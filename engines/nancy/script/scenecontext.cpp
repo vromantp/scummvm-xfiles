@@ -26,9 +26,10 @@
 #include "engines/nancy/enginedata.h"
 #include "engines/nancy/input.h"
 #include "engines/nancy/nancy.h"
-#include "engines/nancy/resource.h"
+#include "engines/nancy/resource/resource.h"
 #include "engines/nancy/util.h"
 
+#include "engines/nancy/script/api.h"
 #include "engines/nancy/script/convo.h"
 #include "engines/nancy/script/graphnode.h"
 #include "engines/nancy/script/luabind.h"
@@ -51,7 +52,25 @@ SceneContext::SceneContext(const Common::String &streamName, const Common::Strin
 		_sceneName(sceneName),
 		_frame(frame),
 		_zOffset(zOffset) {
+#ifdef ENABLE_NANCY_V5
+	if (g_nancy->getGameType() >= kGameTypeNancy26) {
+		_streamState = NancySceneState.getStreams().getNodeState(streamName);
+	}
+#endif
+
 	_lua = new LuaState(this);
+}
+
+// Nancy26 draws whole streams over each other, so the z of a record only counts
+// within the band of its stream
+int32 SceneContext::getZOffset() const {
+#ifdef ENABLE_NANCY_V5
+	if (_streamState) {
+		return _streamState->band;
+	}
+#endif
+
+	return _zOffset;
 }
 
 SceneContext::~SceneContext() {
@@ -74,6 +93,8 @@ SceneContext::~SceneContext() {
 	for (ConvoResponse *response : _convoResponses) {
 		delete response;
 	}
+
+	forgetTaskCompletions(this);
 
 	for (GraphNode *node : _graphNodes) {
 		delete node;
@@ -109,22 +130,31 @@ bool SceneContext::load() {
 	const ScriptBootData *boot = (const ScriptBootData *)g_nancy->getEngineData("ScriptBootData");
 	if (boot) {
 		for (const Common::String &name : boot->includeFileNames) {
-			if (!_lua->runScript(name)) {
+			if (!include(name)) {
 				return false;
 			}
 		}
 	}
 
-	if (!_lua->runScript(_sceneName)) {
+	_isLoading = true;
+	const bool hasRun = _lua->runScript(_sceneName);
+	_isLoading = false;
+	if (!hasRun) {
 		return false;
 	}
 
 	// Nothing can be made before there is a summary. A scene can go on to make
 	// more of them, and so can the scripts it includes; the last one that names
 	// a background is the one that shows.
-	_summary = _newRecords.empty() ? nullptr : dynamic_cast<SummaryRecord *>(_newRecords[0]);
+	_summary = _newRecords.empty() ? nullptr : toSummaryRecord(_newRecords[0]);
+
+	// Nancy26's included scripts make records first, and a scene has only one summary
+	for (uint i = 0; !_summary && i < _newRecords.size() && g_nancy->getGameType() >= kGameTypeNancy26; ++i) {
+		_summary = toSummaryRecord(_newRecords[i]);
+	}
+
 	for (Record *record : _newRecords) {
-		SummaryRecord *summary = dynamic_cast<SummaryRecord *>(record);
+		SummaryRecord *summary = toSummaryRecord(record);
 		if (_summary && summary && !summary->getBackgroundName().empty()) {
 			_summary = summary;
 		}
@@ -175,6 +205,14 @@ Common::String SceneContext::findGlobalName(const Record *record) const {
 }
 
 bool SceneContext::include(const Common::String &name) {
+	if (g_nancy->getGameType() >= kGameTypeNancy21) {
+		if (_includedNames.contains(name)) {
+			return true;
+		}
+
+		_includedNames.setVal(name, true);
+	}
+
 	return _lua->runScript(name);
 }
 
@@ -202,6 +240,49 @@ void SceneContext::setSceneFunction(const char *name) {
 	lua_insert(L, -2);
 	lua_setfield(L, -2, name);
 	lua_pop(L, 1);
+}
+
+bool SceneContext::addManager(const Common::String &name) {
+	for (const ManagerFunction &manager : _managers) {
+		if (manager.name.equalsIgnoreCase(name)) {
+			return false;
+		}
+	}
+
+	ManagerFunction manager;
+	manager.name = name;
+	manager.reference = luaL_ref(getLua(), LUA_REGISTRYINDEX);
+	_managers.push_back(manager);
+	return true;
+}
+
+void SceneContext::getManagerNames(Common::Array<Common::String> &names) const {
+	for (const ManagerFunction &manager : _managers) {
+		names.push_back(manager.name);
+	}
+}
+
+bool SceneContext::describeManager(const Common::String &name, Common::String &text) {
+	for (const ManagerFunction &manager : _managers) {
+		if (!manager.name.equalsIgnoreCase(name)) {
+			continue;
+		}
+
+		lua_State *L = getLua();
+		lua_rawgeti(L, LUA_REGISTRYINDEX, manager.reference);
+		if (lua_pcall(L, 0, 1, 0) != 0) {
+			text = Common::String::format("Error in manager stringize function: %s", lua_tostring(L, -1));
+		} else if (!lua_isstring(L, -1)) {
+			text = Common::String::format("Return value from manager %s is not a string", manager.name.c_str());
+		} else {
+			text = lua_tostring(L, -1);
+		}
+
+		lua_pop(L, 1);
+		return true;
+	}
+
+	return false;
 }
 
 bool SceneContext::callSceneFunction(const char *name, int numArgs) {
@@ -260,6 +341,16 @@ bool SceneContext::skipSpeech() {
 	}
 
 	return hasSkipped;
+}
+
+void SceneContext::registerGraphics() {
+	for (Record *record : _records) {
+		record->registerGraphics();
+	}
+
+	for (Record *record : _newRecords) {
+		record->registerGraphics();
+	}
 }
 
 void SceneContext::end() {
@@ -325,8 +416,11 @@ bool SceneContext::receiveMessage(const Message &message, bool &wasTaken) {
 		return true;
 	}
 
+	// The records made this frame get messages as well, e.g. the managers of
+	// Nancy22, which the scripts of other scenes call on as soon as they load
 	bool hasReceiver = false;
-	const Common::Array<Record *> records = _records;
+	Common::Array<Record *> records = _records;
+	records.push_back(_newRecords);
 	for (Record *record : records) {
 		if (!record->hasMessagingName(message.target)) {
 			continue;
@@ -363,6 +457,13 @@ void SceneContext::run(double elapsedTime) {
 	}
 
 	renderAttachment();
+	applyGraphNodeChanges();
+
+#ifdef ENABLE_NANCY_V5
+	if (g_nancy->getGameType() >= kGameTypeNancy26) {
+		updateDrawRanks();
+	}
+#endif
 
 	for (Record *record : _records) {
 		record->updateGraphics();
@@ -375,7 +476,7 @@ void SceneContext::renderAttachment() {
 	const VIEW *viewport = GetEngineData(VIEW);
 	assert(viewport);
 
-	ScriptPoint mouse;
+	Common::Point32 mouse;
 	getViewportMouse(g_nancy->_input->getInput(), mouse);
 
 	ScriptMatrix transform;
@@ -464,27 +565,50 @@ const ViewTransform *SceneContext::getViewTransform() const {
 	return NancySceneState.getStreams().getViewTransform(_streamName);
 }
 
-GraphNode *SceneContext::createGraphNode() {
-	GraphNode *node = new GraphNode(*this);
+GraphNode *SceneContext::createGraphNode(Record *owner) {
+	GraphNode *node = new GraphNode(*this, owner);
 	_graphNodes.push_back(node);
 	return node;
 }
 
+// Nodes change many times a frame, e.g. the cars of Nancy22's driving game with
+// every step of the physics, so the records under them only catch up once the
+// frame is over. Their transform and z are always worked out when asked for.
 void SceneContext::onGraphNodeChanged(GraphNode *node) {
-	for (Record *record : _records) {
-		if (record->getParentNode() && record->getParentNode()->isUnder(node)) {
-			record->onParentNodeChanged();
+	for (const GraphNode *changed : _changedNodes) {
+		if (changed == node) {
+			return;
 		}
 	}
 
-	for (Record *record : _newRecords) {
-		if (record->getParentNode() && record->getParentNode()->isUnder(node)) {
-			record->onParentNodeChanged();
+	_changedNodes.push_back(node);
+}
+
+void SceneContext::applyGraphNodeChanges() {
+	// Catching up can change more nodes, e.g. the z of a Transformer
+	while (!_changedNodes.empty()) {
+		const Common::Array<GraphNode *> changedNodes = _changedNodes;
+		_changedNodes.clear();
+
+		Common::Array<Record *> records = _records;
+		records.push_back(_newRecords);
+		for (Record *record : records) {
+			const GraphNode *parent = record->getParentNode();
+			if (!parent) {
+				continue;
+			}
+
+			for (const GraphNode *node : changedNodes) {
+				if (parent->isUnder(node)) {
+					record->onParentNodeChanged();
+					break;
+				}
+			}
 		}
 	}
 }
 
-bool SceneContext::getViewportMouse(const NancyInput &input, ScriptPoint &point) {
+bool SceneContext::getViewportMouse(const NancyInput &input, Common::Point32 &point) {
 	const UI::Viewport &viewport = NancySceneState.getViewport();
 	const Common::Rect screenPosition = viewport.getScreenPosition();
 
@@ -500,7 +624,7 @@ bool SceneContext::getViewportMouse(const NancyInput &input, ScriptPoint &point)
 // which leaves the turning around in the background for when nothing else
 // takes a click.
 // Only clicks and keys can be taken; the rest goes to every record.
-void SceneContext::sendMouseEvent(int event, const ScriptPoint &point, bool inViewport) {
+void SceneContext::sendMouseEvent(int event, const Common::Point32 &point, bool inViewport) {
 	const bool canBeTaken = event == kEventLeftClick || event == kEventRightClick;
 
 	for (Record *record : _inputOrder) {
@@ -532,7 +656,7 @@ static const MoveKey kMoveKeys[] = {
 };
 
 void SceneContext::handleInput(NancyInput &input) {
-	ScriptPoint point;
+	Common::Point32 point;
 	const bool inViewport = getViewportMouse(input, point);
 
 	for (Record *record : _inputOrder) {
@@ -604,8 +728,12 @@ void SceneContext::handleInput(NancyInput &input) {
 	}
 }
 
-void SceneContext::changeScene(const Common::String &streamName, const Common::String &sceneName, uint16 frame) {
+void SceneContext::changeScene(const Common::String &name, const Common::String &sceneName, uint16 frame) {
 	State::SceneStreamManager &streams = NancySceneState.getStreams();
+
+	// No name stands for the stream of this scene, which isn't always the one
+	// that runs: Nancy26 hands the input to the records of all streams at once
+	const Common::String &streamName = name.empty() ? _streamName : name;
 
 	_hasChangedScene = true;
 

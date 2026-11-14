@@ -726,6 +726,14 @@ struct ScriptValueData : public PuzzleData {
 	Common::HashMap<Common::String, int32, Common::IgnoreCase_Hash, Common::IgnoreCase_EqualTo> values;
 };
 
+// Nancy1New. The texts the scripts keep by name, next to the values
+struct ScriptTextData : public PuzzleData {
+	static constexpr uint32 getTag() { return MKTAG('S', 'C', 'S', 'T'); }
+	virtual void synchronize(Common::Serializer &ser);
+
+	Common::HashMap<Common::String, Common::String, Common::IgnoreCase_Hash, Common::IgnoreCase_EqualTo> texts;
+};
+
 // Nancy19. What the scripts ask to have kept under a name: a number, a text,
 // or a table of those, already packed into bytes
 struct ScriptSavedData : public PuzzleData {
@@ -733,6 +741,16 @@ struct ScriptSavedData : public PuzzleData {
 	virtual void synchronize(Common::Serializer &ser);
 
 	Common::HashMap<Common::String, Common::Array<byte>, Common::IgnoreCase_Hash, Common::IgnoreCase_EqualTo> values;
+};
+
+// Nancy27. The results of the conditions of the Brain that are only worked out
+// again when the scripts ask for it, and from Nancy28 on the flags of the Brain
+// the scripts set
+struct BrainData : public PuzzleData {
+	static constexpr uint32 getTag() { return MKTAG('B', 'R', 'N', 'S'); }
+	virtual void synchronize(Common::Serializer &ser);
+
+	Common::HashMap<Common::String, bool, Common::IgnoreCase_Hash, Common::IgnoreCase_EqualTo> results;
 };
 
 // Nancy21. The pictures the camera of the cell phone took, as PNG files, which

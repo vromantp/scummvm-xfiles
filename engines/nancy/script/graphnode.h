@@ -29,22 +29,40 @@ struct lua_State;
 namespace Nancy {
 namespace Script {
 
+class Record;
 class SceneContext;
 
 // Nancy21 lets a scene group its records under nodes of their own, made with
 // Scene:GraphNode(). A record that was handed to a node with node:TransferChild()
 // is moved by the transform of the node on top of its own, and its z counts from
 // the one of the node. The tray of puzzle pieces scrolls its pieces that way.
-// Nodes can be put under other nodes as well.
+// Nodes can be put under other nodes as well. In Nancy22, every Transformer
+// record is such a node.
 class GraphNode {
 public:
-	GraphNode(SceneContext &context) : _context(context) {}
+	// A Transformer record is the owner of its node
+	GraphNode(SceneContext &context, Record *owner = nullptr) : _context(context), _owner(owner) {}
 
 	SceneContext &getContext() const { return _context; }
+	Record *getOwner() const { return _owner; }
 
 	// Including those of the nodes above
 	double getZ() const;
+	double getLocalZ() const { return _z; }
 	ScriptMatrix getTransform() const;
+
+#ifdef ENABLE_NANCY_V5
+	// Nancy26: what the records under the node take on, which are the ones
+	// of the Transformer that owns it, after the nodes above it had their say
+	bool isEnabled() const;
+	bool isVisible() const;
+	bool isPaused() const;
+	double getAlpha() const;
+#endif
+
+	// The node's own, which Nancy22's Transformer records set
+	void setZ(double z);
+	void setTransform(const ScriptMatrix &transform);
 
 	GraphNode *getParent() const { return _parent; }
 	void setParent(GraphNode *parent);
@@ -61,6 +79,7 @@ public:
 
 private:
 	SceneContext &_context;
+	Record *_owner;
 	double _z = 0.0;
 	ScriptMatrix _transform;
 	GraphNode *_parent = nullptr;

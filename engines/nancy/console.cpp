@@ -32,10 +32,10 @@
 #include "engines/nancy/movieplayer.h"
 #include "engines/nancy/nancy.h"
 #include "engines/nancy/console.h"
-#include "engines/nancy/resource.h"
+#include "engines/nancy/resource/resource.h"
 #include "engines/nancy/sound.h"
-#include "engines/nancy/cif.h"
-#include "engines/nancy/iff.h"
+#include "engines/nancy/resource/cif.h"
+#include "engines/nancy/resource/iff.h"
 #include "engines/nancy/input.h"
 #include "engines/nancy/graphics.h"
 
@@ -69,6 +69,8 @@ NancyConsole::NancyConsole() : GUI::Debugger() {
 #ifdef ENABLE_NANCY_V4
 	registerCmd("list_records", WRAP_METHOD(NancyConsole, Cmd_listRecords));
 	registerCmd("script_export", WRAP_METHOD(NancyConsole, Cmd_scriptExport));
+	registerCmd("list_managers", WRAP_METHOD(NancyConsole, Cmd_listManagers));
+	registerCmd("cheat_mode", WRAP_METHOD(NancyConsole, Cmd_cheatMode));
 #endif
 	registerCmd("actionrecord_export", WRAP_METHOD(NancyConsole, Cmd_actionRecordExport));
 	registerCmd("scan_ar_type", WRAP_METHOD(NancyConsole, Cmd_scanForActionRecordType));
@@ -78,6 +80,7 @@ NancyConsole::NancyConsole() : GUI::Debugger() {
 	registerCmd("set_eventflags", WRAP_METHOD(NancyConsole, Cmd_setEventFlags));
 	registerCmd("get_inventory", WRAP_METHOD(NancyConsole, Cmd_getInventory));
 	registerCmd("set_inventory", WRAP_METHOD(NancyConsole, Cmd_setInventory));
+	registerCmd("hold_item", WRAP_METHOD(NancyConsole, Cmd_holdItem));
 	registerCmd("get_money", WRAP_METHOD(NancyConsole, Cmd_getMoney));
 	registerCmd("set_money", WRAP_METHOD(NancyConsole, Cmd_setMoney));
 	registerCmd("get_player_time", WRAP_METHOD(NancyConsole, Cmd_getPlayerTime));
@@ -539,8 +542,9 @@ static uint numPlayerCharacters() {
 		return 1;
 	}
 
+	// Nancy26 has no characters to pick from, and a single inventory
 	const PCUI *pcui = GetEngineData(PCUI);
-	return pcui ? MIN<uint>(pcui->characters.size(), kMaxPlayerCharacters) : 1;
+	return pcui && !pcui->characters.empty() ? MIN<uint>(pcui->characters.size(), kMaxPlayerCharacters) : 1;
 }
 
 // The name of an inventory item, from wherever the game keeps it: the inventory
@@ -788,6 +792,7 @@ bool NancyConsole::Cmd_listRecords(int argc, const char **argv) {
 			if (showsFields) {
 				Common::Array<Common::String> fields;
 				record->describeFields(fields);
+				record->describeState(fields);
 				for (const Common::String &field : fields) {
 					debugPrintf("      %s\n", field.c_str());
 				}
@@ -795,6 +800,75 @@ bool NancyConsole::Cmd_listRecords(int argc, const char **argv) {
 		}
 
 		debugPrintf("\n");
+	}
+
+	return true;
+}
+
+// Nancy20: the cheat mode of the original, which the scripts ask for with
+// Game.cheatMode. It turns on views made for debugging the puzzles, like the
+// physics shapes of the Nancy22 driving game (Q).
+bool NancyConsole::Cmd_cheatMode(int argc, const char **argv) {
+	bool isOn = !NancySceneState.isCheatMode();
+	if (argc == 2 && !scumm_stricmp(argv[1], "on")) {
+		isOn = true;
+	} else if (argc == 2 && !scumm_stricmp(argv[1], "off")) {
+		isOn = false;
+	} else if (argc != 1) {
+		debugPrintf("Turns the cheat mode of the scripts of Nancy20 and later on or off.\n");
+		debugPrintf("Usage: %s [on|off]\n", argv[0]);
+		debugPrintf("Without an argument, toggles it.\n");
+		return true;
+	}
+
+	NancySceneState.setCheatMode(isOn);
+	debugPrintf("Cheat mode is %s\n", isOn ? "on" : "off");
+	return true;
+}
+
+// Nancy22: the managers the scripts registered with Log:AddManager, or what one
+// of them gives about itself. The original shows these in its cheat dialog.
+bool NancyConsole::Cmd_listManagers(int argc, const char **argv) {
+	if (argc > 2) {
+		debugPrintf("Lists the managers of the scripts, in Nancy22 and later.\n");
+		debugPrintf("Usage: %s [manager name]\n", argv[0]);
+		debugPrintf("With a name, prints what the manager says about itself.\n");
+		return true;
+	}
+
+	if (g_nancy->getGameType() < kGameTypeNancy22) {
+		debugPrintf("Managers are used from Nancy22 onwards\n");
+		return true;
+	}
+
+	if (g_nancy->getState() != NancyState::kScene) {
+		debugPrintf("Not in the kScene state\n");
+		return true;
+	}
+
+	// The managers all run in a stream of their own
+	State::SceneStream *stream = NancySceneState.getStreams().find(State::SceneStreamManager::getManagerStreamName());
+	Script::SceneContext *context = stream ? stream->getScriptScene() : nullptr;
+	if (!context) {
+		debugPrintf("No running stream %s\n", State::SceneStreamManager::getManagerStreamName());
+		return true;
+	}
+
+	if (argc == 2) {
+		Common::String text;
+		if (context->describeManager(argv[1], text)) {
+			debugPrintf("%s\n", text.c_str());
+		} else {
+			debugPrintf("No manager %s\n", argv[1]);
+		}
+
+		return true;
+	}
+
+	Common::Array<Common::String> names;
+	context->getManagerNames(names);
+	for (const Common::String &name : names) {
+		debugPrintf("%s\n", name.c_str());
 	}
 
 	return true;
@@ -1305,8 +1379,46 @@ bool NancyConsole::Cmd_setEventFlags(int argc, const char **argv) {
 	return cmdExit(0, nullptr);
 }
 
+// An item by its number, or by its name; -1 for none
+static int findInventoryItem(const char *arg) {
+	const uint numItems = g_nancy->getStaticData().numItems;
+
+	const Common::String text = arg;
+	bool isNumber = !text.empty();
+	for (uint i = 0; i < text.size(); ++i) {
+		isNumber &= Common::isDigit(text[i]);
+	}
+
+	if (isNumber) {
+		const int itemID = atoi(arg);
+		return itemID < (int)numItems ? itemID : -1;
+	}
+
+	for (uint i = 0; i < numItems; ++i) {
+		if (inventoryItemName(i).equalsIgnoreCase(text)) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
 void NancyConsole::printInventoryItem(uint itemID) {
 	debugPrintf("\nItem %u, %s", itemID, inventoryItemName(itemID).c_str());
+
+	// Nancy26 names the scene that shows an item
+	const INVD *itemTable = GetEngineData(INVD);
+	if (itemTable && g_nancy->getGameType() >= kGameTypeNancy26) {
+		for (const INVD::Item &item : itemTable->items) {
+			if (item.id == (int16)itemID && !item.sceneName.empty()) {
+				debugPrintf(", shown by %s", item.sceneName.toString().c_str());
+			}
+		}
+	}
+
+	if (NancySceneState.getHeldItem() == (int16)itemID) {
+		debugPrintf(", in hand");
+	}
 
 	// Only the games with inventory data say what happens to a used item
 	auto *inventoryData = GetEngineData(INV);
@@ -1344,14 +1456,19 @@ bool NancyConsole::Cmd_getInventory(int argc, const char **argv) {
 		debugPrintf("Playing as %s\n", playerCharacterName(g_nancy->getPlayerCharacter()).c_str());
 	}
 
+	const int16 heldItem = NancySceneState.getHeldItem();
+	if (heldItem >= 0) {
+		debugPrintf("In hand: item %d, %s\n", heldItem, inventoryItemName(heldItem).c_str());
+	}
+
 	if (argc == 1) {
 		for (uint i = 0; i < numItems; ++i) {
 			printInventoryItem(i);
 		}
 	} else {
 		for (int i = 1; i < argc; ++i) {
-			int itemID = atoi(argv[i]);
-			if (itemID < 0 || itemID >= (int)numItems) {
+			int itemID = findInventoryItem(argv[i]);
+			if (itemID < 0) {
 				debugPrintf("\nInvalid item %s", argv[i]);
 				continue;
 			}
@@ -1394,7 +1511,7 @@ bool NancyConsole::Cmd_setInventory(int argc, const char **argv) {
 
 	if (argc < firstItemArg + 2 || (argc - firstItemArg) % 2 != 0) {
 		debugPrintf("Sets one or more inventory items to the provided value.\n");
-		debugPrintf("Usage: %s [-c <characterIndex>] <itemID> <true/false>...\n", argv[0]);
+		debugPrintf("Usage: %s [-c <characterIndex>] <itemID or name> <true/false>...\n", argv[0]);
 		debugPrintf("-c picks the player character to give the items to (Nancy15+); the character being played is the default.\n");
 		return true;
 	}
@@ -1404,8 +1521,8 @@ bool NancyConsole::Cmd_setInventory(int argc, const char **argv) {
 		Common::String("inventory");
 
 	for (int i = firstItemArg; i < argc; i += 2) {
-		int itemID = atoi(argv[i]);
-		if (itemID < 0 || itemID >= (int)g_nancy->getStaticData().numItems) {
+		int itemID = findInventoryItem(argv[i]);
+		if (itemID < 0) {
 			debugPrintf("Invalid item %s\n", argv[i]);
 			continue;
 		}
@@ -1428,6 +1545,58 @@ bool NancyConsole::Cmd_setInventory(int argc, const char **argv) {
 		}
 	}
 
+	return cmdExit(0, nullptr);
+}
+
+bool NancyConsole::Cmd_holdItem(int argc, const char **argv) {
+	if (g_nancy->getState() != NancyState::kScene) {
+		debugPrintf("Not in the kScene state\n");
+		return true;
+	}
+
+	if (argc != 2) {
+		debugPrintf("Puts an inventory item in the player's hand, or puts the one there away.\n");
+		debugPrintf("Usage: %s <itemID or name>|none\n", argv[0]);
+		return true;
+	}
+
+	// Nancy26 keeps the item in the hand in the inventory as well, and puts
+	// it away by letting go of it. The earlier games take it out.
+	const bool keepsHeldItem = g_nancy->getGameType() >= kGameTypeNancy26;
+
+	if (Common::String(argv[1]).equalsIgnoreCase("none")) {
+		if (keepsHeldItem) {
+			NancySceneState.setHeldItem(-1);
+		} else {
+			NancySceneState.setNoHeldItem();
+		}
+
+		debugPrintf("The hand is empty\n");
+		return cmdExit(0, nullptr);
+	}
+
+	const int itemID = findInventoryItem(argv[1]);
+	if (itemID < 0) {
+		debugPrintf("Invalid item %s\n", argv[1]);
+		return true;
+	}
+
+	if (keepsHeldItem) {
+		if (NancySceneState.hasItem(itemID) == g_nancy->_false) {
+			NancySceneState.addItemToInventory(itemID);
+		}
+
+		NancySceneState.setHeldItem(itemID);
+	} else if (NancySceneState.getHeldItem() != itemID) {
+		NancySceneState.setNoHeldItem();
+		if (NancySceneState.hasItem(itemID) == g_nancy->_true) {
+			NancySceneState.removeItemFromInventory(itemID, true);
+		} else {
+			NancySceneState.setHeldItem(itemID);
+		}
+	}
+
+	debugPrintf("Holding item %d, %s\n", itemID, inventoryItemName(itemID).c_str());
 	return cmdExit(0, nullptr);
 }
 
@@ -1559,7 +1728,7 @@ bool NancyConsole::Cmd_getPlayerTime(int argc, const char **argv) {
 		time.getDays(),
 		time.getHours(),
 		time.getMinutes(),
-		(uint32)time);
+		time.getTotalMilliseconds());
 
 	auto *bootSummary = GetEngineData(BSUM);
 	if (bootSummary && bootSummary->endOfDayFlag != kEvNoEvent) {
@@ -1602,7 +1771,7 @@ bool NancyConsole::Cmd_setPlayerTime(int argc, const char **argv) {
 		time.getDays(),
 		time.getHours(),
 		time.getMinutes(),
-		(uint32)time);
+		time.getTotalMilliseconds());
 
 	return cmdExit(0, nullptr);
 }

@@ -25,9 +25,9 @@
 
 #include "engines/nancy/nancy.h"
 #include "engines/nancy/graphics.h"
-#include "engines/nancy/iff.h"
+#include "engines/nancy/resource/iff.h"
 #include "engines/nancy/renderobject.h"
-#include "engines/nancy/resource.h"
+#include "engines/nancy/resource/resource.h"
 #include "engines/nancy/cursor.h"
 #include "engines/nancy/state/scene.h"
 
@@ -128,11 +128,11 @@ void GraphicsManager::init() {
 	_screen.clear();
 
 	// Nancy16 runs at a higher resolution than the game was made for. The
-	// viewport's chunk holds the resolution the game gets drawn at.
-	if (g_nancy->getGameType() >= kGameTypeNancy16) {
-		auto *viewportData = GetEngineData(VIEW);
-		assert(viewportData);
-
+	// viewport's chunk holds the resolution the game gets drawn at, which is
+	// the one of the screen from Nancy24 on.
+	const VIEW *viewportData = GetEngineData(VIEW);
+	if (g_nancy->getGameType() >= kGameTypeNancy16 && viewportData &&
+			(viewportData->bounds.width() != _screen.w || viewportData->bounds.height() != _screen.h)) {
 		_gameSurface.create(viewportData->bounds.width(), viewportData->bounds.height(), getScreenPixelFormat());
 		_gameSurface.setTransparentColor(getTransColor());
 		_gameSurface.clear();
@@ -284,6 +284,10 @@ void GraphicsManager::drawObjects(Graphics::ManagedSurface &target, const Common
 		DrawnObject entry;
 		entry.object = object;
 		entry.position = getDrawnPosition(*object);
+		if (!object->getClipRect().isEmpty()) {
+			entry.position.clip(object->getClipRect());
+		}
+
 		entry.isOpaque = !object->_drawSurface.hasTransparentColor() && object->_drawSurface.format != _transparentPixelFormat;
 		if (!entry.position.isEmpty()) {
 			drawn.push_back(entry);
@@ -449,6 +453,24 @@ void GraphicsManager::loadSystemFonts(const IFF &fontIFF) {
 	}
 }
 
+// The font file of the game folder a face is in, if any. The face in the one
+// file Nancy23 has, "Digital Display2.ttf", is named after the file.
+static Common::Path findCustomFontFile(const ScriptBootData &boot, const Common::String &faceName) {
+	for (const Common::String &fileName : boot.customFontFiles) {
+		Common::String baseName = fileName;
+		const size_t dot = baseName.findLastOf('.');
+		if (dot != Common::String::npos) {
+			baseName.erase(dot);
+		}
+
+		if (baseName.equalsIgnoreCase(faceName)) {
+			return Common::Path(fileName);
+		}
+	}
+
+	return Common::Path();
+}
+
 void GraphicsManager::loadSystemFonts(const ScriptBootData &boot) {
 	const int32 kNormalWeight = 400;
 	const int32 kBoldWeight = 700;
@@ -462,13 +484,15 @@ void GraphicsManager::loadSystemFonts(const ScriptBootData &boot) {
 			_fonts.resize(font.id + 1);
 		}
 
-		_fonts[font.id].setSystemFont(font.name, font.faceName, font.height, font.isBold ? kBoldWeight : kNormalWeight);
+		_fonts[font.id].setSystemFont(font.name, font.faceName, font.height, font.isBold ? kBoldWeight : kNormalWeight,
+			findCustomFontFile(boot, font.faceName));
 	}
 
 	// Every font also comes in bold, after the ones with a number of their own
 	for (const ScriptBootData::SystemFont &font : boot.fonts) {
 		_fonts.resize(_fonts.size() + 1);
-		_fonts.back().setSystemFont(font.name + "_Bold", font.faceName, font.height, kBoldWeight);
+		_fonts.back().setSystemFont(font.name + "_Bold", font.faceName, font.height, kBoldWeight,
+			findCustomFontFile(boot, font.faceName));
 	}
 
 	for (const ScriptBootData::FontColor &color : boot.fontColors) {
@@ -546,6 +570,16 @@ void GraphicsManager::removeObject(RenderObject *object) {
 			break;
 		}
 	}
+}
+
+bool GraphicsManager::hasObject(const RenderObject *object) const {
+	for (const RenderObject *r : _objects) {
+		if (r == object) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void GraphicsManager::clearObjects() {
@@ -748,6 +782,10 @@ const Graphics::PixelFormat &GraphicsManager::getInputPixelFormat(uint bpp) {
 }
 
 Common::Rect GraphicsManager::getScreenBounds() {
+	if (g_nancy->getGameType() >= kGameTypeNancy26) {
+		return Common::Rect(1024, 768);
+	}
+
 	return (g_nancy->getGameType() >= kGameTypeNancy16) ? Common::Rect(800, 600) : Common::Rect(640, 480);
 }
 
@@ -775,6 +813,47 @@ void GraphicsManager::screenshotScreen(Graphics::ManagedSurface &inSurf) {
 	draw(false);
 	inSurf.free();
 	inSurf.copyFrom(_screen);
+}
+
+void GraphicsManager::getDrawnGameImage(Graphics::ManagedSurface &out) {
+	const Graphics::ManagedSurface &image = getGameImage();
+	if (_scriptDrawingZOrder < 0) {
+		out.copyFrom(image);
+		return;
+	}
+
+	// The objects below the script have been brought up to date for this frame
+	out.create(image.w, image.h, image.format);
+	out.clear(out.format.ARGBToColor(255, 0, 0, 0));
+	for (const RenderObject *object : _objects) {
+		if (object->getZOrder() >= _scriptDrawingZOrder) {
+			break;
+		}
+
+		if (!object->isVisible() || !isInLayer(*object, isGameScaled() ? kLayerGame : kLayerAll)) {
+			continue;
+		}
+
+		Common::Rect position = getDrawnPosition(*object);
+		if (!object->getClipRect().isEmpty()) {
+			position.clip(object->getClipRect());
+		}
+
+		position.clip(Common::Rect(out.w, out.h));
+		if (!position.isEmpty()) {
+			blitObject(out, *object, position);
+		}
+	}
+}
+
+bool GraphicsManager::takeSavePicture(Graphics::ManagedSurface &out) {
+	if (_savePicture.empty()) {
+		return false;
+	}
+
+	out.copyFrom(_savePicture);
+	_savePicture.free();
+	return true;
 }
 
 // Draw a given screen-space rectangle of an object

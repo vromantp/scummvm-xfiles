@@ -96,6 +96,16 @@ public:
 	void requestSave(const Common::String &name);
 	void requestLoad(const Common::String &name);
 
+	// Nancy26's scripts start new games and quit by themselves
+	void requestNewGame() { _request.type = kRequestNewGame; }
+	void requestQuit() { _request.type = kRequestQuit; }
+
+	// Whether there is a saved game of that name
+	bool hasSave(const Common::String &name) const { return findSaveSlot(name) != -1; }
+
+	// The names of the saved games
+	void getSaveNames(Common::Array<Common::String> &names) const;
+
 	// Goes on with the quit or load that was put off to ask whether to save first
 	void runPendingAction();
 
@@ -120,11 +130,15 @@ public:
 	// Nancy17: the control under the mouse that has a tooltip, and the panel's control that shows it
 	void setHoveredTooltip(const Control *control, Tooltip *tooltip);
 
+	// Nancy18 movies can keep the mouse away from the panels for as long as they play
+	void lockMouseInput() { ++_mouseInputLocks; }
+	void unlockMouseInput() { if (_mouseInputLocks > 0) --_mouseInputLocks; }
+
 	const Graphics::ManagedSurface *getTexture(const Common::String &name);
 
 	// Creates a control from a template, as the last one of a panel
-	void createObject(const Common::String &name, const Common::String &templateName, const Common::String &parentName);
-	void destroyObject(const Common::String &name);
+	bool createObject(const Common::String &name, const Common::String &templateName, const Common::String &parentName);
+	bool destroyObject(const Common::String &name);
 
 	// Engine state shown by the UI
 	void update();
@@ -200,9 +214,11 @@ private:
 	void setSaveScreenshot(const Graphics::ManagedSurface &image, const Common::Rect &src);
 
 	Panel *findPanel(const Common::String &name) const;
+	bool isItemButton(const Common::String &name) const;
 	InvButton *findItemButton(int16 itemID) const;
 
 	Common::Array<Panel *> _panels;
+	Common::Array<InvButton *> _attachedItemButtons;	// Buttons placed by the UI data that act as an item, like the PDA
 	Common::String _eventSender;
 	Common::String _caption;
 	Common::HashMap<Common::String, Graphics::ManagedSurface *, Common::IgnoreCase_Hash, Common::IgnoreCase_EqualTo> _textures;
@@ -213,6 +229,8 @@ private:
 	// Nancy17 tooltips are drawn on top of every panel
 	RenderObject _tooltipWindow{kTooltipZ};
 	const Control *_hoveredControl = nullptr;
+	uint _mouseInputLocks = 0;
+	uint16 _heldArrowKeys = 0;	// the input of the last frame, to tell when an arrow key goes down
 	Tooltip *_hoveredTooltip = nullptr;
 	const Control *_tooltipControl = nullptr;
 	uint32 _tooltipHoverStart = 0;

@@ -220,7 +220,7 @@ Component *Costume::loadComponent (tag32 tag, Component *parent, int parentID, c
 		return new MeshComponent(parent, parentID, name, tag);
 	else if (tag == MKTAG('L','U','A','V'))
 		return new LuaVarComponent(parent, parentID, name, tag);
-	else if (tag == MKTAG('I','M','L','S'))
+	else if (tag == MKTAG('I','M','L','S') || tag == MKTAG('I','M','S','S'))
 		return new SoundComponent(parent, parentID, name, tag);
 	else if (tag == MKTAG('B','K','N','D'))
 		return new BitmapComponent(parent, parentID, name, tag);
@@ -359,7 +359,7 @@ void Costume::setColormap(const Common::String &map) {
 	_cmap = g_resourceloader->getColormap(map);
 	for (int i = 0; i < _numComponents; i++)
 		if (_components[i])
-			_components[i]->setColormap(nullptr);
+			_components[i]->refreshColormap();
 }
 
 void Costume::stopChores(bool ignoreLoopingChores, int msecs) {

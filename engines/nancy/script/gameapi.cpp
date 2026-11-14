@@ -44,6 +44,7 @@
 
 #include "engines/nancy/state/scene.h"
 
+#include "engines/nancy/ui/ndui/button.h"
 #include "engines/nancy/ui/ndui/common.h"
 #include "engines/nancy/ui/ndui/manager.h"
 
@@ -114,10 +115,24 @@ static const luaL_Reg kFlagsFunctions[] = {
 	{ nullptr, nullptr }
 };
 
-// VarTable.<name>, the whole numbers scripts keep by name
+// VarTable.<name>, the whole numbers scripts keep by name, and from Nancy1New
+// on StrTable.<name>, the texts. Nancy1New names them all in its boot scripts.
+
+static void checkTableName(lua_State *L, bool isText, const char *name) {
+	if (g_nancy->getGameType() < kGameTypeNancy1New) {
+		return;
+	}
+
+	const ScriptBootData *boot = GetEngineData(ScriptBootData);
+	const ScriptBootData::NameSet &names = isText ? boot->textNames : boot->valueNames;
+	if (!names.contains(name)) {
+		luaL_error(L, "%s does not have variable %s", isText ? "StrTable" : "VarTable", name);
+	}
+}
 
 static int varTableIndex(lua_State *L) {
 	const char *name = luaL_checkstring(L, 2);
+	checkTableName(L, false, name);
 
 	ScriptValueData *values = (ScriptValueData *)NancySceneState.getPuzzleData(ScriptValueData::getTag());
 	lua_pushnumber(L, values->values.getValOrDefault(name, 0));
@@ -127,6 +142,7 @@ static int varTableIndex(lua_State *L) {
 static int varTableNewIndex(lua_State *L) {
 	const char *name = luaL_checkstring(L, 2);
 	const int32 value = (int32)luaL_checknumber(L, 3);
+	checkTableName(L, false, name);
 
 	ScriptValueData *values = (ScriptValueData *)NancySceneState.getPuzzleData(ScriptValueData::getTag());
 	values->values.setVal(name, value);
@@ -136,6 +152,31 @@ static int varTableNewIndex(lua_State *L) {
 static const luaL_Reg kVarTableFunctions[] = {
 	{ "__index", varTableIndex },
 	{ "__newindex", varTableNewIndex },
+	{ nullptr, nullptr }
+};
+
+static int strTableIndex(lua_State *L) {
+	const char *name = luaL_checkstring(L, 2);
+	checkTableName(L, true, name);
+
+	ScriptTextData *texts = (ScriptTextData *)NancySceneState.getPuzzleData(ScriptTextData::getTag());
+	lua_pushstring(L, texts->texts.getValOrDefault(name).c_str());
+	return 1;
+}
+
+static int strTableNewIndex(lua_State *L) {
+	const char *name = luaL_checkstring(L, 2);
+	const char *text = luaL_checkstring(L, 3);
+	checkTableName(L, true, name);
+
+	ScriptTextData *texts = (ScriptTextData *)NancySceneState.getPuzzleData(ScriptTextData::getTag());
+	texts->texts.setVal(name, text);
+	return 0;
+}
+
+static const luaL_Reg kStrTableFunctions[] = {
+	{ "__index", strTableIndex },
+	{ "__newindex", strTableNewIndex },
 	{ nullptr, nullptr }
 };
 
@@ -228,9 +269,9 @@ static int cursorIndex(lua_State *L) {
 
 	if (key == "activePoint") {
 		// Where the mouse is in the viewport, while it is in there
-		ScriptPoint point;
+		Common::Point32 point;
 		if (!SceneContext::getViewportMouse(g_nancy->_input->getInput(), point)) {
-			point = ScriptPoint(-1, -1);
+			point = Common::Point32(-1, -1);
 		}
 
 		pushPoint(L, point);
@@ -239,12 +280,12 @@ static int cursorIndex(lua_State *L) {
 
 	if (key == "activeUIPoint") {
 		// Where the mouse is on the screen
-		pushPoint(L, ScriptPoint(g_nancy->_input->getInput().mousePos));
+		pushPoint(L, Common::Point32(g_nancy->_input->getInput().mousePos));
 		return 1;
 	}
 
 	if (key == "inViewport") {
-		ScriptPoint point;
+		Common::Point32 point;
 		lua_pushboolean(L, SceneContext::getViewportMouse(g_nancy->_input->getInput(), point));
 		return 1;
 	}
@@ -294,7 +335,7 @@ static int cursorNewIndex(lua_State *L) {
 
 // Cursor:MoveTo(point), Nancy21: puts the mouse at a place in the viewport
 static int cursorMoveTo(lua_State *L) {
-	ScriptPoint point;
+	Common::Point32 point;
 	if (!readPoint(L, 2, point)) {
 		return luaL_argerror(L, 2, "expected a point");
 	}
@@ -402,17 +443,94 @@ static const luaL_Reg kKeyFunctions[] = {
 };
 
 // Game
-// TODO: Game.time
 
 // The two levels the game can be played at
 static const uint kDifficultyJunior = 0;
 static const uint kDifficultySenior = 2;
 
+// Game:ShowLink(key), Nancy25: opens the URL in the autotext entry for the
+// key in a web browser. Returns whether it was opened.
+static int gameShowLink(lua_State *L) {
+	const char *key = luaL_checkstring(L, 2);
+
+	Common::String url;
+	if (!findText(key, url)) {
+		return luaL_error(L, "Autotext '%s' not found", key);
+	}
+
+	lua_pushboolean(L, g_system->hasFeature(OSystem::kFeatureOpenUrl) && g_system->openUrl(url));
+	return 1;
+}
+
 static int gameIndex(lua_State *L) {
 	const Common::String key = luaL_checkstring(L, 2);
 
+	if (key == "ShowLink") {
+		lua_pushcfunction(L, gameShowLink);
+		return 1;
+	}
+
+	// Nancy25: replaces Streams.environment, the environment of the main
+	// stream's scene
+	if (key == "environment") {
+		lua_pushstring(L, NancySceneState.getStreams().getEnvironment().c_str());
+		return 1;
+	}
+
 	if (key == "difficulty") {
 		lua_pushstring(L, NancySceneState.getDifficulty() == kDifficultySenior ? "senior" : "junior");
+		return 1;
+	}
+
+	// How long the game has been played, as { days, hours, minutes, seconds,
+	// totalSeconds }; the seconds have fractions
+	if (key == "time") {
+		const Time &time = NancySceneState._timers.lastTotalTime;
+		lua_createtable(L, 0, 5);
+		lua_pushinteger(L, time.getDays());
+		lua_setfield(L, -2, "days");
+		lua_pushinteger(L, time.getHours());
+		lua_setfield(L, -2, "hours");
+		lua_pushinteger(L, time.getMinutes());
+		lua_setfield(L, -2, "minutes");
+		lua_pushnumber(L, (time.getTotalMilliseconds() % 60000) / 1000.0);
+		lua_setfield(L, -2, "seconds");
+		lua_pushnumber(L, time.getTotalMilliseconds() / 1000.0);
+		lua_setfield(L, -2, "totalSeconds");
+		return 1;
+	}
+
+	// Nancy23: whether the clock of the cell phone shows 12 or 24 hours. The
+	// original takes it from ClockFormat in its INI file, which is 12 by default.
+	if (key == "hourFormat") {
+		lua_pushinteger(L, 12);
+		return 1;
+	}
+
+	// Nancy22: the name of the saved game that is being loaded, or nil
+	if (key == "loadName") {
+		const Common::String &name = NancySceneState.getLoadName();
+		if (name.empty()) {
+			lua_pushnil(L);
+		} else {
+			lua_pushstring(L, name.c_str());
+		}
+
+		return 1;
+	}
+
+	// Nancy22: a cheat of the original, toggled with F in its cheat mode, with
+	// which a click skips the current line of a conversation. Always off here,
+	// since Esc already skips what the characters are saying.
+	if (key == "fastConvo") {
+		lua_pushboolean(L, false);
+		return 1;
+	}
+
+	// Nancy20: whether the cheat mode of the original is on, which scripts use
+	// for views made for debugging. The console command cheat_mode sets it.
+	if (key == "cheatMode") {
+		lua_pushboolean(L, NancySceneState.isCheatMode());
 		return 1;
 	}
 
@@ -599,8 +717,28 @@ static const luaL_Reg kDrawFunctions[] = {
 	{ "Line", drawLine },
 	{ "Tri", drawTri },
 	{ "Circle", drawCircle },
+	{ "OVL", drawOverlay },
 	{ nullptr, nullptr }
 };
+
+#ifdef ENABLE_NANCY_V5
+bool pushRecordDrawFunction(lua_State *L, const Common::String &name) {
+	// Nancy26's Overrides draw by themselves: this:DrawRect(rect, color)
+	if (!name.hasPrefix("Draw")) {
+		return false;
+	}
+
+	const Common::String shape = name.substr(4);
+	for (const luaL_Reg *function = kDrawFunctions; function->name; ++function) {
+		if (shape == function->name && shape != "OVL") {
+			lua_pushcfunction(L, function->func);
+			return true;
+		}
+	}
+
+	return false;
+}
+#endif
 
 // Save and Load, which keep what a script hands them in the saved game
 
@@ -610,13 +748,23 @@ enum SavedValueTag {
 	kSavedTrue		= 2,
 	kSavedNumber	= 3,
 	kSavedString	= 4,
-	kSavedTable		= 5
+	kSavedTable		= 5,
+	kSavedRect		= 6
 };
 
 static void writeSavedUint32(Common::Array<byte> &out, uint32 value) {
 	for (int i = 0; i < 4; ++i) {
 		out.push_back((byte)(value >> (8 * i)));
 	}
+}
+
+static void writeSavedNumber(Common::Array<byte> &out, double number) {
+	uint64 bits;
+	memcpy(&bits, &number, sizeof(bits));
+
+	out.push_back(kSavedNumber);
+	writeSavedUint32(out, (uint32)bits);
+	writeSavedUint32(out, (uint32)(bits >> 32));
 }
 
 // Packs the value at a stack index. Returns false for what can't be kept.
@@ -630,16 +778,9 @@ static bool writeSavedValue(lua_State *L, int index, Common::Array<byte> &out, i
 	case LUA_TBOOLEAN:
 		out.push_back(lua_toboolean(L, index) ? kSavedTrue : kSavedFalse);
 		return true;
-	case LUA_TNUMBER: {
-		const double number = lua_tonumber(L, index);
-		uint64 bits;
-		memcpy(&bits, &number, sizeof(bits));
-
-		out.push_back(kSavedNumber);
-		writeSavedUint32(out, (uint32)bits);
-		writeSavedUint32(out, (uint32)(bits >> 32));
+	case LUA_TNUMBER:
+		writeSavedNumber(out, lua_tonumber(L, index));
 		return true;
-	}
 	case LUA_TSTRING: {
 		size_t length;
 		const char *text = lua_tolstring(L, index, &length);
@@ -678,6 +819,35 @@ static bool writeSavedValue(lua_State *L, int index, Common::Array<byte> &out, i
 		out.push_back(kSavedTable);
 		writeSavedUint32(out, numPairs);
 		out.push_back(pairs);
+		return true;
+	}
+	case LUA_TUSERDATA: {
+		// The original's vectors are tables of their components, which get
+		// kept as such: Nancy25's StackingWin_SC reads them back with [1] and [2]
+		const ScriptVector *vector = testVector(L, index);
+		if (vector) {
+			out.push_back(kSavedTable);
+			writeSavedUint32(out, (uint32)vector->size);
+			for (int i = 0; i < vector->size; ++i) {
+				writeSavedNumber(out, i + 1);
+				writeSavedNumber(out, vector->v[i]);
+			}
+
+			return true;
+		}
+
+		// Of the other objects only rects can be kept, e.g. the parts of the
+		// screen Nancy23's photo manager gets handed
+		const ScriptRect *rect = testRect(L, index);
+		if (!rect) {
+			return false;
+		}
+
+		out.push_back(kSavedRect);
+		writeSavedUint32(out, (uint32)rect->left);
+		writeSavedUint32(out, (uint32)rect->top);
+		writeSavedUint32(out, (uint32)rect->right);
+		writeSavedUint32(out, (uint32)rect->bottom);
 		return true;
 	}
 	default:
@@ -737,16 +907,26 @@ static void readSavedValue(lua_State *L, const Common::Array<byte> &in, uint &po
 
 		break;
 	}
+	case kSavedRect: {
+		ScriptRect rect;
+		rect.left = (int32)readSavedUint32(in, pos);
+		rect.top = (int32)readSavedUint32(in, pos);
+		rect.right = (int32)readSavedUint32(in, pos);
+		rect.bottom = (int32)readSavedUint32(in, pos);
+		pushRect(L, rect);
+		break;
+	}
 	default:
 		lua_pushnil(L);
 		break;
 	}
 }
 
-// Save:Data(name, value)
+// Save:Data(name, value). A value left out counts as nil: Nancy24's
+// SoundSystem_SC forgets to pass one.
 static int saveData(lua_State *L) {
 	const char *name = luaL_checkstring(L, 2);
-	luaL_checkany(L, 3);
+	lua_settop(L, 3);
 
 	Common::Array<byte> packed;
 	if (!writeSavedValue(L, 3, packed, 0)) {
@@ -773,6 +953,49 @@ static int loadData(lua_State *L) {
 	return 1;
 }
 
+// Save:Attic(name, value) and Load:Attic(name), Nancy21: values that are kept
+// apart from the saved games. Only the scripts of Nancy22 use them, for playtest
+// statistics that the game logs only when a debug flag is set.
+static int saveAttic(lua_State *L) {
+	const char *name = luaL_checkstring(L, 2);
+	luaL_checkany(L, 3);
+
+	Common::Array<byte> packed;
+	if (!writeSavedValue(L, 3, packed, 0)) {
+		return luaL_error(L, "Save:Attic can only save tables, numbers, booleans, strings and nils");
+	}
+
+	g_nancy->_scriptAttic.setVal(name, packed);
+	return 0;
+}
+
+static int loadAttic(lua_State *L) {
+	const char *name = luaL_checkstring(L, 2);
+	if (!g_nancy->_scriptAttic.contains(name)) {
+		lua_pushnil(L);
+		return 1;
+	}
+
+	uint pos = 0;
+	readSavedValue(L, g_nancy->_scriptAttic[name], pos);
+	return 1;
+}
+
+// Save:GetScreenshotNames(), Nancy22: the names of the pictures the camera of
+// the cell phone took
+static int saveGetScreenshotNames(lua_State *L) {
+	const ScriptPictureData *pictures = (const ScriptPictureData *)NancySceneState.getPuzzleData(ScriptPictureData::getTag());
+
+	lua_createtable(L, pictures->pictures.size(), 0);
+	int index = 1;
+	for (const auto &picture : pictures->pictures) {
+		lua_pushstring(L, picture._key.c_str());
+		lua_rawseti(L, -2, index++);
+	}
+
+	return 1;
+}
+
 // Save:Game(name), which saves the game under a name of the scripts' choosing
 static int saveGame(lua_State *L) {
 	const char *name = luaL_checkstring(L, 2);
@@ -788,20 +1011,38 @@ static int saveGame(lua_State *L) {
 // Save:Screenshot(rect[, name]), Nancy21: keeps a picture of a part of the
 // viewport with the game, for the camera of the cell phone. Overlays show it
 // from the "LOADSAVE" tree. Gives the name of the picture, or an empty one when
-// it couldn't be taken.
+// it couldn't be taken. Nancy26 takes Save:Screenshot(rect[, width, height])
+// instead, and shrinks the picture to that size: the save screen shows the
+// whole scene in a small picture.
 static int saveScreenshot(lua_State *L) {
 	const ScriptRect &rect = checkRect(L, 2);
-	const Common::String name = lua_gettop(L) > 2 ? Common::String(luaL_checkstring(L, 3)) : Common::String::format("%u_OVL", g_system->getMillis());
+	const bool takesSize = g_nancy->getGameType() >= kGameTypeNancy26;
+	const int width = takesSize ? (int)luaL_optinteger(L, 3, 0) : 0;
+	const int height = takesSize ? (int)luaL_optinteger(L, 4, 0) : 0;
 
-	// The viewport as it was drawn last, before it got scaled onto the screen
-	const Graphics::ManagedSurface &image = g_nancy->_graphics->getGameImage();
+	// Nancy22 names the pictures it takes "<time>_SSPIC"
+	const char *suffix = g_nancy->getGameType() >= kGameTypeNancy22 ? "_SSPIC" : "_OVL";
+	const Common::String name = (!takesSize && lua_gettop(L) > 2) ? Common::String(luaL_checkstring(L, 3)) : Common::String::format("%u%s", g_system->getMillis(), suffix);
+
+	// The viewport as it was drawn last, before it got scaled onto the screen,
+	// or from Nancy26 on, as far as it is drawn when a Render function takes it
+	Graphics::ManagedSurface image;
+	g_nancy->_graphics->getDrawnGameImage(image);
 	Common::Rect area = NancySceneState.getViewport().convertViewportToScreen(rect.toRect());
 	area.clip(Common::Rect(image.w, image.h));
 
 	bool isTaken = false;
 	if (!area.isEmpty()) {
 		const Graphics::Surface part = image.rawSurface().getSubArea(area);
-		Graphics::Surface *picture = part.convertTo(Graphics::PixelFormat::createFormatRGB24());
+		Graphics::Surface *picture = nullptr;
+		if (width > 0 && height > 0 && (width != area.width() || height != area.height())) {
+			Graphics::Surface *scaled = part.scale(width, height, true);
+			picture = scaled->convertTo(Graphics::PixelFormat::createFormatRGB24());
+			scaled->free();
+			delete scaled;
+		} else {
+			picture = part.convertTo(Graphics::PixelFormat::createFormatRGB24());
+		}
 
 		Common::MemoryWriteStreamDynamic png(DisposeAfterUse::YES);
 		if (Image::writePNG(png, *picture)) {
@@ -823,14 +1064,17 @@ static int saveScreenshot(lua_State *L) {
 static const luaL_Reg kSaveFunctions[] = {
 	{ "__index", indexFunctions },
 	{ "Data", saveData },
+	{ "Attic", saveAttic },
 	{ "Game", saveGame },
 	{ "Screenshot", saveScreenshot },
+	{ "GetScreenshotNames", saveGetScreenshotNames },
 	{ nullptr, nullptr }
 };
 
 static const luaL_Reg kLoadFunctions[] = {
 	{ "__index", indexFunctions },
 	{ "Data", loadData },
+	{ "Attic", loadAttic },
 	{ nullptr, nullptr }
 };
 
@@ -839,10 +1083,6 @@ static const luaL_Reg kLoadFunctions[] = {
 static const char *const kSoundChannelType = "ND.SoundChannel";
 
 enum SoundChannelID {
-	kChannelFirstMusic		= 0,	// Theme
-	kChannelFirstAmbient	= 6,
-	kChannelFirstFX			= 14,
-	kChannelFirstVoice		= 24,
 	kNumSoundChannels		= 30,
 
 	// These stand for every channel of a kind
@@ -850,7 +1090,9 @@ enum SoundChannelID {
 	kChannelAllMusic		= 0x22,
 	kChannelAllFX			= 0x23,
 	kChannelAllAmbient		= 0x24,
-	kChannelAllVoice		= 0x25
+	kChannelAllVoice		= 0x25,
+	kChannelAllGlobal		= 0x26,		// Nancy22
+	kChannelAllExceptTheme	= 0xFFFE	// Nancy21; -2 in the original
 };
 
 struct SoundChannelName {
@@ -869,50 +1111,189 @@ static const SoundChannelName kSoundChannelNames[] = {
 	{ "AllAmbient", kChannelAllAmbient }, { "AllVoice", kChannelAllVoice }
 };
 
+// Nancy22 has five channels for the sounds that go on from scene to scene, and
+// no more music or voice channels with numbers
+static const SoundChannelName kNancy22SoundChannelNames[] = {
+	{ "Theme", 0 }, { "UIMusic", 1 }, { "EngineMusic", 2 },
+	{ "Global1", 3 }, { "Global2", 4 }, { "Global3", 5 }, { "Global4", 6 }, { "Global5", 7 },
+	{ "Ambient1", 8 }, { "Ambient2", 9 }, { "Ambient3", 10 }, { "Ambient4", 11 },
+	{ "Ambient5", 12 }, { "Ambient6", 13 }, { "Ambient7", 14 }, { "Ambient8", 15 },
+	{ "FX1", 16 }, { "FX2", 17 }, { "FX3", 18 }, { "FX4", 19 }, { "FX5", 20 }, { "FX6", 21 }, { "FX7", 22 }, { "FX8", 23 },
+	{ "UIFX", 24 }, { "EngineFX", 25 },
+	{ "NPCVoice", 26 }, { "PlayerVoice", 27 }, { "UIVoice", 28 }, { "EngineVoice", 29 },
+	{ "All", kChannelAll }, { "AllExceptTheme", kChannelAllExceptTheme }, { "AllMusic", kChannelAllMusic },
+	{ "AllFX", kChannelAllFX }, { "AllAmbient", kChannelAllAmbient }, { "AllVoice", kChannelAllVoice },
+	{ "AllGlobal", kChannelAllGlobal }
+};
+
+// Nancy24 has three Global channels instead of five, and channels of its own
+// for the sounds of the inventory and the phone
+static const SoundChannelName kNancy24SoundChannelNames[] = {
+	{ "Theme", 0 }, { "UIMusic", 1 }, { "EngineMusic", 2 },
+	{ "Global1", 3 }, { "Global2", 4 }, { "Global3", 5 },
+	{ "Ambient1", 6 }, { "Ambient2", 7 }, { "Ambient3", 8 }, { "Ambient4", 9 },
+	{ "Ambient5", 10 }, { "Ambient6", 11 }, { "Ambient7", 12 }, { "Ambient8", 13 },
+	{ "FX1", 14 }, { "FX2", 15 }, { "FX3", 16 }, { "FX4", 17 }, { "FX5", 18 }, { "FX6", 19 }, { "FX7", 20 }, { "FX8", 21 },
+	{ "InvFX", 22 }, { "PhoneFX", 23 }, { "UIFX", 24 }, { "EngineFX", 25 },
+	{ "NPCVoice", 26 }, { "PlayerVoice", 27 }, { "UIVoice", 28 }, { "EngineVoice", 29 },
+	{ "All", kChannelAll }, { "AllExceptTheme", kChannelAllExceptTheme }, { "AllMusic", kChannelAllMusic },
+	{ "AllFX", kChannelAllFX }, { "AllAmbient", kChannelAllAmbient }, { "AllVoice", kChannelAllVoice },
+	{ "AllGlobal", kChannelAllGlobal }
+};
+
+// Nancy27 has no global channels, and has three more phone channels
+static const SoundChannelName kNancy27SoundChannelNames[] = {
+	{ "Theme", 0 }, { "UIMusic", 1 }, { "EngineMusic", 2 },
+	{ "Ambient1", 3 }, { "Ambient2", 4 }, { "Ambient3", 5 }, { "Ambient4", 6 },
+	{ "Ambient5", 7 }, { "Ambient6", 8 }, { "Ambient7", 9 }, { "Ambient8", 10 },
+	{ "FX1", 11 }, { "FX2", 12 }, { "FX3", 13 }, { "FX4", 14 }, { "FX5", 15 }, { "FX6", 16 }, { "FX7", 17 }, { "FX8", 18 },
+	{ "InvFX", 19 }, { "PhoneFX", 20 }, { "PhoneFX2", 21 }, { "PhoneFX3", 22 }, { "PhoneFX4", 23 }, { "UIFX", 24 }, { "EngineFX", 25 },
+	{ "NPCVoice", 26 }, { "PlayerVoice", 27 }, { "UIVoice", 28 }, { "EngineVoice", 29 },
+	{ "All", kChannelAll }, { "AllExceptTheme", kChannelAllExceptTheme }, { "AllMusic", kChannelAllMusic },
+	{ "AllFX", kChannelAllFX }, { "AllAmbient", kChannelAllAmbient }, { "AllVoice", kChannelAllVoice }
+};
+
+// Where the channels of each kind begin, and the end of the last kind
+struct SoundChannelLayout {
+	uint16 firstMusic;
+	uint16 firstGlobal;
+	uint16 firstAmbient;
+	uint16 firstFX;
+	uint16 firstVoice;
+	uint16 end;
+};
+
+static const SoundChannelLayout kSoundChannelLayout = { 0, 6, 6, 14, 24, kNumSoundChannels };
+static const SoundChannelLayout kNancy22SoundChannelLayout = { 0, 3, 8, 16, 26, kNumSoundChannels };
+static const SoundChannelLayout kNancy24SoundChannelLayout = { 0, 3, 6, 14, 26, kNumSoundChannels };
+static const SoundChannelLayout kNancy27SoundChannelLayout = { 0, 3, 3, 11, 26, kNumSoundChannels };
+
+static const SoundChannelLayout &getSoundChannelLayout() {
+	if (g_nancy->getGameType() <= kGameTypeNancy21) {
+		return kSoundChannelLayout;
+	} else if (g_nancy->getGameType() <= kGameTypeNancy23) {
+		return kNancy22SoundChannelLayout;
+	} else if (g_nancy->getGameType() <= kGameTypeNancy26) {
+		return kNancy24SoundChannelLayout;
+	}
+
+	return kNancy27SoundChannelLayout;
+}
+
 void pushSoundChannel(lua_State *L, uint16 channel) {
 	pushValue(L, kSoundChannelType, channel);
 }
 
+static bool findSoundChannel(const char *name, uint16 &result);
+
+// Nancy26 also names channels with strings ("UIFX")
 uint16 checkSoundChannel(lua_State *L, int index) {
+	uint16 channel = 0;
+	if (lua_type(L, index) == LUA_TSTRING && findSoundChannel(lua_tostring(L, index), channel)) {
+		return channel;
+	}
+
 	return *(const uint16 *)checkUserData(L, index, kSoundChannelType);
 }
 
-static int soundChannelIndex(lua_State *L) {
-	const char *name = luaL_checkstring(L, 2);
+bool isVoiceChannel(uint16 channel) {
+	const SoundChannelLayout &layout = getSoundChannelLayout();
+	return channel >= layout.firstVoice && channel < layout.end;
+}
 
-	for (const SoundChannelName &channel : kSoundChannelNames) {
-		if (scumm_stricmp(channel.name, name) == 0) {
-			pushSoundChannel(L, channel.channel);
-			return 1;
+bool isVoicePlaying() {
+	const SoundChannelLayout &layout = getSoundChannelLayout();
+	for (uint16 channel = layout.firstVoice; channel < layout.end; ++channel) {
+		if (g_nancy->_sound->isSoundPlaying(channel)) {
+			return true;
 		}
 	}
 
-	lua_pushnil(L);
+	return false;
+}
+
+static bool findSoundChannel(const char *name, uint16 &result) {
+	if (g_nancy->getGameType() >= kGameTypeNancy27) {
+		for (const SoundChannelName &channel : kNancy27SoundChannelNames) {
+			if (scumm_stricmp(channel.name, name) == 0) {
+				result = channel.channel;
+				return true;
+			}
+		}
+	} else if (g_nancy->getGameType() >= kGameTypeNancy24) {
+		for (const SoundChannelName &channel : kNancy24SoundChannelNames) {
+			if (scumm_stricmp(channel.name, name) == 0) {
+				result = channel.channel;
+				return true;
+			}
+		}
+	} else if (g_nancy->getGameType() >= kGameTypeNancy22) {
+		for (const SoundChannelName &channel : kNancy22SoundChannelNames) {
+			if (scumm_stricmp(channel.name, name) == 0) {
+				result = channel.channel;
+				return true;
+			}
+		}
+	} else {
+		for (const SoundChannelName &channel : kSoundChannelNames) {
+			if (scumm_stricmp(channel.name, name) == 0) {
+				result = channel.channel;
+				return true;
+			}
+		}
+
+		if (g_nancy->getGameType() >= kGameTypeNancy21 && scumm_stricmp(name, "AllExceptTheme") == 0) {
+			result = kChannelAllExceptTheme;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+static int soundChannelIndex(lua_State *L) {
+	uint16 channel = 0;
+	if (findSoundChannel(luaL_checkstring(L, 2), channel)) {
+		pushSoundChannel(L, channel);
+	} else {
+		lua_pushnil(L);
+	}
+
 	return 1;
 }
 
 // The channels a channel object stands for
 static void getChannelRange(uint16 channel, uint16 &first, uint16 &last) {
+	const SoundChannelLayout &layout = getSoundChannelLayout();
+
 	switch (channel) {
 	case kChannelAll:
 		first = 0;
-		last = kNumSoundChannels - 1;
+		last = layout.end - 1;
+		break;
+	case kChannelAllExceptTheme:
+		first = 1;
+		last = layout.end - 1;
 		break;
 	case kChannelAllMusic:
-		first = kChannelFirstMusic;
-		last = kChannelFirstAmbient - 1;
+		first = layout.firstMusic;
+		last = layout.firstGlobal - 1;
+		break;
+	case kChannelAllGlobal:
+		first = layout.firstGlobal;
+		last = layout.firstAmbient - 1;
 		break;
 	case kChannelAllAmbient:
-		first = kChannelFirstAmbient;
-		last = kChannelFirstFX - 1;
+		first = layout.firstAmbient;
+		last = layout.firstFX - 1;
 		break;
 	case kChannelAllFX:
-		first = kChannelFirstFX;
-		last = kChannelFirstVoice - 1;
+		first = layout.firstFX;
+		last = layout.firstVoice - 1;
 		break;
 	case kChannelAllVoice:
-		first = kChannelFirstVoice;
-		last = kNumSoundChannels - 1;
+		first = layout.firstVoice;
+		last = layout.end - 1;
 		break;
 	default:
 		first = last = channel;
@@ -981,12 +1362,21 @@ static const luaL_Reg kSoundChannelFunctions[] = {
 	{ nullptr, nullptr }
 };
 
+// Sound:Duration(file), Nancy24: how many seconds a sound file plays, or 0 for
+// one that doesn't exist
+static int soundDuration(lua_State *L) {
+	const Audio::Timestamp length = g_nancy->_sound->getFileLength(luaL_checkstring(L, 2));
+	lua_pushnumber(L, (double)length.totalNumberOfFrames() / length.framerate());
+	return 1;
+}
+
 static const luaL_Reg kSoundFunctions[] = {
 	{ "__index", indexFunctions },
 	{ "Stop", soundStop },
 	{ "SetVolume", soundSetVolume },
 	{ "GetVolume", soundGetVolume },
 	{ "IsPlaying", soundIsPlaying },
+	{ "Duration", soundDuration },
 	{ nullptr, nullptr }
 };
 
@@ -1060,12 +1450,30 @@ static int sceneInclude(lua_State *L) {
 }
 
 // Scene:ChangeScene(stream, scene), which goes to the first frame of the scene
+// Nancy26 also takes Scene:ChangeScene(scene), (scene, frame) and
+// (stream, scene, frame); no stream stands for the one of the scene
 static int sceneChangeScene(lua_State *L) {
 	SceneContext *context = checkContext(L);
-	const char *streamName = luaL_checkstring(L, 2);
-	const char *sceneName = luaL_checkstring(L, 3);
+	const int top = lua_gettop(L);
 
-	context->changeScene(streamName, sceneName, 0);
+	Common::String streamName;
+	Common::String sceneName;
+	int frame = 0;
+
+	if (top == 2 && g_nancy->getGameType() >= kGameTypeNancy26) {
+		sceneName = luaL_checkstring(L, 2);
+	} else if (top == 3 && lua_type(L, 3) == LUA_TNUMBER) {
+		sceneName = luaL_checkstring(L, 2);
+		frame = luaL_checkint(L, 3);
+	} else {
+		streamName = luaL_checkstring(L, 2);
+		sceneName = luaL_checkstring(L, 3);
+		if (top >= 4) {
+			frame = luaL_checkint(L, 4);
+		}
+	}
+
+	context->changeScene(streamName, sceneName, (uint16)frame);
 	lua_pushboolean(L, true);
 	return 1;
 }
@@ -1115,8 +1523,26 @@ static int sceneBeginStream(lua_State *L) {
 		// TODO: "restartParent" and "isUI", which no script sets
 		readField(L, 2, "captureInput", flags.capturesInput);
 
-		// A stream is a step closer than the one that began it
-		flags.zOffset = 1;
+		// Before Nancy24, a stream is a step closer than the one that began it.
+		// From then on, a stream that keeps the input goes 10 in front of the
+		// frontmost stream, which is more than the z of a record spans, and any
+		// other one shares the z of the stream that began it.
+		if (g_nancy->getGameType() >= kGameTypeNancy26) {
+			// Nancy26 places streams by a z of their own
+#ifdef ENABLE_NANCY_V5
+			readField(L, 2, "z", flags.z);
+			readField(L, 2, "inVP", flags.isInViewport);
+			readField(L, 2, "save", flags.isSaved);
+			if (flags.capturesInput) {
+				flags.z = NancySceneState.getStreams().getCapturingZ(flags.z, flags.isInViewport);
+			}
+#endif
+		} else if (g_nancy->getGameType() < kGameTypeNancy24) {
+			flags.zOffset = 1;
+		} else if (flags.capturesInput) {
+			const State::SceneStreamManager &streams = NancySceneState.getStreams();
+			flags.zOffset = streams.getFrontZOffset() + 10 - streams.getRunningZOffset();
+		}
 	} else {
 		name = luaL_checkstring(L, 2);
 		sceneName = luaL_checkstring(L, 3);
@@ -1158,6 +1584,14 @@ static int sceneTransferChild(lua_State *L) {
 		checkRecord(L, 2)->setParentNode(nullptr);
 	}
 
+	return 0;
+}
+
+// Scene:Attach(record), Nancy22: puts a record back under the scene, out of
+// the Transformer record it was attached to
+static int sceneAttach(lua_State *L) {
+	checkContext(L);
+	checkRecord(L, 2)->setParentNode(nullptr);
 	return 0;
 }
 
@@ -1210,19 +1644,6 @@ static int sceneRecords(lua_State *L) {
 	return 1;
 }
 
-static const luaL_Reg kSceneFunctions[] = {
-	{ "__index", sceneIndex },
-	{ "__newindex", sceneNewIndex },
-	{ "ARs", sceneRecords },
-	{ "Include", sceneInclude },
-	{ "BeginStream", sceneBeginStream },
-	{ "EndStream", sceneEndStream },
-	{ "ChangeScene", sceneChangeScene },
-	{ "GraphNode", sceneGraphNode },
-	{ "TransferChild", sceneTransferChild },
-	{ nullptr, nullptr }
-};
-
 // Streams
 
 // Streams.environment is the environment of the main stream's scene
@@ -1244,10 +1665,25 @@ static int streamsGetScene(lua_State *L) {
 	return 1;
 }
 
+// Streams:GetTime(stream), Nancy23: how long the scene of the stream has been
+// running, or -1 when there is none
+static int streamsGetTime(lua_State *L) {
+	lua_pushnumber(L, NancySceneState.getStreams().getSceneTime(luaL_checkstring(L, 2)));
+	return 1;
+}
+
+// Streams:GetFrame(stream), Nancy24: the frame of the scene of the stream, or
+// -1 when there is none
+static int streamsGetFrame(lua_State *L) {
+	lua_pushinteger(L, NancySceneState.getStreams().getSceneFrame(luaL_checkstring(L, 2)));
+	return 1;
+}
+
 // Streams:GetStreams(withUI), Nancy21: the names of the running streams, the
 // main stream among them. The one of the UI is only in there when asked for.
 static int streamsGetStreams(lua_State *L) {
-	const bool withUI = lua_toboolean(L, 2) != 0;
+	// Nancy26 lists them all
+	const bool withUI = lua_toboolean(L, 2) != 0 || g_nancy->getGameType() >= kGameTypeNancy26;
 
 	Common::Array<Common::String> names;
 	NancySceneState.getStreams().getStreamNames(names, withUI);
@@ -1283,10 +1719,36 @@ static int streamsSetTransform(lua_State *L) {
 static const luaL_Reg kStreamsFunctions[] = {
 	{ "__index", streamsIndex },
 	{ "GetScene", streamsGetScene },
+	{ "GetTime", streamsGetTime },
+	{ "GetFrame", streamsGetFrame },
 	{ "GetStreams", streamsGetStreams },
 	{ "GetZ", streamsGetZ },
 	{ "GetTransform", streamsGetTransform },
 	{ "SetTransform", streamsSetTransform },
+	{ nullptr, nullptr }
+};
+
+static const luaL_Reg kSceneFunctions[] = {
+	{ "__index", sceneIndex },
+	{ "__newindex", sceneNewIndex },
+	{ "ARs", sceneRecords },
+	{ "Include", sceneInclude },
+	{ "BeginStream", sceneBeginStream },
+	{ "EndStream", sceneEndStream },
+	{ "ChangeScene", sceneChangeScene },
+	{ "GraphNode", sceneGraphNode },
+	{ "TransferChild", sceneTransferChild },
+	// Available since Nancy19, but used by game scripts from Nancy22 onwards
+	{ "Change", sceneChangeScene },
+	{ "Attach", sceneAttach },
+	// Nancy25 moved the Streams functions here, with "Stream" in their names
+	{ "GetStreamScene", streamsGetScene },
+	{ "GetStreamTime", streamsGetTime },
+	{ "GetStreamFrame", streamsGetFrame },
+	{ "GetStreams", streamsGetStreams },
+	{ "GetStreamZ", streamsGetZ },
+	{ "GetStreamTransform", streamsGetTransform },
+	{ "SetStreamTransform", streamsSetTransform },
 	{ nullptr, nullptr }
 };
 
@@ -1307,15 +1769,23 @@ static bool deliverMessage(lua_State *L, const char *actionName, UI::NDUI::Actio
 	message.text = action.text;
 	message.value = action.value;
 
-	const SceneContext *context = LuaState::getContext(L);
+	SceneContext *context = LuaState::getContext(L);
 	if (context && !context->getStreamName().equalsIgnoreCase(State::SceneStreamManager::getUIStreamName())) {
 		message.sender = context->getSceneName();
 	} else {
 		message.sender = action.sender;
 	}
 
+	// A scene whose script is running for the first time doesn't belong to its
+	// stream yet, but its records get messages too: Nancy23's ManagerMain_SC
+	// makes the managers, then includes scripts that call on them
 	bool wasTaken = false;
-	if (!NancySceneState.receiveMessage(message, wasTaken) && ui) {
+	bool hasReceiver = context && context->isLoading() && context->receiveMessage(message, wasTaken);
+	if (!wasTaken) {
+		hasReceiver |= NancySceneState.receiveMessage(message, wasTaken);
+	}
+
+	if (!hasReceiver && ui) {
 		ui->takeAction(action);
 	}
 
@@ -1436,11 +1906,75 @@ static int playerAddJournalEntry(lua_State *L) {
 	return 0;
 }
 
-// Player:AddTask(text, flag[, character]): the task can be checked off once the flag is set
+static void setTaskCompletion(lua_State *L, int index, uint character, const Common::String &text) {
+	SceneContext *context = LuaState::getContext(L);
+	if (!context) {
+		return;
+	}
+
+	Common::Array<State::Scene::TaskCompletion> &completions = NancySceneState.getTaskCompletions();
+	for (uint i = 0; i < completions.size(); ++i) {
+		const State::Scene::TaskCompletion &completion = completions[i];
+		if (completion.character == character && completion.text.equalsIgnoreCase(text)) {
+			luaL_unref(completion.context->getLua(), LUA_REGISTRYINDEX, completion.ref);
+			completions.remove_at(i);
+			break;
+		}
+	}
+
+	State::Scene::TaskCompletion completion;
+	completion.context = context;
+	completion.character = character;
+	completion.text = text;
+	lua_pushvalue(L, index);
+	completion.ref = luaL_ref(L, LUA_REGISTRYINDEX);
+	completions.push_back(completion);
+}
+
+bool isTaskComplete(const Common::String &text) {
+	const uint character = g_nancy->getPlayerCharacter();
+	for (const State::Scene::TaskCompletion &completion : NancySceneState.getTaskCompletions()) {
+		if (completion.character != character || !completion.text.equalsIgnoreCase(text)) {
+			continue;
+		}
+
+		lua_State *L = completion.context->getLua();
+		lua_rawgeti(L, LUA_REGISTRYINDEX, completion.ref);
+		if (!LuaState::call(L, 0, 1, "Error in the completion function of a task")) {
+			return false;
+		}
+
+		const bool isComplete = lua_toboolean(L, -1) != 0;
+		lua_pop(L, 1);
+		return isComplete;
+	}
+
+	return true;
+}
+
+void forgetTaskCompletions(SceneContext *context) {
+	Common::Array<State::Scene::TaskCompletion> &completions = NancySceneState.getTaskCompletions();
+	for (uint i = 0; i < completions.size();) {
+		if (completions[i].context == context) {
+			completions.remove_at(i);
+		} else {
+			++i;
+		}
+	}
+}
+
+// Player:AddTask(text, flag[, character]): the task can be checked off once the
+// flag is set. Nancy24 gives a function that says whether it is done instead.
 static int playerAddTask(lua_State *L) {
 	const Common::String text = luaL_checkstring(L, 2);
-	const Common::String flagName = luaL_checkstring(L, 3);
 	const uint character = checkCharacter(L, 4);
+
+	Common::String flagName;
+	if (lua_isfunction(L, 3)) {
+		setTaskCompletion(L, 3, character, text);
+	} else {
+		flagName = luaL_checkstring(L, 3);
+	}
 
 	ScriptJournalData *data = getJournalData(character);
 	if (!data) {
@@ -1486,6 +2020,42 @@ static int playerLoadTaskFlag(lua_State *L) {
 	return 0;
 }
 
+// Player:LoadTaskCompletion(text, function[, character]), Nancy24: gives a task
+// the function that says whether it is done, as the task list does once it
+// gets loaded. A task that was checked off but isn't done anymore gets unchecked.
+static int playerLoadTaskCompletion(lua_State *L) {
+	const Common::String text = luaL_checkstring(L, 2);
+	if (!lua_isfunction(L, 3)) {
+		return luaL_argerror(L, 3, "Completion argument must be a function");
+	}
+
+	lua_settop(L, 3);
+	const uint character = checkCharacter(L, 4);
+	setTaskCompletion(L, 3, character, text);
+
+	TasklistData *tasklistData = (TasklistData *)NancySceneState.getPuzzleData(TasklistData::getTag());
+	if (!tasklistData || character != g_nancy->getPlayerCharacter()) {
+		return 0;
+	}
+
+	for (uint i = 0; i < tasklistData->checkedEntries.size(); ++i) {
+		if (tasklistData->checkedEntries[i].equalsIgnoreCase(text)) {
+			if (!isTaskComplete(text)) {
+				tasklistData->checkedEntries.remove_at(i);
+
+				UI::NDUI::Manager *ui = NancySceneState.getNDUI();
+				if (ui) {
+					ui->takeAction(UI::NDUI::kActionSetValue, text, 0.0);
+				}
+			}
+
+			break;
+		}
+	}
+
+	return 0;
+}
+
 void showPlayerEntries() {
 	UI::NDUI::Manager *ui = NancySceneState.getNDUI();
 	const uint character = g_nancy->getPlayerCharacter();
@@ -1524,6 +2094,24 @@ static int playerIndex(lua_State *L) {
 		const PCUI *players = GetEngineData(PCUI);
 		const uint character = g_nancy->getPlayerCharacter();
 		lua_pushstring(L, players && character < players->characters.size() ? players->characters[character].name.c_str() : "");
+		return 1;
+	}
+
+	// Nancy22: the stream of the item that is being looked at, or ""
+	if (key == "curViewableStream") {
+		Common::String streamName;
+		const INVD *items = GetEngineData(INVD);
+		if (items) {
+			for (const INVD::Item &item : items->items) {
+				if (item.kind == UI::NDUI::InvButton::kItemView &&
+						NancySceneState.getStreams().isRunning(UI::NDUI::InvButton::getStreamName(item.name))) {
+					streamName = UI::NDUI::InvButton::getStreamName(item.name);
+					break;
+				}
+			}
+		}
+
+		lua_pushstring(L, streamName.c_str());
 		return 1;
 	}
 
@@ -1587,11 +2175,17 @@ static const luaL_Reg kPlayerFunctions[] = {
 	{ "AddJournalEntry", playerAddJournalEntry },
 	{ "AddTask", playerAddTask },
 	{ "LoadTaskFlag", playerLoadTaskFlag },
+	{ "LoadTaskCompletion", playerLoadTaskCompletion },
 	{ nullptr, nullptr }
 };
 
 bool findText(const Common::String &key, Common::String &text) {
 	static const char *const kTableNames[] = { "AUTOTEXT", "CONVO" };
+
+	// Nancy25 has an autotext entry for the empty key, which means no text
+	if (key.empty()) {
+		return false;
+	}
 
 	for (const char *tableName : kTableNames) {
 		const CVTX *table = (const CVTX *)g_nancy->getEngineData(tableName);
@@ -1628,7 +2222,10 @@ static const MessageActionName kMessageActionNames[] = {
 	{ "toggleCollapsed", UI::NDUI::kActionToggleCollapsed },
 	{ "getValue", UI::NDUI::kActionQuery },
 	{ "showItem", UI::NDUI::kActionShowItem },
-	{ "hideItem", UI::NDUI::kActionHideItem }
+	{ "hideItem", UI::NDUI::kActionHideItem },
+	{ "cycleFocus", UI::NDUI::kActionCycleFocus },
+	{ "beginFlash", UI::NDUI::kActionBeginFlash },
+	{ "endFlash", UI::NDUI::kActionEndFlash }
 };
 
 // Message:Send(action, target[, value[, text[, isTextKey]]])
@@ -1717,9 +2314,14 @@ static const luaL_Reg kViewportFunctions[] = {
 	{ nullptr, nullptr }
 };
 
-// Log:Write(text)
+// Log:Write(text), or from Nancy26 on, Log:Write(location, text)
 static int logWrite(lua_State *L) {
-	debugC(1, kDebugScene, "Script: %s", luaL_checkstring(L, 2));
+	if (lua_gettop(L) >= 3) {
+		debugC(1, kDebugScene, "Script: %s: %s", luaL_checkstring(L, 2), luaL_checkstring(L, 3));
+	} else {
+		debugC(1, kDebugScene, "Script: %s", luaL_checkstring(L, 2));
+	}
+
 	return 0;
 }
 
@@ -1745,12 +2347,70 @@ static int logClear(lua_State *L) {
 	return 0;
 }
 
+// Log:ShowWarning(text), Nancy22: a warning the original shows in its debug output
+static int logShowWarning(lua_State *L) {
+	debugC(1, kDebugScene, "Script warning: %s", luaL_checkstring(L, 2));
+	return 0;
+}
+
+// Log:AddManager(name, function), Nancy22: a function that describes a manager,
+// which the original shows in its cheat dialog, and list_managers prints here
+static int logAddManager(lua_State *L) {
+	const char *name = luaL_checkstring(L, 2);
+	SceneContext *context = LuaState::getContext(L);
+	if (!context) {
+		return luaL_error(L, "Tried to add a manager from a non-scene Lua environment");
+	}
+
+	luaL_checktype(L, 3, LUA_TFUNCTION);
+	lua_settop(L, 3);
+	if (!context->addManager(name)) {
+		return luaL_error(L, "Manager name %s already taken", name);
+	}
+
+	return 0;
+}
+
 static const luaL_Reg kLogFunctions[] = {
 	{ "__index", indexFunctions },
 	{ "Write", logWrite },
 	{ "Assert", logAssert },
 	{ "Watch", logWatch },
 	{ "Clear", logClear },
+	{ "ShowWarning", logShowWarning },
+	{ "AddManager", logAddManager },
+	{ nullptr, nullptr }
+};
+
+// UI, Nancy19: makes and takes away the controls of the panels. The scripts of
+// a panel make the controls that come from a template themselves. Only the
+// scripts of Nancy22 use it, e.g. for the responses of the conversations.
+
+// UI:CreateObject(panel, name, template[, loadName[, ...]]), which gives whether
+// the control was made
+static int uiCreateObject(lua_State *L) {
+	const char *parentName = luaL_checkstring(L, 2);
+	const char *name = luaL_checkstring(L, 3);
+	const char *templateName = luaL_checkstring(L, 4);
+
+	UI::NDUI::Manager *ui = NancySceneState.getNDUI();
+	lua_pushboolean(L, ui && ui->createObject(name, templateName, parentName));
+	return 1;
+}
+
+// UI:DestroyObject(name)
+static int uiDestroyObject(lua_State *L) {
+	const char *name = luaL_checkstring(L, 2);
+
+	UI::NDUI::Manager *ui = NancySceneState.getNDUI();
+	lua_pushboolean(L, ui && ui->destroyObject(name));
+	return 1;
+}
+
+static const luaL_Reg kUIFunctions[] = {
+	{ "__index", indexFunctions },
+	{ "CreateObject", uiCreateObject },
+	{ "DestroyObject", uiDestroyObject },
 	{ nullptr, nullptr }
 };
 
@@ -1787,16 +2447,42 @@ static int autotextIndex(lua_State *L) {
 	return 1;
 }
 
+// Autotext:ShowCC(key[, show]) puts up the text of a key as the caption, and gives
+// a number for it that goes up with every caption; -1 when there is no such text.
+// Only Nancy22 calls it, always with show set.
+static int autotextShowCC(lua_State *L) {
+	static int numShown = 0;
+
+	const char *key = luaL_checkstring(L, 2);
+	Common::String text;
+	if (!findText(key, text)) {
+		lua_pushinteger(L, -1);
+		return 1;
+	}
+
+	UI::NDUI::Manager *ui = NancySceneState.getNDUI();
+	if (ui) {
+		ui->setCaption(text);
+	}
+
+	lua_pushinteger(L, ++numShown);
+	return 1;
+}
+
 static const luaL_Reg kAutotextFunctions[] = {
 	{ "__index", autotextIndex },
+	{ "ShowCC", autotextShowCC },
 	{ "RemoveCC", autotextRemoveCC },
 	{ nullptr, nullptr }
 };
 
-// TODO: Autotext:ShowCC, the Generics and UIMgr objects, and Log:WriteAll
+// TODO: The Generics and UIMgr objects, and Log:WriteAll
 void registerGameAPI(lua_State *L) {
 	registerGlobal(L, "Flags", "ND.Flags", kFlagsFunctions);
 	registerGlobal(L, "VarTable", "ND.VarTable", kVarTableFunctions);
+	if (g_nancy->getGameType() >= kGameTypeNancy1New) {
+		registerGlobal(L, "StrTable", "ND.StrTable", kStrTableFunctions);
+	}
 
 	registerGlobal(L, "Z", "ND.ZHelper", kZFunctions);
 	luaL_getmetatable(L, "ND.ZHelper");
@@ -1820,11 +2506,20 @@ void registerGameAPI(lua_State *L) {
 
 	registerGlobal(L, "Scene", "ND.Scene", kSceneFunctions);
 	registerGlobal(L, "Autotext", "ND.Autotext", kAutotextFunctions);
-	registerGlobal(L, "Streams", "ND.Streams", kStreamsFunctions);
-	luaL_getmetatable(L, "ND.Streams");
-	lua_pushstring(L, State::SceneStreamManager::getMainStreamName());
-	lua_setfield(L, -2, "mainName");
+	// What starts a new line in a text
+	luaL_getmetatable(L, "ND.Autotext");
+	lua_pushstring(L, "<n>");
+	lua_setfield(L, -2, "newline");
 	lua_pop(L, 1);
+	// Nancy25 has no Streams object, its functions are in Scene and Game
+	if (g_nancy->getGameType() < kGameTypeNancy25) {
+		registerGlobal(L, "Streams", "ND.Streams", kStreamsFunctions);
+		luaL_getmetatable(L, "ND.Streams");
+		lua_pushstring(L, State::SceneStreamManager::getMainStreamName());
+		lua_setfield(L, -2, "mainName");
+		lua_pop(L, 1);
+	}
+
 	registerGlobal(L, "Player", "ND.CurPlayer", kPlayerFunctions);
 	registerGlobal(L, "Message", "ND.Message", kMessageFunctions);
 	registerGlobal(L, "Viewport", "ND.Viewport", kViewportFunctions);
@@ -1837,6 +2532,7 @@ void registerGameAPI(lua_State *L) {
 	registerGlobal(L, "Save", "ND.Save", kSaveFunctions);
 	registerGlobal(L, "Load", "ND.Load", kLoadFunctions);
 	registerGlobal(L, "Log", "ND.Log", kLogFunctions);
+	registerGlobal(L, "UI", "ND.UIMgr", kUIFunctions);
 }
 
 } // End of namespace Script

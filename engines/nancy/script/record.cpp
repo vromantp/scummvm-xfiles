@@ -21,6 +21,8 @@
 
 #include "common/algorithm.h"
 
+#include "engines/nancy/nancy.h"
+
 #include "engines/nancy/script/api.h"
 #include "engines/nancy/script/graphnode.h"
 #include "engines/nancy/script/luabind.h"
@@ -28,7 +30,13 @@
 #include "engines/nancy/script/record.h"
 #include "engines/nancy/script/records.h"
 #include "engines/nancy/script/scenecontext.h"
+#include "engines/nancy/script/transformer.h"
 #include "engines/nancy/script/types.h"
+
+#ifdef ENABLE_NANCY_V5
+#include "engines/nancy/script/v5/recordnode.h"
+#include "engines/nancy/script/v5/streamtree.h"
+#endif
 
 namespace Nancy {
 namespace Script {
@@ -38,9 +46,73 @@ static const char *const kRecordMarker = "__record";
 
 Record::Record(SceneContext &context, const char *typeName) :
 		_context(context),
-		_typeName(typeName) {}
+		_typeName(typeName) {
+#ifdef ENABLE_NANCY_V5
+	if (g_nancy->getGameType() >= kGameTypeNancy26) {
+		createNodeState();
+	}
+#endif
+}
 
-Record::~Record() {}
+Record::~Record() {
+#ifdef ENABLE_NANCY_V5
+	destroyNodeState();
+#endif
+
+	delete _stages;
+}
+
+bool Record::isActive() const {
+#ifdef ENABLE_NANCY_V5
+	if (_nodeState) {
+		return _nodeState->isActive();
+	}
+#endif
+
+	return _isActive && !_isDone;
+}
+
+// What the records draw with. Nancy26 has its own, in v5/recordnode.cpp.
+#ifndef ENABLE_NANCY_V5
+bool Record::isShown() const {
+	return isActive();
+}
+
+Common::Rect Record::getScreenClip() const {
+	return Common::Rect();
+}
+
+uint32 Record::applyAlpha(uint32 modColor) const {
+	return modColor;
+}
+
+uint32 Record::takeModColor(uint32 modColor) {
+	return modColor;
+}
+
+bool Record::hasAlphaChanged() const {
+	return false;
+}
+
+void Record::onStagesChanged() {
+}
+#endif
+
+BlendStages &Record::getStages() {
+	if (!_stages) {
+		_stages = new BlendStages(*this);
+	}
+
+	return *_stages;
+}
+
+ScriptMatrix Record::getLocalTransform() const {
+	if (_stages && !_stages->isEmpty()) {
+		return _stages->getTransform();
+	}
+
+	return _transform;
+}
 
 lua_State *Record::getLua() const {
 	return _context.getLua();
@@ -80,6 +152,15 @@ void Record::storeValue(const char *name) {
 	lua_pop(L, 1);
 }
 
+void Record::clean() {
+	lua_State *L = getLua();
+	lua_pushlightuserdata(L, this);
+	lua_pushnil(L);
+	lua_rawset(L, LUA_REGISTRYINDEX);
+
+	_hasActiveFunction = false;
+}
+
 void Record::create(int tableIndex) {
 	lua_State *L = getLua();
 
@@ -98,9 +179,20 @@ void Record::create(int tableIndex) {
 	readField(L, tableIndex, "z", _z);
 	readField(L, tableIndex, "scriptOwns", _isScriptOwned);
 
+#ifdef ENABLE_NANCY_V5
+	if (_nodeState) {
+		readNodeFields(tableIndex);
+	}
+#endif
+
 	lua_getfield(L, tableIndex, "active");
 	if (lua_isboolean(L, -1)) {
 		_isActive = lua_toboolean(L, -1) != 0;
+#ifdef ENABLE_NANCY_V5
+		if (_nodeState) {
+			setActiveFlags(_isActive);
+		}
+#endif
 	} else if (lua_isfunction(L, -1)) {
 		_hasActiveFunction = true;
 	}
@@ -143,6 +235,13 @@ void Record::onObjectCollected() {
 }
 
 void Record::update(double sceneTime, double elapsedTime) {
+#ifdef ENABLE_NANCY_V5
+	if (_nodeState) {
+		updateNode(sceneTime, elapsedTime);
+		return;
+	}
+#endif
+
 	if (_isDone) {
 		return;
 	}
@@ -166,7 +265,7 @@ void Record::update(double sceneTime, double elapsedTime) {
 
 	_wasActive = _isActive;
 
-	if (!_isActive) {
+	if (!_isActive || isPaused()) {
 		return;
 	}
 
@@ -205,6 +304,12 @@ void Record::render() {
 }
 
 double Record::getZ() const {
+#ifdef ENABLE_NANCY_V5
+	if (_nodeState && _nodeState->drawRank >= 0) {
+		return getRankZ(_nodeState->drawRank);
+	}
+#endif
+
 	return _parentNode ? _z + _parentNode->getZ() : _z;
 }
 
@@ -233,6 +338,12 @@ void Record::limitZ(double z) {
 
 void Record::finish() {
 	_isDone = true;
+#ifdef ENABLE_NANCY_V5
+	if (_nodeState) {
+		setActiveFlags(false);
+	}
+#endif
+
 	if (getContext().isSkipping()) {
 		_hasEndedInSkip = true;
 	}
@@ -257,8 +368,22 @@ bool Record::reset() {
 	_hasRunOnce = false;
 	_isDone = false;
 	_hasStarted = false;
+
+	// Nancy26's Reset makes the record active, like Restart
+#ifdef ENABLE_NANCY_V5
+	if (_nodeState) {
+		setActiveFlags(true);
+	}
+#endif
+
 	callFunction("OnReset");
 	return true;
+}
+
+bool Record::restart() {
+	_isActive = true;
+	_hasActiveFunction = false;
+	return reset();
 }
 
 bool Record::callFunction(const char *name, int numArgs, int numResults) {
@@ -281,9 +406,39 @@ bool Record::callFunction(const char *name, int numArgs, int numResults) {
 	return LuaState::call(L, numArgs + 1, numResults, what.c_str());
 }
 
+// The functions scripts can give a record for what the player does
+static const char *const kEventFunctionNames[kNumRecordEvents] = {
+	"OnLeftClick", "OnRightClick", "OnLeftDown", "OnLeftUp", "OnRightDown", "OnRightUp",
+	"OnKeyDown", "OnKey", "OnKeyUp"
+};
+
+// The functions for what the player does, which scripts can give a record as
+// well. The Nancy23 and Nancy24 exes only have the ones of the scripts.
+static bool isEventFunctionName(const Common::String &key) {
+	if (key == "OnMouseMove" || key == "ChangeCursor") {
+		return true;
+	}
+
+	for (const char *name : kEventFunctionNames) {
+		if (key == name) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 int Record::getScriptField() {
 	lua_State *L = getLua();
 	const Common::String key = luaL_checkstring(L, 2);
+
+	// What a script stored under the name of a function for the player's input
+	// wins over the base fields of Nancy26
+#ifdef ENABLE_NANCY_V5
+	if (_nodeState && !isEventFunctionName(key)) {
+		return getNodeScriptField(key);
+	}
+#endif
 
 	if (key == "active") {
 		lua_pushboolean(L, isActive());
@@ -300,6 +455,17 @@ int Record::getScriptField() {
 	} else if (key == "transform" && hasTransform()) {
 		pushMatrix(L, _transform);
 		return 1;
+	}
+
+	// A function the script stored under this name is used instead of the
+	// built-in one, e.g. Nancy24's buttons call OnMouseMove without a point
+	if (isEventFunctionName(key)) {
+		pushStoredValue(key.c_str());
+		if (lua_isfunction(L, -1)) {
+			return 1;
+		}
+
+		lua_pop(L, 1);
 	}
 
 	// The functions every record has
@@ -321,6 +487,17 @@ int Record::getScriptField() {
 int Record::setScriptField() {
 	lua_State *L = getLua();
 	const Common::String key = luaL_checkstring(L, 2);
+
+#ifdef ENABLE_NANCY_V5
+	if (_nodeState) {
+		if (!setNodeField(key) && !setField(key)) {
+			lua_pushvalue(L, 3);
+			storeValue(key.c_str());
+		}
+
+		return 0;
+	}
+#endif
 
 	if (key == "active") {
 		if (lua_isfunction(L, 3)) {
@@ -352,13 +529,7 @@ int Record::setScriptField() {
 	return 0;
 }
 
-// The functions scripts can give a record for what the player does
-static const char *const kEventFunctionNames[kNumRecordEvents] = {
-	"OnLeftClick", "OnRightClick", "OnLeftDown", "OnLeftUp", "OnRightDown", "OnRightUp",
-	"OnKeyDown", "OnKey", "OnKeyUp"
-};
-
-void Record::sendMouseMove(const ScriptPoint &point, bool inViewport) {
+void Record::sendMouseMove(const Common::Point32 &point, bool inViewport) {
 	if (!isActive()) {
 		return;
 	}
@@ -375,7 +546,7 @@ void Record::sendMouseMove(const ScriptPoint &point, bool inViewport) {
 	}
 }
 
-bool Record::sendChangeCursor(const ScriptPoint &point, bool inViewport, uint &cursorType, bool &isHot) {
+bool Record::sendChangeCursor(const Common::Point32 &point, bool inViewport, uint &cursorType, bool &isHot) {
 	if (!isActive()) {
 		return false;
 	}
@@ -399,7 +570,7 @@ bool Record::sendChangeCursor(const ScriptPoint &point, bool inViewport, uint &c
 	return hasCursor;
 }
 
-bool Record::sendMouseEvent(RecordEvent event, const ScriptPoint &point, bool inViewport) {
+bool Record::sendMouseEvent(RecordEvent event, const Common::Point32 &point, bool inViewport) {
 	if (!isActive()) {
 		return false;
 	}
@@ -423,7 +594,7 @@ bool Record::sendMouseEvent(RecordEvent event, const ScriptPoint &point, bool in
 }
 
 // Only the records made of script functions handle mouse wheel events
-void Record::sendMouseScroll(const ScriptPoint &point, bool inViewport, int notches) {
+void Record::sendMouseScroll(const Common::Point32 &point, bool inViewport, int notches) {
 	if (!isActive() || !isScripted()) {
 		return;
 	}
@@ -595,6 +766,21 @@ static int recordReset(lua_State *L) {
 	return 0;
 }
 
+// ar:Restart(), Nancy22
+static int recordRestart(lua_State *L) {
+	if (!checkRecord(L, 1)->restart()) {
+		return luaL_error(L, "Cannot reset AR");
+	}
+
+	return 0;
+}
+
+// ar:Clean(), Nancy24
+static int recordClean(lua_State *L) {
+	checkRecord(L, 1)->clean();
+	return 0;
+}
+
 // ar:Render()
 static int recordRender(lua_State *L) {
 	checkRecord(L, 1)->render();
@@ -614,7 +800,7 @@ static int recordRun(lua_State *L) {
 static int recordOnMouseMove(lua_State *L) {
 	Record *record = checkRecord(L, 1);
 
-	ScriptPoint point;
+	Common::Point32 point;
 	if (!readPoint(L, 2, point)) {
 		return luaL_argerror(L, 2, "Single parameter must be a Point or a table with x and y fields");
 	}
@@ -627,7 +813,7 @@ static int recordOnMouseMove(lua_State *L) {
 static int recordChangeCursor(lua_State *L) {
 	Record *record = checkRecord(L, 1);
 
-	ScriptPoint point;
+	Common::Point32 point;
 	if (!readPoint(L, 2, point)) {
 		return luaL_argerror(L, 2, "Single parameter must be a Point or a table with x and y fields");
 	}
@@ -647,7 +833,7 @@ static int recordOnMouseEvent(lua_State *L) {
 	const RecordEvent event = (RecordEvent)lua_tointeger(L, lua_upvalueindex(1));
 	Record *record = checkRecord(L, 1);
 
-	ScriptPoint point;
+	Common::Point32 point;
 	if (!readPoint(L, 2, point)) {
 		return luaL_argerror(L, 2, "Single parameter must be a Point or a table with x and y fields");
 	}
@@ -687,6 +873,8 @@ static const luaL_Reg kRecordFunctions[] = {
 	{ "__newindex", recordNewIndex },
 	{ "__eq", recordEquals },
 	{ "Reset", recordReset },
+	{ "Restart", recordRestart },
+	{ "Clean", recordClean },
 	{ "Run", recordRun },
 	{ "Render", recordRender },
 	{ "OnMouseMove", recordOnMouseMove },
@@ -696,7 +884,7 @@ static const luaL_Reg kRecordFunctions[] = {
 
 // AR:<kind>(table)
 static int createRecord(lua_State *L) {
-	const RecordKind kind = (RecordKind)lua_tointeger(L, lua_upvalueindex(1));
+	const RecordType type = (RecordType)lua_tointeger(L, lua_upvalueindex(1));
 	const char *kindName = lua_tostring(L, lua_upvalueindex(2));
 
 	SceneContext *context = LuaState::getContext(L);
@@ -711,11 +899,12 @@ static int createRecord(lua_State *L) {
 		return luaL_argerror(L, 1, "Expected a table as the parameter");
 	}
 
-	if (kind != kRecordSummary && !context->hasRecords()) {
+	// Nancy26's scenes include scripts that make records before the summary
+	if (type != kRecordSummary && !context->hasRecords() && g_nancy->getGameType() < kGameTypeNancy26) {
 		return luaL_error(L, "Summary AR must be the first AR in the scene");
 	}
 
-	Record *record = makeRecord(kind, *context);
+	Record *record = makeRecord(type, *context);
 	if (!record) {
 		return luaL_error(L, "AR:%s is not supported yet", kindName);
 	}
@@ -726,9 +915,16 @@ static int createRecord(lua_State *L) {
 	return 1;
 }
 
+// AR:GetActualField(ar, name), Nancy24: what a script stored in the record,
+// such as its "active" function rather than whether it is active
+static int recordGetActualField(lua_State *L) {
+	checkRecord(L, 2)->pushStoredValue(luaL_checkstring(L, 3));
+	return 1;
+}
+
 void registerRecordAPI(lua_State *L) {
-	for (uint i = 0; i < kNumRecordKinds; ++i) {
-		const char *typeName = getRecordTypeName((RecordKind)i);
+	for (uint i = 0; i < kNumRecordTypes; ++i) {
+		const char *typeName = getRecordTypeName((RecordType)i);
 		if (luaL_newmetatable(L, typeName)) {
 			luaL_register(L, nullptr, kRecordFunctions);
 
@@ -750,6 +946,7 @@ void registerRecordAPI(lua_State *L) {
 
 	static const luaL_Reg kFactoryFunctions[] = {
 		{ "__index", indexFunctions },
+		{ "GetActualField", recordGetActualField },
 		{ nullptr, nullptr }
 	};
 
@@ -757,11 +954,11 @@ void registerRecordAPI(lua_State *L) {
 
 	// One function for every kind, which knows the kind it makes
 	luaL_getmetatable(L, "ND.AR");
-	for (uint i = 0; i < kNumRecordKinds; ++i) {
+	for (uint i = 0; i < kNumRecordTypes; ++i) {
 		lua_pushinteger(L, i);
-		lua_pushstring(L, getRecordKindName((RecordKind)i));
+		lua_pushstring(L, getRecordKindName((RecordType)i));
 		lua_pushcclosure(L, createRecord, 2);
-		lua_setfield(L, -2, getRecordKindName((RecordKind)i));
+		lua_setfield(L, -2, getRecordKindName((RecordType)i));
 	}
 
 	lua_pop(L, 1);

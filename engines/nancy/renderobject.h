@@ -60,9 +60,14 @@ public:
 
 	void moveTo(const Common::Point &position);
 	void moveTo(const Common::Rect &bounds);
-	void setVisible(bool visible);
+	// Without forceRedraw, an object that stays shown or hidden isn't drawn again
+	void setVisible(bool visible, bool forceRedraw = true);
 	void setTransparent(bool isTransparent);
 	bool isVisible() const { return _isVisible; }
+
+	// Nancy26: the part of the screen the object gets drawn in; empty for all of it
+	void setClipRect(const Common::Rect &clip);
+	const Common::Rect &getClipRect() const { return _clipRect; }
 
 	// Where on the screen the object was the last time it got drawn; empty when it
 	// wasn't shown. The viewport can scroll since, which moves where the object
@@ -122,6 +127,7 @@ protected:
 	Common::Rect _drawnScreenPosition;
 	Common::Rect _previousScreenPosition;
 	Common::Rect _screenPosition;
+	Common::Rect _clipRect;
 	const ViewTransform *_viewTransform = nullptr;
 };
 

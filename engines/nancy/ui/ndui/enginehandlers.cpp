@@ -29,6 +29,10 @@
 
 #include "engines/nancy/state/scene.h"
 
+#ifdef ENABLE_NANCY_V4
+#include "engines/nancy/script/api.h"
+#endif
+
 #include "engines/nancy/ui/ndui/manager.h"
 #include "engines/nancy/ui/ndui/panel.h"
 #include "engines/nancy/ui/ndui/button.h"
@@ -37,9 +41,10 @@ namespace Nancy {
 namespace UI {
 namespace NDUI {
 
-// The Nancy19 channels the UI plays a sound on for the player to hear a new volume with
-static const uint16 kSampleChannelMusic = 4;
-static const uint16 kSampleChannelFX = 22;
+// The channels the UI plays a sound on for the player to hear a new volume with:
+// UIMusic, UIFX and UIVoice, which Nancy22 numbers differently
+static uint16 getSampleChannelMusic() { return g_nancy->getGameType() >= kGameTypeNancy22 ? 1 : 4; }
+static uint16 getSampleChannelFX() { return g_nancy->getGameType() >= kGameTypeNancy22 ? 24 : 22; }
 static const uint16 kSampleChannelVoice = 28;
 
 // The timer whose displays show the time of day
@@ -141,9 +146,9 @@ void Manager::takeEngineAction(const Action &action) {
 	} else if (action.target.equalsIgnoreCase("Engine_VoiceVolume")) {
 		onVolumeAction(action, "speech_volume", kSampleChannelVoice);
 	} else if (action.target.equalsIgnoreCase("Engine_FXVolume")) {
-		onVolumeAction(action, "sfx_volume", kSampleChannelFX);
+		onVolumeAction(action, "sfx_volume", getSampleChannelFX());
 	} else if (action.target.equalsIgnoreCase("Engine_MusicVolume")) {
-		onVolumeAction(action, "music_volume", kSampleChannelMusic);
+		onVolumeAction(action, "music_volume", getSampleChannelMusic());
 	} else if (action.target.equalsIgnoreCase("Engine_Flags")) {
 		onFlagsAction(action);
 	} else if (action.target.equalsIgnoreCase("Engine_Sound")) {
@@ -217,7 +222,7 @@ void Manager::viewInventoryItem(int16 itemID) {
 // taken out to be looked at.
 void Manager::onItemStreamClicked(const InvButton &button) {
 	const int16 itemID = button.getItemID();
-	const Common::String streamName = "INVSTR_" + button.getName();
+	const Common::String streamName = InvButton::getStreamName(button.getName());
 	const Common::String &sceneName = button.getSceneName();
 
 	// On top of everything the scenes below draw
@@ -234,7 +239,7 @@ void Manager::onItemStreamClicked(const InvButton &button) {
 		const INVD *items = GetEngineData(INVD);
 		for (const INVD::Item &item : items->items) {
 			if (item.kind == InvButton::kItemView && item.id != itemID) {
-				NancySceneState.getStreams().end("INVSTR_" + item.name);
+				NancySceneState.getStreams().end(InvButton::getStreamName(item.name));
 			}
 		}
 
@@ -331,9 +336,31 @@ void Manager::createItemButtons() {
 		return;
 	}
 
-	if (panel && _templates.contains("InvButton")) {
-		panel->addItemButtons(_templates["InvButton"]);
+	if (!panel || !_templates.contains("InvButton")) {
+		return;
 	}
+
+	// Names are unique in the UI. An item named like a button the UI data places
+	// elsewhere uses that button, like the PDA of Nancy18 on the lower bar.
+	const INVD *items = GetEngineData(INVD);
+	Common::Array<int16> attachedItems;
+	_attachedItemButtons.clear();
+
+	for (uint i = 0; items && i < items->items.size(); ++i) {
+		const INVD::Item &item = items->items[i];
+
+		for (Panel *other : _panels) {
+			InvButton *button = other != panel ? other->findInvButton(item.name) : nullptr;
+			if (button) {
+				button->attachItem(item);
+				_attachedItemButtons.push_back(button);
+				attachedItems.push_back(item.id);
+				break;
+			}
+		}
+	}
+
+	panel->addItemButtons(_templates["InvButton"], attachedItems);
 }
 
 void Manager::showInventoryItem(int16 itemID, bool show) {
@@ -497,7 +524,12 @@ void Manager::onTasklistAction(const Action &action) {
 	}
 
 	int16 flag = _tasklistFlags.getValOrDefault(action.sender, kEvNoEvent);
-	if (flag != kEvNoEvent && NancySceneState.getEventFlag(flag, g_nancy->_false)) {
+	bool isDone = flag == kEvNoEvent || !NancySceneState.getEventFlag(flag, g_nancy->_false);
+#ifdef ENABLE_NANCY_V4
+	isDone = isDone && Script::isTaskComplete(action.sender);
+#endif
+
+	if (!isDone) {
 		takeAction(kActionSetValue, action.sender, 0.0);
 	} else {
 		TasklistData *tasklistData = (TasklistData *)NancySceneState.getPuzzleData(TasklistData::getTag());
@@ -617,6 +649,12 @@ void Manager::endConversation() {
 
 void Manager::setCaption(const Common::String &text) {
 	_caption = text;
+
+	// Nancy26's UI is made of records, which get the captions through messages
+	if (g_nancy->getGameType() >= kGameTypeNancy26) {
+		return;
+	}
+
 	takeAction(kActionSetText, "CCText", text);
 }
 

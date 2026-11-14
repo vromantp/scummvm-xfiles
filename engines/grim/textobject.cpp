@@ -63,14 +63,14 @@ TextObject::~TextObject() {
 }
 
 void TextObject::setText(const Common::String &text, bool delaySetup) {
-	destroy();
+	invalidate();
 	_textID = text;
 	if (!delaySetup)
 		setupText();
 }
 
 void TextObject::reset() {
-	destroy();
+	invalidate();
 	setupText();
 }
 
@@ -144,7 +144,7 @@ int TextObject::getBitmapWidth() const {
 }
 
 int TextObject::getBitmapHeight() const {
-	return _numberLines * _font->getKernedHeight();
+	return MAX(_numberLines, 1) * _font->getKernedHeight();
 }
 
 int TextObject::getTextCharPosition(int pos) {
@@ -156,7 +156,7 @@ int TextObject::getTextCharPosition(int pos) {
 	return width;
 }
 
-void TextObject::destroy() {
+void TextObject::invalidate() {
 	if (_created) {
 		g_driver->destroyTextObject(this);
 		_created = false;
@@ -395,7 +395,8 @@ void TextObject::draw() {
 }
 
 void TextObject::update() {
-	if (!_duration || !_created) {
+	if (_duration == 0) {
+		// this object never automatically expires
 		return;
 	}
 

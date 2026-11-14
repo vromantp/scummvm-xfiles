@@ -20,11 +20,12 @@
  */
 
 #include "common/debug.h"
+#include "common/events.h"
 #include "common/memstream.h"
 
 #include "engines/nancy/nancy.h"
-#include "engines/nancy/resource.h"
-#include "engines/nancy/iff.h"
+#include "engines/nancy/resource/resource.h"
+#include "engines/nancy/resource/iff.h"
 #include "engines/nancy/input.h"
 #include "engines/nancy/cursor.h"
 #include "engines/nancy/graphics.h"
@@ -204,6 +205,12 @@ void Manager::saveState(Common::Array<UIStateData::Change> &changes) const {
 
 void Manager::restoreState(const Common::Array<UIStateData::Change> &changes) {
 	for (const UIStateData::Change &change : changes) {
+		// Older saved games have the inventory buttons too, which may not match
+		// the items: those are shown from the inventory itself
+		if (isItemButton(change.name)) {
+			continue;
+		}
+
 		takeAction(change.action, change.name, 0.0);
 	}
 
@@ -218,21 +225,22 @@ Manager::Request Manager::takeRequest() {
 	return request;
 }
 
-void Manager::createObject(const Common::String &name, const Common::String &templateName, const Common::String &parentName) {
+bool Manager::createObject(const Common::String &name, const Common::String &templateName, const Common::String &parentName) {
 	Panel *parent = findPanel(parentName);
 
 	// Nancy19 has the script of the panel make the control
 	if (parent && g_nancy->getGameType() >= kGameTypeNancy19) {
 		if (!parent->createObject(name, templateName)) {
 			warning("Couldn't create UI object %s from %s in %s", name.c_str(), templateName.c_str(), parentName.c_str());
+			return false;
 		}
 
-		return;
+		return true;
 	}
 
 	if (!parent || !_templates.contains(templateName)) {
 		warning("Couldn't create UI object %s from %s in %s", name.c_str(), templateName.c_str(), parentName.c_str());
-		return;
+		return false;
 	}
 
 	const Common::Array<byte> &data = _templates[templateName];
@@ -243,14 +251,27 @@ void Manager::createObject(const Common::String &name, const Common::String &tem
 	Control *control = parent->addNewControl(type, stream);
 	control->setName(name);
 	parent->arrangeControls();
+	return true;
 }
 
-void Manager::destroyObject(const Common::String &name) {
+bool Manager::destroyObject(const Common::String &name) {
 	for (Panel *panel : _panels) {
 		if (panel->removeControl(name)) {
-			return;
+			return true;
 		}
 	}
+
+	return false;
+}
+
+bool Manager::isItemButton(const Common::String &name) const {
+	for (const Panel *panel : _panels) {
+		if (panel->isItemButton(name)) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 Panel *Manager::findPanel(const Common::String &name) const {
@@ -264,6 +285,12 @@ Panel *Manager::findPanel(const Common::String &name) const {
 }
 
 InvButton *Manager::findItemButton(int16 itemID) const {
+	for (InvButton *button : _attachedItemButtons) {
+		if (button->getItemID() == itemID) {
+			return button;
+		}
+	}
+
 	for (Panel *panel : _panels) {
 		InvButton *button = panel->findItemButton(itemID);
 		if (button) {
@@ -274,7 +301,23 @@ InvButton *Manager::findItemButton(int16 itemID) const {
 	return nullptr;
 }
 
+// The keymapper turns the arrow keys into movement, so they never arrive as keys
+struct ArrowKey {
+	uint16 input;
+	Common::KeyCode key;
+};
+
+static const ArrowKey kArrowKeys[] = {
+	{ NancyInput::kMoveLeft, Common::KEYCODE_LEFT },
+	{ NancyInput::kMoveRight, Common::KEYCODE_RIGHT },
+	{ NancyInput::kMoveUp, Common::KEYCODE_UP },
+	{ NancyInput::kMoveDown, Common::KEYCODE_DOWN }
+};
+
 void Manager::handleInput(NancyInput &input) {
+	const uint16 heldArrowKeys = _heldArrowKeys;
+	_heldArrowKeys = input.input;
+
 	// The dialog on top gets what gets typed
 	for (int i = _panels.size() - 1; i >= 0; --i) {
 		EditBox *editBox = _panels[i]->getKeyboardFocus();
@@ -283,12 +326,25 @@ void Manager::handleInput(NancyInput &input) {
 				editBox->handleKey(key);
 			}
 
+			// The arrow keys move the caret, not the player
+			for (const ArrowKey &arrowKey : kArrowKeys) {
+				if ((input.input & arrowKey.input) && !(heldArrowKeys & arrowKey.input)) {
+					editBox->handleKey(Common::KeyState(arrowKey.key, 0, g_nancy->getEventManager()->getModifierState()));
+				}
+			}
+
 			input.otherKbdInput.clear();
+			input.input &= ~(NancyInput::kMoveUp | NancyInput::kMoveDown | NancyInput::kMoveLeft |
+				NancyInput::kMoveRight | NancyInput::kMoveFastModifier);
 			break;
 		}
 	}
 
 	_hoveredControl = nullptr;
+
+	if (_mouseInputLocks > 0) {
+		return;
+	}
 
 	// The panels drawn on top get the mouse first
 	bool isOverUI = false;

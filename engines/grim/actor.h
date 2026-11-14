@@ -436,10 +436,12 @@ public:
 	 *
 	 * @param msgId The id of the message to say.
 	 * @param background ?? actual meaning unknown yet.
+	 * @param volume The voice volume (0-127), the SayLine table's volume.
+	 * @param pan The voice pan (0-127), the SayLine table's pan.
 	 * @see isTalking
 	 * @see shutUp
 	 */
-	void sayLine(const char *msgId, bool background, float x, float y);
+	void sayLine(const char *msgId, bool background, float x, float y, int volume, int pan);
 	// When we clean all text objects we don't want the actors to clean their
 	// objects again since they're already freed
 	void lineCleanup();
@@ -500,7 +502,7 @@ public:
 	/**
 	 * Check if the actor is still talking. If it is returns true, otherwise false.
 	 */
-	bool updateTalk(uint frameTime);
+	bool updateTalk();
 	void draw();
 
 	bool isLookAtVectorZero() {
@@ -593,7 +595,7 @@ private:
 	Math::Vector3d getSimplePuckVector() const;
 	void calculateOrientation(const Math::Vector3d &pos, Math::Angle *pitch, Math::Angle *yaw, Math::Angle *roll);
 
-	bool getSphereInfo(bool adjustZ, float &size, Math::Vector3d &pos) const;
+	bool getSphereInfo(float &size, Math::Vector3d &pos) const;
 	EMIModel *findModelWithMesh(const Common::String &mesh);
 
 	Common::String _name;
@@ -614,6 +616,7 @@ private:
 	Common::String _talkSoundName;
 	bool _talking;
 	bool _backgroundTalk;
+	int _talkSoundId;
 	ObjectPtr<LipSync> _lipSync;
 	Common::List<Costume *> _costumeStack;
 
@@ -708,7 +711,6 @@ private:
 	bool _puckOrient;
 
 	static bool _isTalkingBackground;
-	int _talkDelay;
 	int _attachedActor;
 	int _lookAtActor;
 	Common::String _attachedJoint;
@@ -719,6 +721,7 @@ private:
 
 	int _sortOrder;
 	int _sectorSortOrder;
+	bool _hasSectorSortOrder { false };
 	bool _useParentSortOrder;
 
 	bool _fakeUnbound;

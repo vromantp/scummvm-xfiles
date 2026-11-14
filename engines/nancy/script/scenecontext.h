@@ -29,6 +29,10 @@
 
 #include "engines/nancy/script/types.h"
 
+#ifdef ENABLE_NANCY_V5
+#include "engines/nancy/script/v5/streamtree.h"
+#endif
+
 struct lua_State;
 
 namespace Nancy {
@@ -60,6 +64,10 @@ public:
 	// doesn't begin with a summary.
 	bool load();
 
+	// Whether the script of the scene is running for the first time, before
+	// the scene belongs to its stream
+	bool isLoading() const { return _isLoading; }
+
 	// One frame, which lasted the given number of seconds
 	void run(double elapsedTime);
 	void handleInput(NancyInput &input);
@@ -73,6 +81,9 @@ public:
 
 	// The scene is being deleted
 	bool isEnding() const { return _isEnding; }
+
+	// Puts what the records draw back on the screen
+	void registerGraphics();
 
 	// The Ref image of that name, which the records of the scene share. Places
 	// outside of it take the nearest pixel.
@@ -103,7 +114,18 @@ public:
 	const Common::String &getSceneName() const { return _sceneName; }
 	uint getFrame() const { return _frame; }
 	void setFrame(uint frame) { _frame = frame; }
-	int32 getZOffset() const { return _zOffset; }
+	int32 getZOffset() const;
+
+#ifdef ENABLE_NANCY_V5
+	// Nancy26: the stream of the scene was put at another place among the
+	// others, so everything it draws goes elsewhere
+	void onBandChanged();
+
+	// Nancy26: what the stream of the scene says about all its records
+	bool isStreamEnabled() const { return !_streamState || _streamState->isEnabled; }
+	bool isStreamVisible() const { return !_streamState || _streamState->isVisible; }
+	bool isStreamPaused() const { return _streamState && _streamState->isPaused; }
+#endif
 
 	// Nancy21: the zoom of the stream the scene is in
 	const ViewTransform *getViewTransform() const;
@@ -132,13 +154,18 @@ public:
 	// The panels a scene adds to the UI call into its scripts, so they go when it does
 	void setMakesUI() { _makesUI = true; }
 
-	// Nancy21: a new node to group records under, which lasts as long as the scene
-	GraphNode *createGraphNode();
+	// Nancy21: a new node to group records under, which lasts as long as the scene.
+	// A Transformer record owns the one it is.
+	GraphNode *createGraphNode(Record *owner = nullptr);
 
-	// Lets the records under a node know that it changed its z or transform
+	// Lets the records under a node know that it changed its z or transform,
+	// once the frame is over
 	void onGraphNodeChanged(GraphNode *node);
+	void applyGraphNodeChanges();
 
-	// Runs another script as a part of this scene
+	// Runs another script as a part of this scene. From Nancy21 on, a script
+	// that the scene already included is left out, since scripts include each
+	// other, e.g. ThemeManager_SC and ThemeControls_SC in Nancy22.
 	bool include(const Common::String &name);
 
 	// Changes the scene of a stream; no name stands for the one this scene is in
@@ -148,25 +175,42 @@ public:
 	// on the "Scene" object. Takes the function at the top of the stack.
 	void setSceneFunction(const char *name);
 
+	// Nancy22: keeps the function at the top of the stack, which describes the
+	// manager of that name for the debugger. Returns false when the name is taken.
+	bool addManager(const Common::String &name);
+	void getManagerNames(Common::Array<Common::String> &names) const;
+
+	// What the function of a manager gives, or the error it ran into. Returns
+	// false when the scene has no manager of that name.
+	bool describeManager(const Common::String &name, Common::String &text);
+
 	// Where the mouse is in the viewport. Returns whether it is inside of it.
-	static bool getViewportMouse(const NancyInput &input, ScriptPoint &point);
+	static bool getViewportMouse(const NancyInput &input, Common::Point32 &point);
 
 private:
 	bool callSceneFunction(const char *name, int numArgs);
 	void pushMessage(const Message &message);
 	void runFrame(double elapsedTime);
+#ifdef ENABLE_NANCY_V5
+	void updateDrawRanks();	// Nancy26
+#endif
 	void deleteDroppedRecords();
 	void renderAttachment();
 	bool hasSkippableRecord() const;
 	void pushSceneFunctions();
-	void sendMouseEvent(int event, const ScriptPoint &point, bool inViewport);
+	void sendMouseEvent(int event, const Common::Point32 &point, bool inViewport);
 	void sendKeyEvent(int event, Common::KeyCode key);
 
 	Common::String _streamName;
 	Common::String _sceneName;
 	bool _isEnding = false;
+	bool _isLoading = false;
 	uint _frame;
 	int32 _zOffset;
+
+#ifdef ENABLE_NANCY_V5
+	const StreamNodeState *_streamState = nullptr;	// Nancy26
+#endif
 
 	LuaState *_lua;
 	Common::Array<Record *> _records;
@@ -176,7 +220,16 @@ private:
 	ConvoRecord *_convo = nullptr;
 	Common::Array<ConvoResponse *> _convoResponses;
 	Common::Array<GraphNode *> _graphNodes;
+	Common::Array<GraphNode *> _changedNodes;	// since the last frame
 	Common::HashMap<Common::String, RefImage *, Common::IgnoreCase_Hash, Common::IgnoreCase_EqualTo> _refs;
+	Common::HashMap<Common::String, bool, Common::IgnoreCase_Hash, Common::IgnoreCase_EqualTo> _includedNames;
+
+	struct ManagerFunction {
+		Common::String name;
+		int reference;	// in the registry
+	};
+
+	Common::Array<ManagerFunction> _managers;
 
 	double _time = 0.0;
 	double _elapsedTime = 0.0;

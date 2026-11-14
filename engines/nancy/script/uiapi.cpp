@@ -215,7 +215,7 @@ static void readRectField(lua_State *L, int tableIndex, const char *name, Script
 	}
 }
 
-static void readPointField(lua_State *L, int tableIndex, const char *name, ScriptPoint &point) {
+static void readPointField(lua_State *L, int tableIndex, const char *name, Common::Point32 &point) {
 	if (pushField(L, tableIndex, name)) {
 		if (!readPoint(L, -1, point)) {
 			luaL_error(L, "field %s must be a point", name);
@@ -454,9 +454,11 @@ static UI::NDUI::Control *addControl(lua_State *L, int32 type, Common::MemoryWri
 	return control;
 }
 
-// The text kept under a key, or the key itself when there is none
+// The text kept under a key. A key that isn't there gives no text, as the
+// engine doesn't answer the control's request for it: Nancy24's coin counter
+// names "PennyCounter", which isn't in the autotext.
 static Common::String resolveText(const Common::String &key) {
-	Common::String text = key;
+	Common::String text;
 	findText(key, text);
 	return text;
 }
@@ -502,7 +504,7 @@ static int panelAddButton(lua_State *L) {
 	writeControl(L, 2, kAlignCenter, data);
 	writeOverlay(L, 2, "foregroundOverlay", data);
 
-	ScriptPoint pressedOffset;
+	Common::Point32 pressedOffset;
 	readPointField(L, 2, "pressedOffset", pressedOffset);
 	data.writeSint32LE(pressedOffset.x);
 	data.writeSint32LE(pressedOffset.y);
@@ -659,7 +661,7 @@ static int newPanel(lua_State *L, byte kind) {
 	int32 initialState = UI::NDUI::kStartVisible;
 	int32 primaryOrder = 0;
 	int32 secondaryOrder = 0;
-	ScriptPoint spacing;
+	Common::Point32 spacing;
 	ScriptRect margins;
 	uint32 color = 0;
 

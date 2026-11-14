@@ -24,6 +24,7 @@
 #include "engines/nancy/input.h"
 #include "engines/nancy/util.h"
 
+#include "common/algorithm.h"
 #include "common/memstream.h"
 
 #include "engines/nancy/ui/ndui/panel.h"
@@ -302,9 +303,12 @@ Control *Panel::addNewControl(int32 type, Common::SeekableReadStream &stream) {
 	case kControlCheckBox:
 		control = new CheckBox(this);
 		break;
-	case kControlInvButton:
-		control = new InvButton(this);
+	case kControlInvButton: {
+		InvButton *button = new InvButton(this);
+		_invButtons.push_back(button);
+		control = button;
 		break;
+	}
 	case kControlVarStatic:
 		control = new VarStatic(this);
 		break;
@@ -323,7 +327,7 @@ Control *Panel::addNewControl(int32 type, Common::SeekableReadStream &stream) {
 	return control;
 }
 
-void Panel::addItemButtons(const Common::Array<byte> &buttonTemplate) {
+void Panel::addItemButtons(const Common::Array<byte> &buttonTemplate, const Common::Array<int16> &skippedItems) {
 	const INVD *items = GetEngineData(INVD);
 	if (!items) {
 		return;
@@ -332,6 +336,10 @@ void Panel::addItemButtons(const Common::Array<byte> &buttonTemplate) {
 	_kind = kObjectInvPanel;
 
 	for (const INVD::Item &item : items->items) {
+		if (Common::find(skippedItems.begin(), skippedItems.end(), item.id) != skippedItems.end()) {
+			continue;
+		}
+
 		Common::MemoryReadStream stream(buttonTemplate.data(), buttonTemplate.size());
 		stream.skip(33 + 4); // version and control type
 
@@ -508,6 +516,9 @@ bool Panel::takeAction(const Action &action) {
 
 		showItem((int16)action.value, action.type == kActionShowItem);
 		break;
+	case kActionCycleFocus:
+		cycleFocus();
+		break;
 	default:
 		return false;
 	}
@@ -540,8 +551,11 @@ void Panel::saveState(Common::Array<UIStateData::Change> &changes) const {
 		return;
 	}
 
-	for (const Control *control : _controls) {
-		addStateChanges(changes, control->getName(), control->getInitialState(), control->isVisible(), control->isEnabled());
+	// Which inventory buttons are shown follows from the items of the character
+	if (_kind != kObjectInvPanel) {
+		for (const Control *control : _controls) {
+			addStateChanges(changes, control->getName(), control->getInitialState(), control->isVisible(), control->isEnabled());
+		}
 	}
 
 	addStateChanges(changes, getName(), _initialState, isVisible(), _enabled);
@@ -560,7 +574,7 @@ void Panel::finishBlending() {
 	_isDirty = true;
 }
 
-// Every show needs a matching hide before the panel goes away
+// Before Nancy19, every show needs a matching hide before the panel goes away
 void Panel::show() {
 	++_showCount;
 	if (_isCollapsed) {
@@ -591,20 +605,31 @@ void Panel::setCollapsed(bool isCollapsed) {
 	}
 }
 
+// Nancy19 and up don't count: a hide always hides, and tells the scripts. Nancy25
+// opens the phone without showing its panel, and closes it by hiding that.
 void Panel::hide() {
-	--_showCount;
-	if (_showCount == 0) {
-		setVisible(false);
-		_isShownWhenExpanded = false;
-		if (_capture) {
-			_capture->_isPressed = false;
-			_capture = nullptr;
+	if (g_nancy->getGameType() < kGameTypeNancy19) {
+		--_showCount;
+		if (_showCount < 0) {
+			_showCount = 0;
+			return;
 		}
 
-		fireEvent(kEventHide);
-	} else if (_showCount < 0) {
+		if (_showCount > 0) {
+			return;
+		}
+	} else {
 		_showCount = 0;
 	}
+
+	setVisible(false);
+	_isShownWhenExpanded = false;
+	if (_capture) {
+		_capture->_isPressed = false;
+		_capture = nullptr;
+	}
+
+	fireEvent(kEventHide);
 }
 
 void Panel::fireEvent(int32 eventType) {
@@ -645,6 +670,17 @@ bool Panel::removeControl(const Common::String &name) {
 			}
 		}
 
+		for (uint j = 0; j < _invButtons.size(); ++j) {
+			if (_invButtons[j] == control) {
+				_invButtons.remove_at(j);
+				break;
+			}
+		}
+
+		if (_focus == control) {
+			_focus = nullptr;
+		}
+
 		if (_capture == control) {
 			_capture = nullptr;
 		}
@@ -662,9 +698,58 @@ EditBox *Panel::getKeyboardFocus() const {
 		return nullptr;
 	}
 
+	if (_focus && _focus->isVisible() && _focus->isEnabled()) {
+		return _focus;
+	}
+
 	for (EditBox *editBox : _editBoxes) {
 		if (editBox->isVisible() && editBox->isEnabled()) {
 			return editBox;
+		}
+	}
+
+	return nullptr;
+}
+
+// The edit box after the focused one, going around to the first
+void Panel::cycleFocus() {
+	EditBox *current = getKeyboardFocus();
+	if (!current) {
+		return;
+	}
+
+	uint start = 0;
+	while (_editBoxes[start] != current) {
+		++start;
+	}
+
+	for (uint i = 1; i <= _editBoxes.size(); ++i) {
+		EditBox *editBox = _editBoxes[(start + i) % _editBoxes.size()];
+		if (editBox->isVisible() && editBox->isEnabled()) {
+			_focus = editBox;
+			break;
+		}
+	}
+}
+
+bool Panel::isItemButton(const Common::String &name) const {
+	if (_kind != kObjectInvPanel) {
+		return false;
+	}
+
+	for (const Control *control : _controls) {
+		if (control->getName().equalsIgnoreCase(name)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+InvButton *Panel::findInvButton(const Common::String &name) const {
+	for (InvButton *button : _invButtons) {
+		if (button->getName().equalsIgnoreCase(name)) {
+			return button;
 		}
 	}
 

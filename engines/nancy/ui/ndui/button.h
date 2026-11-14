@@ -64,8 +64,13 @@ public:
 
 	InvButton(Panel *panel) : Button(panel) {}
 
+	// The stream the scene of an item opens in
+	static Common::String getStreamName(const Common::String &itemName) { return "INVSTR_" + itemName; }
+
 	// Nancy17 buttons are made from a template, and get their item afterwards
 	void setItem(const INVD::Item &item);
+	// Makes the button act as the item, without changing its name or look
+	void attachItem(const INVD::Item &item);
 
 	int16 getItemID() const { return _itemID; }
 	int32 getKind() const { return _kind; }

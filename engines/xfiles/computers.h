@@ -92,6 +92,10 @@ private:
 	void moveMediaCaret();
 	/** The text of a text asset (or a file asset), false if it has none. */
 	bool loadText(uint32 asset, Common::U32String &text);
+	/** 0x42a120: remember the kind and draw the forwarded mail's subject, attachment or article. */
+	void forwardObject(char kind);
+	/** 0x475760: queue the forwarded record's mails for the recipients. */
+	void emailSend();
 	/** The members of an interface item's asset list, in order, enabled or not. */
 	void itemMembers(uint32 item, Common::Array<uint32> &members);
 	/** Focus a log-in field (state 0 to 3) and put the caret behind its text (0x4867e0). */
@@ -120,6 +124,8 @@ private:
 	int _countersInVariables;   ///< -1 not checked, 0 English path, 1 the database has variables 5326 and 5327 by name
 	/** Newer exe (database build 9): the password counters are the variables iScullyPasswordCount and iFBIPasswordCount. */
 	bool countersInVariables();
+	char _forwardKind;          ///< 0x6bd814: the last ForwardObject kind, not saved
+	uint _forwardCount;         ///< 0x6b1d68: the next attachment code, not saved, never reset
 	uint32 _record;             ///< 0x6b9b94: the asset of the record shown, 0 if none (MediaInit clears it)
 	bool _cookShown;            ///< 0x6b1f20: INGDisplayCook has run its action list (never reset)
 	bool _recordShown;          ///< 0x6b1f1c: an ING record is shown

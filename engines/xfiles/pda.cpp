@@ -101,6 +101,19 @@ static const uint32 kNoteMarkerExtra[2] = { 63282, 63284 };
 static const uint kNoteMarkerDay = 2;
 static const int kNoteFontSize = 12;
 
+/** The address book's rows and check items per mode (docs/plans/B-089.md). */
+static const uint32 kAddrRowsT[5] = { 40423, 40424, 40425, 40426, 40427 };
+static const uint32 kAddrChecksT[5] = { 40416, 40417, 40418, 40419, 40420 };
+static const uint32 kAddrRowsC[5] = { 40453, 40454, 40455, 40456, 40457 };
+static const uint32 kAddrChecksC[5] = { 40448, 40449, 40450, 40451, 40452 };
+static const uint32 kAddrRowsP[9] = { 65031, 65030, 65029, 37215, 37216, 37217, 37218, 37219, 37220 };
+static const uint32 kAddrRowsA[3] = { 40430, 40431, 40432 };
+static const uint32 kAddrRowsB[3] = { 40433, 40434, 40435 };
+static const uint32 kAddrRowsD[1] = { 40516 };
+/** The item whose asset list is the address book, and the send button. */
+static const uint32 kAddressBookItem = 45311;
+static const uint32 kMailSendButton = 40502;
+
 static bool listHas(const Common::Array<uint32> &list, uint32 id) {
 	return Common::find(list.begin(), list.end(), id) != list.end();
 }
@@ -112,7 +125,7 @@ static void listRemove(Common::Array<uint32> &list, uint32 id) {
 }
 
 PdaHooks::PdaHooks(Script &script, const VCData &data)
-	: _script(script), _data(data), _inboxTop(0), _pdaFontSize(kPDAFontSize), _pdaLayout(false), _scrollItem(0),
+	: _script(script), _data(data), _inboxTop(0), _addrTop(0), _addrMode(0), _addrDest(nullptr), _pdaFontSize(kPDAFontSize), _pdaLayout(false), _scrollItem(0),
 	  _scrollSize(kPDAFontSize), _scrollColor(0), _scrollBold(false), _scrollSans(false), _addressIndex(0), _noteDay(0), _noteDays(0) {
 	for (uint i = 0; i < kNoteDayCount; i++)
 		_noteOrder[i] = i;
@@ -167,7 +180,48 @@ void PdaHooks::addHooks(HookTable<Script> &t) {
 			p._inboxTop = 0;
 			p._pdaLayout = c.args[0] == 'P';
 			p._pdaFontSize = p._pdaLayout ? kPDAFontSize : kMailFontSize;
+			// 0x475170: the address book starts unselected, with no destination
+			p._addrWork.clear();
+			p._addrTo.clear();
+			p._addrCc.clear();
+			p._addrPda.clear();
+			p._addrMode = 0;
+			p._addrDest = nullptr;
+			VCInterfaceItem book;
+			Common::Array<uint32> members;
+			if (s._data.getInterfaceItem(kAddressBookItem, book) && s._data.getMembers(book.assets, members)) {
+				for (uint i = 0; i < members.size(); i++) {
+					AddrEntry e;
+					e.id = members[i];
+					e.selected = false;
+					p._addrWork.push_back(e);
+				}
+			}
 		}
+		return true;
+	});
+	t.add("DisplayAddrs", [](Script &s, const HookCall &c) {
+		if (!c.has(1))
+			return false;
+		s._pda.displayAddrs((char)c.args[0]);
+		return true;
+	});
+	t.add("AddrSelected", [](Script &s, const HookCall &c) {
+		if (!c.has(1))
+			return false;
+		s._pda.addrSelected(c.args[0]);
+		return true;
+	});
+	t.add("ScrollAddrs", [](Script &s, const HookCall &c) {
+		if (!c.has(2))
+			return false;
+		s._pda.scrollAddrs((char)c.args[0], c.args[1]);
+		return true;
+	});
+	t.add("CreateAddrList", [](Script &s, const HookCall &c) {
+		if (!c.has(1))
+			return false;
+		s._pda.createAddrList((char)c.args[0]);
 		return true;
 	});
 	t.add("DisplayInBox", [](Script &s, const HookCall &c) {
@@ -424,6 +478,186 @@ void PdaHooks::buildAddressList() {
 		if (_script.isEnabled(entries[i]))
 			_addressList.push_back(entries[i]);
 	}
+}
+
+bool PdaHooks::setAddrMode(char c) {
+	switch (c) {
+	case 'T':
+		_addrDest = &_addrTo;
+		break;
+	case 'C':
+		_addrDest = &_addrCc;
+		break;
+	case 'P':
+		_addrDest = &_addrPda;
+		break;
+	case 'A':
+	case 'B':
+	case 'D':
+		break;
+	default:
+		return false;
+	}
+	_addrMode = c;
+	return true;
+}
+
+PdaHooks::AddrModeInfo PdaHooks::addrModeInfo() const {
+	AddrModeInfo m = { nullptr, nullptr, 0 };
+	switch (_addrMode) {
+	case 'T':
+		m.rows = kAddrRowsT;
+		m.checks = kAddrChecksT;
+		m.count = ARRAYSIZE(kAddrRowsT);
+		break;
+	case 'C':
+		m.rows = kAddrRowsC;
+		m.checks = kAddrChecksC;
+		m.count = ARRAYSIZE(kAddrRowsC);
+		break;
+	case 'P':
+		m.rows = kAddrRowsP;
+		m.count = ARRAYSIZE(kAddrRowsP);
+		break;
+	case 'A':
+		m.rows = kAddrRowsA;
+		m.count = ARRAYSIZE(kAddrRowsA);
+		break;
+	case 'B':
+		m.rows = kAddrRowsB;
+		m.count = ARRAYSIZE(kAddrRowsB);
+		break;
+	case 'D':
+		m.rows = kAddrRowsD;
+		m.count = ARRAYSIZE(kAddrRowsD);
+		break;
+	default:
+		break;
+	}
+	return m;
+}
+
+uint PdaHooks::addrShownCount() const {
+	switch (_addrMode) {
+	case 'A':
+		return _addrTo.size();
+	case 'B':
+		return _addrCc.size();
+	case 'D':
+		return _addrPda.size();
+	default:
+		return _addrWork.size();
+	}
+}
+
+uint32 PdaHooks::addrShownId(uint i) const {
+	switch (_addrMode) {
+	case 'A':
+		return _addrTo[i];
+	case 'B':
+		return _addrCc[i];
+	case 'D':
+		return _addrPda[i];
+	default:
+		return _addrWork[i].id;
+	}
+}
+
+void PdaHooks::drawAddrs() {
+	// 0x44af40
+	AddrModeInfo mode = addrModeInfo();
+	uint count = addrShownCount();
+	bool working = _addrMode == 'T' || _addrMode == 'C' || _addrMode == 'P';
+	for (uint r = 0; r < mode.count; r++) {
+		uint i = _addrTop + r;
+		if (i >= count) {
+			_script.clearItemText(mode.rows[r]);
+			continue;
+		}
+		if (mode.checks && working && _addrWork[i].selected)
+			_script.setItemEnabled(mode.checks[r], true);
+		Common::U32String text;
+		uint32 id = addrShownId(i);
+		if ((_script.readTextFile(id, text) || _script.getTextAsset(id, text)) && !text.empty())
+			_script.setItemText(mode.rows[r], text, _pdaFontSize, false, 0, Script::kAlignLeft, false, 0);
+		else
+			_script.clearItemText(mode.rows[r]);
+	}
+}
+
+void PdaHooks::displayAddrs(char c) {
+	// 0x44aa00
+	for (uint i = 0; i < _addrWork.size(); i++)
+		_addrWork[i].selected = false;
+	setAddrMode(c);
+	_addrTop = 0;
+	AddrModeInfo mode = addrModeInfo();
+	for (uint r = 0; mode.checks && r < mode.count; r++)
+		_script.setItemEnabled(mode.checks[r], false);
+	drawAddrs();
+}
+
+void PdaHooks::addrSelected(int32 n) {
+	// 0x42f7f0
+	AddrModeInfo mode = addrModeInfo();
+	if (!mode.checks || n < 0 || (uint)n >= mode.count || _addrTop + (uint)n >= _addrWork.size())
+		return;
+	AddrEntry &e = _addrWork[_addrTop + n];
+	e.selected = !e.selected;
+	_script.setItemEnabled(mode.checks[n], e.selected);
+}
+
+void PdaHooks::scrollAddrs(char c, int32 dir) {
+	// 0x43fc30
+	setAddrMode(c);
+	AddrModeInfo mode = addrModeInfo();
+	if (!mode.rows)
+		return;
+	uint count = addrShownCount(), rows = mode.count;
+	if (count <= rows)
+		return;
+	if (dir == 1) {
+		if (_addrTop >= count - rows)
+			return;
+		_addrTop++;
+	} else {
+		if (_addrTop == 0)
+			return;
+		_addrTop--;
+	}
+	for (uint r = 0; mode.checks && r < rows; r++)
+		_script.setItemEnabled(mode.checks[r], false);
+	drawAddrs();
+}
+
+void PdaHooks::createAddrList(char c) {
+	// 0x474f40; the exe crashes with no destination, the port skips it
+	setAddrMode(c);
+	if (_addrDest) {
+		_addrDest->clear();
+		for (uint i = 0; i < _addrWork.size(); i++) {
+			if (_addrWork[i].selected)
+				_addrDest->push_back(_addrWork[i].id);
+		}
+	}
+	if (c != 'D')
+		_script.setItemEnabled(kMailSendButton, !_addrTo.empty() || !_addrCc.empty());
+}
+
+bool PdaHooks::mailRecipients(Common::Array<uint32> &ids) const {
+	ids.clear();
+	if (_addrTo.empty() && _addrPda.empty())
+		return false;
+	if (!_addrPda.empty()) {
+		ids = _addrPda;
+		return true;
+	}
+	ids = _addrTo;
+	for (uint i = 0; i < _addrCc.size(); i++) {
+		if (!listHas(_addrTo, _addrCc[i]))
+			ids.push_back(_addrCc[i]);
+	}
+	return true;
 }
 
 void PdaHooks::showAddress() {

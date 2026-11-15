@@ -58,6 +58,12 @@ public:
 	void enablePDANote(uint32 id);
 	/** 0x4be560: the current scroll text gets another text, in its style; nothing if there is none. */
 	void replaceScrollText(const Common::U32String &text);
+	/** The mail font size, 14 or (after EmailInit('P')) 12. */
+	int mailFontSize() const { return _pdaFontSize; }
+	/** EmailSend's recipients (0x475760): the PDA list, else "to" then the "cc" not in "to"; false if "to" and the PDA list are empty. */
+	bool mailRecipients(Common::Array<uint32> &ids) const;
+	/** Add an e-mail to VCEmailPending, as SendEmail does. */
+	void queueEmail(uint32 id) { _emailPending.push_back(id); }
 	/** Take the lists from a save. */
 	void restore(const VCSave &save);
 	/** Write the lists into a save. */
@@ -79,6 +85,20 @@ private:
 	void buildAddressList();
 	void enableAllNotes();
 	void notePadInit();
+	struct AddrModeInfo {
+		const uint32 *rows;
+		const uint32 *checks;
+		uint count;
+	};
+	bool setAddrMode(char c);
+	AddrModeInfo addrModeInfo() const;
+	uint addrShownCount() const;
+	uint32 addrShownId(uint i) const;
+	void drawAddrs();
+	void displayAddrs(char c);
+	void addrSelected(int32 n);
+	void scrollAddrs(char c, int32 dir);
+	void createAddrList(char c);
 	void noteFlipDay(int32 n);
 	void showNoteDayText();
 	void showNoteMarker();
@@ -87,6 +107,16 @@ private:
 
 	Script &_script;
 	const VCData &_data;
+	/** The compose screen's address book (EmailInit, DisplayAddrs and others). */
+	struct AddrEntry {
+		uint32 id;
+		bool selected;
+	};
+	Common::Array<AddrEntry> _addrWork;                      ///< 0x6bd7d0
+	Common::Array<uint32> _addrTo, _addrCc, _addrPda;        ///< 0x6bd8f8, 0x6bd8e0, 0x6bd958
+	uint _addrTop;                                           ///< 0x6b1ed4
+	char _addrMode;                                          ///< The last address mode letter, 0 for none
+	Common::Array<uint32> *_addrDest;                        ///< 0x6bd7f4: the list CreateAddrList fills, nullptr for none
 	/** VCEmail, VCEmailRead and VCEmailPending, and the inbox (globals 0x6bd914, 0x6bd86c). */
 	Common::Array<uint32> _emails, _emailsRead, _emailPending;
 	struct InboxRow {

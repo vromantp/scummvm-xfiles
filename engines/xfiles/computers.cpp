@@ -247,10 +247,20 @@ static const uint32 kSbaseItems[31] = {
 };
 // clang-format on
 
-ComputerHooks::ComputerHooks(Script &script) : _script(script), _loginState(0), _connectedBefore(false), _wrongTries(0), _pwbkTries(0), _countersInVariables(-1), _record(0), _cookShown(false), _recordShown(false), _sbaseCount(0), _photosDownloaded(0), _photoOffset(0), _photoEnlarged(-1), _photoOpen(false) {
+ComputerHooks::ComputerHooks(Script &script) : _script(script), _loginState(0), _connectedBefore(false), _wrongTries(0), _pwbkTries(0), _countersInVariables(-1), _forwardKind(0), _forwardCount(0), _record(0), _cookShown(false), _recordShown(false), _sbaseCount(0), _photosDownloaded(0), _photoOffset(0), _photoEnlarged(-1), _photoOpen(false) {
 }
 
 void ComputerHooks::addHooks(HookTable<Script> &t) {
+	t.add("ForwardObject", [](Script &s, const HookCall &c) {
+		if (!c.has(1))
+			return false;
+		s._computer.forwardObject((char)c.args[0]);
+		return true;
+	});
+	t.add("EmailSend", [](Script &s, const HookCall &) {
+		s._computer.emailSend();
+		return true;
+	});
 	t.add("LoginInit", [](Script &s, const HookCall &c) {
 		if (!c.has(1) || ((char)c.args[0] != 'C' && (char)c.args[0] != 'P'))
 			return false;
@@ -410,6 +420,80 @@ void ComputerHooks::setFieldAsset(uint32 item, uint32 asset, int size, uint32 co
 		return;
 	}
 	_script.setItemText(item, text, size, false, color, Script::kAlignLeft, false, 0);
+}
+
+void ComputerHooks::forwardObject(char kind) {
+	// 0x42a120
+	static const char *const kCodes[9] = { "MKM1013", "DRC0919", "PJI0219", "JDV0823", "APS1210", "GXR1200", "JXK0223", "AXH0531", "FFF0919" };
+	_forwardKind = kind;
+	int size = _script._pda.mailFontSize();
+	if (kind == 'I') {
+		Common::U32String subject;
+		if (_record != 0 && loadText(_record, subject) && !subject.empty())
+			_script.setItemText(40437, subject, size, false, 0, Script::kAlignLeft, false, 0);
+		setFieldText(40436, Common::String(kCodes[_forwardCount]) + ".DAT", size);
+		_forwardCount = (_forwardCount + 1) % 9;
+		_script.setItemEnabled(40502, false);
+	} else if (kind == 'M') {
+		if (countersInVariables())
+			setFieldAsset(40437, 94881, size);
+		else
+			setFieldText(40437, "Article", size);
+		Common::U32String body;
+		if (_record != 0)
+			loadText(_record, body);
+		_script._pda.replaceScrollText(body);
+		_script.setItemEnabled(40502, false);
+	}
+}
+
+void ComputerHooks::emailSend() {
+	// 0x475760
+	struct Pair {
+		uint32 record, item;
+	};
+	static const uint32 kIndexIds[9] = { 45284, 45290, 45298, 45300, 64037, 45296, 45304, 45294, 45282 };
+	static const Pair kInfo[] = {
+		{ 37564, 63666 }, { 37568, 63668 }, { 37572, 63674 }, { 37576, 63678 }, { 37578, 63684 }, { 37582, 63686 },
+		{ 37586, 63688 }, { 37590, 63690 }, { 37594, 63692 }, { 37598, 63694 }, { 37602, 63696 }, { 37606, 63698 },
+		{ 37610, 63700 }, { 37614, 63702 }, { 37618, 63704 }, { 50608, 64582 }, { 50592, 64583 }, { 50624, 64584 }
+	};
+	static const Pair kArticle[] = {
+		{ 55585, 63706 }, { 55592, 63708 }, { 55587, 63710 }, { 55586, 63712 }, { 55590, 63714 },
+		{ 55588, 63716 }, { 55589, 63718 }, { 55591, 63720 }, { 55584, 63722 }, { 55583, 63724 }
+	};
+	Common::Array<uint32> recipients;
+	if (!_script._pda.mailRecipients(recipients))
+		return;
+	const Pair *table = nullptr;
+	uint tableSize = 0;
+	if (_forwardKind == 'I') {
+		table = kInfo;
+		tableSize = ARRAYSIZE(kInfo);
+	} else if (_forwardKind == 'M') {
+		table = kArticle;
+		tableSize = ARRAYSIZE(kArticle);
+	}
+	uint32 item = 0;
+	for (uint i = 0; i < tableSize; i++) {
+		if (table[i].record == _record) {
+			item = table[i].item;
+			break;
+		}
+	}
+	if (!item)
+		return;
+	Common::Array<uint32> members;
+	itemMembers(item, members);
+	for (uint r = 0; r < recipients.size(); r++) {
+		for (uint i = 0; i < ARRAYSIZE(kIndexIds); i++) {
+			if (kIndexIds[i] == recipients[r]) {
+				if (i < members.size() && members[i] != 0)
+					_script._pda.queueEmail(members[i]);
+				break;
+			}
+		}
+	}
 }
 
 bool ComputerHooks::loadText(uint32 asset, Common::U32String &text) {

@@ -261,6 +261,15 @@ void PdaHooks::addHooks(HookTable<Script> &t) {
 		s._pda.mainScroll(c.args[0]);
 		return true;
 	});
+	t.add("ScrollHeaders", [](Script &s, const HookCall &c) {
+		if (!c.has(1))
+			return false;
+		s._pda.scrollHeaders(c.args[0]);
+		return true;
+	});
+	t.add("InitAddrList", [](Script &, const HookCall &) {
+		return true; // 0x4dfa00 is empty
+	});
 	t.add("ScrollTextKill", [](Script &s, const HookCall &c) {
 		PdaHooks &p = s._pda;
 		s.clearItemText(p._scrollItem);
@@ -432,6 +441,38 @@ void PdaHooks::scrollTextList(int32 item, int32 asset, int32 color, int32 font, 
 		_script.getTextAsset(asset, text);
 	// Arial 12 is 15 px per line (font.metrics, regular); the bold one is assumed to match
 	setScrollText(item, text, size, rgb, arial, arial);
+}
+
+void PdaHooks::scrollHeaders(int32 n) {
+	// 0x4ec910: only with more than 8 rows; the redraw is 0x48c680
+	uint rows = _inboxRows.size();
+	if (rows <= kInboxRows)
+		return;
+	switch (n) {
+	case 0:
+		if (_inboxTop == 0)
+			return;
+		_inboxTop--;
+		break;
+	case 1:
+		if (_inboxTop >= rows - kInboxRows)
+			return;
+		_inboxTop++;
+		break;
+	case 10:
+		if (_inboxTop == 0)
+			return;
+		_inboxTop = _inboxTop < kInboxRows ? 0 : _inboxTop - 7;
+		break;
+	case 11:
+		if (_inboxTop >= rows - kInboxRows)
+			return;
+		_inboxTop = MIN<uint>(_inboxTop + 7, rows - kInboxRows);
+		break;
+	default:
+		break;
+	}
+	showInboxTexts();
 }
 
 void PdaHooks::mainScroll(int32 n) {

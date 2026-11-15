@@ -814,6 +814,8 @@ private:
 	void enableTarget(uint32 target, bool value);
 	/** iUberParanoia += n (0x4bf500). */
 	void addUberParanoia(int32 n);
+	/** Willmore's journal: page[left] on item 46370, page[left + 1] or nothing on 46371 (0x4bfb20, 0x4bff40). */
+	void showJournalPages();
 
 	// Item texts (itemtext.cpp)
 	/** Lay out and set the text of an item (0x4be2c0); wrapWidth 0: a line per newline only. */
@@ -1000,6 +1002,8 @@ private:
 	uint32 _cookEmailCount;                    ///< The variable RegCookEmail gave iNumWillmoreEMailsToCook, or 0
 	uint32 _cookEmailFlag;                     ///< The variable it gave IFL_bPDAEmailedCookAboutNSA, or 0
 	uint32 _uberParanoia;                      ///< The variable RegUberVars gives iUberParanoia, or 0
+	Common::Array<uint32> _journalPages;       ///< JournalInit's pages: the enabled assets of item 49422 (0x6b9da8)
+	uint _journalLeft;                         ///< The journal's left page index (0x6b18d0)
 
 	// The Smolnikoff shootout: exe globals a save does not hold (0x6b1ef0..0x6b1f10, 0x6be8a4/7cc/834)
 	uint32 _shootVars[3];                      ///< The variables InitSmShootout was given (left, center, right goon dead)

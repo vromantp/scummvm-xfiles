@@ -42,6 +42,11 @@ static const uint32 kPDAAlertSound = 75688;
 /** PageTurnSound runs trigger 92463's list (XFiles.exe 0x4b3930): one of six random page sounds. */
 static const uint32 kPageTurnSoundActions = 92468;
 
+/** Willmore's journal (XFiles.exe 0x4bfb20): the page list's item and the two page text items. */
+static const uint32 kJournalSource = 49422;
+static const uint32 kJournalLeftItem = 46370;
+static const uint32 kJournalRightItem = 46371;
+
 /** DrawGunRauch's view (XFiles.exe 0x4f97d0): the Rauch porch shootout. */
 static const uint32 kRauchShootoutView = 39746;
 
@@ -521,6 +526,52 @@ void Script::addInterfaceHooks() {
 		s.setItemText(c.args[0], text, 14, false, 0x000000, Script::kAlignLeft, false, width, true);
 		return true;
 	});
+	t.add("JournalInit", [](Script &s, const HookCall &c) {
+		// 0x4bfb20: the enabled pages; the front if the value is not 0, else the last spread. Never writes the variable
+		if (!c.has(1))
+			return false;
+		s._journalPages.clear();
+		VCInterfaceItem item;
+		Common::Array<uint32> members;
+		if (s._data.getInterfaceItem(kJournalSource, item))
+			s._data.getMembers(item.assets, members);
+		for (uint i = 0; i < members.size(); i++) {
+			if (s.isEnabled(members[i]))
+				s._journalPages.push_back(members[i]);
+		}
+		uint count = s._journalPages.size();
+		if (count == 0 || c.args[0] != 0)
+			s._journalLeft = 0;
+		else
+			s._journalLeft = (count & 1) ? count - 1 : count - 2;
+		s.showJournalPages();
+		return true;
+	});
+	t.add("JournalFlip", [](Script &s, const HookCall &c) {
+		// 0x4bff40: nothing with two pages or fewer
+		if (!c.has(3) || !c.isVariable(1) || !c.isVariable(2))
+			return false;
+		uint count = s._journalPages.size();
+		if (count <= 2)
+			return true;
+		if (c.args[0] == 0) {
+			if (s._journalLeft < count - 2)
+				s._journalLeft += 2;
+		} else if (s._journalLeft != 0) {
+			s._journalLeft -= 2;
+		}
+		int32 first = s._journalLeft == 0 ? 1 : 0;
+		int32 last = s._journalLeft < count - 2 ? 0 : 1;
+		if (s.getVariable(c.variableArg(1)) != first)
+			s.setVariable(c.variableArg(1), first);
+		if (s.getVariable(c.variableArg(2)) != last)
+			s.setVariable(c.variableArg(2), last);
+		s.showJournalPages();
+		return true;
+	});
+	t.add("JournalDestroy", [](Script &, const HookCall &) {
+		return true; // 0x4bfb00 only frees the font
+	});
 	t.add("SetIItemFocus", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
@@ -702,6 +753,22 @@ void Script::logHook(const Common::String &name, HookStatus status) {
 
 bool Script::isHolding() const {
 	return _heldVariable && getVariable(_heldVariable) != _heldNone;
+}
+
+void Script::showJournalPages() {
+	// ZonkersHand 14 in the exe: the sans face stands in, as for SuicideNote
+	for (uint k = 0; k < 2; k++) {
+		uint32 item = k == 0 ? kJournalLeftItem : kJournalRightItem;
+		uint index = _journalLeft + k;
+		Common::U32String text;
+		if (index < _journalPages.size() && !readTextFile(_journalPages[index], text))
+			getTextAsset(_journalPages[index], text);
+		VCInterfaceItem data;
+		int width = 0;
+		if (_data.getInterfaceItem(item, data))
+			width = data.rect.right - data.rect.left;
+		setItemText(item, text, 14, false, 0x000000, kAlignLeft, false, width, true);
+	}
 }
 
 void Script::clearHeldItem() {

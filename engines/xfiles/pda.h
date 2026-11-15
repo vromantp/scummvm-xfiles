@@ -79,6 +79,7 @@ private:
 		bool sans = false);
 	void scrollTextList(int32 item, int32 asset, int32 color, int32 font, int32 size);
 	void mainScroll(int32 n);
+	void scrollHeaders(int32 n);
 	void pdaInitAddr();
 	void pdaFlipAddr(int32 n);
 	void showAddress();

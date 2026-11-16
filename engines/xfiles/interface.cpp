@@ -92,6 +92,31 @@ static const uint32 kNonModalLayouts[] = {
 // Layouts the activation itself exempts (0x42b250), whatever the list holds
 static const uint32 kAlwaysNonModalLayouts[] = { 49738, 49781, 49783, 49785, 72933, 50460 };
 
+/**
+ * A font laid out as GDI's DrawTextA does: no kerning (FreeType applies the kern table, GDI does not).
+ * Owns the wrapped font.
+ */
+class KerningFreeFont : public Graphics::Font {
+public:
+	explicit KerningFreeFont(Graphics::Font *font) : _font(font) {}
+	~KerningFreeFont() override { delete _font; }
+
+	int getFontHeight() const override { return _font->getFontHeight(); }
+	int getFontAscent() const override { return _font->getFontAscent(); }
+	int getFontDescent() const override { return _font->getFontDescent(); }
+	int getFontLeading() const override { return _font->getFontLeading(); }
+	int getMaxCharWidth() const override { return _font->getMaxCharWidth(); }
+	int getCharWidth(uint32 chr) const override { return _font->getCharWidth(chr); }
+	int getKerningOffset(uint32 left, uint32 right) const override { return 0; }
+	Common::Rect getBoundingBox(uint32 chr) const override { return _font->getBoundingBox(chr); }
+	void drawChar(Graphics::Surface *dst, uint32 chr, int x, int y, uint32 color) const override {
+		_font->drawChar(dst, chr, x, y, color);
+	}
+
+private:
+	Graphics::Font *_font;
+};
+
 // -- Graphic ------------------------------------------------------------------
 
 Interface::Graphic::Graphic() : _picture(nullptr), _movie(nullptr), _frame(0), _frameStart(0), _playing(false) {
@@ -875,10 +900,15 @@ Graphics::Font *Interface::getItemFont(int size, bool bold, int face) const {
 #ifdef USE_FREETYPE2
 	Graphics::TTFRenderMode mode = _smooth ? Graphics::kTTFRenderModeLight : Graphics::kTTFRenderModeMonochrome;
 	if (face == Script::kFaceHand) {
-		// ZonkersHand: the game's Jrn.ttr at GDI's lfHeight -14 (character height)
+		// ZonkersHand: the game's Jrn.ttr at GDI's lfHeight -14 (character height). GDI's advances are the
+		// hinted ones (FT_LOAD_TARGET_MONO gives the same for every character), also when smoothed, and it
+		// does not kern: this wraps every journal page and suicide note as the exe does
 		Common::SeekableReadStream *stream = _files.openFile(0, "Jrn.ttr");
+		Graphics::TTFRenderMode handMode = _smooth ? Graphics::kTTFRenderModeNormalWithGridFitting : Graphics::kTTFRenderModeMonochrome;
 		if (stream)
-			font = Graphics::loadTTFFont(stream, DisposeAfterUse::YES, size, Graphics::kTTFSizeModeCharacter, 0, 0, mode);
+			font = Graphics::loadTTFFont(stream, DisposeAfterUse::YES, size, Graphics::kTTFSizeModeCharacter, 0, 0, handMode);
+		if (font)
+			font = new KerningFreeFont(font);
 		if (!font)
 			face = Script::kFaceSans; // Liberation Sans stands in
 	}

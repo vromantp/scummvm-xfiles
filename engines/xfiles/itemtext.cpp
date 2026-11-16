@@ -58,8 +58,13 @@ struct TextMeter {
 	}
 };
 
-/** Word-wrap a line (DT_WORDBREAK): break after the last space that fits, or inside a word longer than a line. */
-static void wrapLine(const Common::U32String &line, int limit, const TextMeter &meter, Common::U32StringArray &out) {
+/**
+ * Word-wrap a line as DrawTextA's DT_WORDBREAK (checked against Windows' GDI on the journal pages): break at the
+ * last space whose text before it fits, dropping that one space only (further spaces start the next line), even at
+ * the line's first character; the line counts its trailing spaces, but a break that leaves nothing at the end of
+ * the text adds no line. A word longer than a line breaks inside (GDI's rule for that is not modelled).
+ */
+static void wrapLine(const Common::U32String &line, int limit, const TextMeter &meter, bool lastLine, Common::U32StringArray &out) {
 	Common::U32String rest = line;
 	while (meter.width(rest) > limit) {
 		int at = -1;
@@ -73,11 +78,11 @@ static void wrapLine(const Common::U32String &line, int limit, const TextMeter &
 			if (rest[i] == ' ')
 				at = i;
 		}
-		if (at > 0) {
+		if (at >= 0) {
 			out.push_back(rest.substr(0, at));
-			while ((uint)at < rest.size() && rest[at] == ' ')
-				at++;
-			rest = rest.substr(at);
+			rest = rest.substr(at + 1);
+			if (rest.empty() && lastLine)
+				return;
 		} else {
 			fit = MAX<uint>(fit, 1);
 			out.push_back(rest.substr(0, fit));
@@ -109,7 +114,7 @@ void Script::setItemText(uint32 item, const Common::U32String &text, int size, b
 			continue;
 		}
 		if (wrapWidth > 0)
-			wrapLine(line, limit, meter, t.lines);
+			wrapLine(line, limit, meter, i == text.size(), t.lines);
 		else
 			t.lines.push_back(line);
 		line.clear();

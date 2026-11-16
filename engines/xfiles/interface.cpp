@@ -764,10 +764,12 @@ void Interface::drawTinted(Graphics::Surface &dst, const Common::Rect &rect, con
 	before.free();
 }
 
-void Interface::drawIcons(Graphics::Surface &dst, const Common::Array<Icon> &icons, bool dim) const {
+void Interface::drawIcons(Graphics::Surface &dst, const Common::Array<Icon> &icons, bool dim, uint32 heldId) const {
 	for (uint i = 0; i < icons.size(); i++) {
 		const Graphic *graphic = icons[i].graphic;
-		if (icons[i].rollover && icons[i].rect.contains(_mouse) && !isModal())
+		// The held item keeps its rollover image (InvIcon_OnRoll)
+		bool lit = heldId && icons[i].id == heldId;
+		if (icons[i].rollover && (lit || icons[i].rect.contains(_mouse)) && !isModal())
 			graphic = icons[i].rollover;
 		if (!graphic)
 			continue;
@@ -806,7 +808,7 @@ void Interface::drawBar(Graphics::Surface &dst) const {
 	drawIcons(dst, _ideas, dim);
 	drawIcons(dst, _evidence, dim);
 	if (_barOpen) {
-		drawIcons(dst, _inventory, dim);
+		drawIcons(dst, _inventory, dim, _held);
 	} else if (_held && !isModal()) {
 		// A closed bar hides every icon but the one in hand (InvBar_OnShow 0x437050, Tool_BarIcons 0x4e2060)
 		Common::Array<Icon> heldIcon;
@@ -814,7 +816,7 @@ void Interface::drawBar(Graphics::Surface &dst) const {
 			if (_inventory[i].id == _held)
 				heldIcon.push_back(_inventory[i]);
 		}
-		drawIcons(dst, heldIcon, dim);
+		drawIcons(dst, heldIcon, dim, _held);
 	}
 	bool kitShown = _kitOpen && !_evidenceRowShown;
 	if (kitShown)

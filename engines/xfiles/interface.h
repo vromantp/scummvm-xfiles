@@ -248,7 +248,7 @@ private:
 	void drawItemText(Graphics::Surface &dst, const Item &item) const;
 	/** Courier New 400 or 700 at a character height, from Liberation Mono (kept); nullptr if unavailable. */
 	Graphics::Font *getItemFont(int size, bool bold, bool sans) const;
-	void drawIcons(Graphics::Surface &dst, const Common::Array<Icon> &icons, bool dim = false) const;
+	void drawIcons(Graphics::Surface &dst, const Common::Array<Icon> &icons, bool dim = false, uint32 heldId = 0) const;
 	/** Multiply the pixels of area that differ from before (a copy of the area) by the suspend tint. */
 	static void tintChanged(Graphics::Surface &dst, const Graphics::Surface &before, const Common::Rect &area);
 	/** Draw a graphic, then multiply the pixels it changed inside area by the suspend tint (B-007). */

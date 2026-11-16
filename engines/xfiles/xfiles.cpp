@@ -479,6 +479,8 @@ void XFilesEngine::runGame() {
 	_fastForward.clear();
 	// A location card started by a skipped step is gone: no time passed
 	_captions.reset();
+	// A clip whose end step was skipped is no longer playing in the script
+	_sound.dropEndedClips();
 	while (!shouldQuit()) {
 		// A load queued by loadGameStream (from the global main menu, from the
 		// steps) runs here, between two frames

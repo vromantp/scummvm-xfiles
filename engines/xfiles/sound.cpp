@@ -147,6 +147,15 @@ void SoundPlayer::clearClips() {
 	_clips.clear();
 }
 
+void SoundPlayer::dropEndedClips() {
+	Common::Array<uint32> stale;
+	for (Common::HashMap<uint32, Clip>::const_iterator it = _clips.begin(); it != _clips.end(); ++it)
+		if (!_script->isPlaying(it->_key))
+			stale.push_back(it->_key);
+	for (uint i = 0; i < stale.size(); i++)
+		stopClip(stale[i]);
+}
+
 void SoundPlayer::updateClips() {
 	Common::Array<Common::Pair<uint32, Movie *>> ended;
 	for (Common::HashMap<uint32, Clip>::iterator it = _clips.begin(); it != _clips.end(); ++it) {

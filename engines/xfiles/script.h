@@ -764,6 +764,8 @@ public:
 	 * (tool-objects.md "Binoculars block the view").
 	 */
 	bool binocularsBlock(const Common::Point &pos) const;
+	/** The asset has a sound object: a sound, a clip, or a video playing or queued (0x491380). */
+	bool isPlaying(uint32 id) const;
 
 private:
 	/** A tool object (binoculars, camera, flashlight, night vision) pauses the timed text while held; the gun and plain items do not. */
@@ -859,8 +861,6 @@ private:
 	void endSound(uint32 id, const char *how);
 	/** The Object Deactivation of the sounds and clips a Stop action stopped, once the event is over (B-112). */
 	void flushStops();
-	/** The asset has a sound object: a sound, a clip, or a video playing or queued (0x491380). */
-	bool isPlaying(uint32 id) const;
 	/** A placed clip (PlayAssetAt) ends: its Object Deactivation fires as at a sound's end. */
 	void endClip(uint32 id, const char *how);
 	/** PlayAssetAt of an XG clip: it plays once with its top-left at (x, y); no hold. */

@@ -62,6 +62,8 @@ public:
 	void clear();
 	/** Once a frame: places the 3D sounds again after a move, ends the finished sounds and clips (Script::finishSound). */
 	void update(bool sound3D);
+	/** Drops the clips the script no longer plays, without firing their end (a fast-forward ran the end steps). */
+	void dropEndedClips();
 	/** Draws the clips of one kind: the placed ones (PlayAssetAt, group +0x220 key 0x16, over the layout items) or the rest (view group). */
 	void drawClips(Graphics::Surface &dst, bool placed) const;
 	/** Freeze or resume every sound and clip. */

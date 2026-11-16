@@ -805,8 +805,17 @@ void Interface::drawBar(Graphics::Surface &dst) const {
 	}
 	drawIcons(dst, _ideas, dim);
 	drawIcons(dst, _evidence, dim);
-	if (_barOpen)
+	if (_barOpen) {
 		drawIcons(dst, _inventory, dim);
+	} else if (_held && !isModal()) {
+		// A closed bar hides every icon but the one in hand (InvBar_OnShow 0x437050, Tool_BarIcons 0x4e2060)
+		Common::Array<Icon> heldIcon;
+		for (uint i = 0; i < _inventory.size(); i++) {
+			if (_inventory[i].id == _held)
+				heldIcon.push_back(_inventory[i]);
+		}
+		drawIcons(dst, heldIcon, dim);
+	}
 	bool kitShown = _kitOpen && !_evidenceRowShown;
 	if (kitShown)
 		drawIcons(dst, _kit, dim);

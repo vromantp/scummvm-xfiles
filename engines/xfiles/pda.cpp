@@ -224,6 +224,12 @@ void PdaHooks::addHooks(HookTable<Script> &t) {
 		s._pda.createAddrList((char)c.args[0]);
 		return true;
 	});
+	t.add("AddrSelPDA", [](Script &s, const HookCall &c) {
+		if (!c.has(1))
+			return false;
+		s._pda.addrSelPDA(c.args[0]);
+		return true;
+	});
 	t.add("DisplayInBox", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
@@ -790,7 +796,7 @@ void PdaHooks::enableAllNotes() {
 	_noteDays = kNoteDayCount;
 }
 
-void PdaHooks::showNoteDayText() {
+Common::U32String PdaHooks::noteDayText() const {
 	// 0x4e71a0: the scroll text starts with a blank, then each note of the day in list order
 	VCInterfaceItem item;
 	Common::Array<uint32> members;
@@ -803,7 +809,89 @@ void PdaHooks::showNoteDayText() {
 		if (listHas(members, _notes[i]) && (_script.readTextFile(_notes[i], note) || _script.getTextAsset(_notes[i], note)))
 			text += note;
 	}
-	setScrollText(kNoteTextItem, text, kNoteFontSize);
+	return text;
+}
+
+void PdaHooks::showNoteDayText() {
+	setScrollText(kNoteTextItem, noteDayText(), kNoteFontSize);
+	// 0x4e71a0 also sets the record shown (0x6b9b94) to the day's item, which EmailSend 'N' reads
+	_script._computer.setRecord(_noteDay < kNoteDayCount ? kNoteDayItems[noteDay(_noteDay)] : 0);
+}
+
+void PdaHooks::notesPreview(uint32 address) {
+	// 0x4e6b90: after an address is picked for the notepad send, the day's header (item 40873) and body (the
+	// scroll text) for that address, else "Field Notes" and the day's notes. The day is the raw shown page
+	static const struct {
+		uint day;
+		uint32 address, body, header;
+	} kPreviews[] = {
+		{ 5, 45298, 61766, 67075 }, { 6, 45300, 61770, 67083 }, { 6, 45298, 61767, 67077 }, { 10, 45284, 61771, 67085 },
+		{ 16, 45298, 61774, 67091 }, { 19, 45298, 61772, 67087 }, { 21, 45298, 61773, 67089 }
+	};
+	static const uint32 kHeaderItem = 40873, kWongChecked = 1980, kAddressCook = 45290;
+	uint32 header = 0, body = 0;
+	if (_noteDay == 1) {
+		if (address == kAddressCook) {
+			if (_script.getVariable(kWongChecked) == 0) {
+				header = 67073;
+				body = 61776;
+			}
+		}
+	} else if (_noteDay == 4) {
+		if (address == 45298) {
+			header = 67079;
+			body = hasNote(63288) ? 61769 : 61768;
+		}
+	} else {
+		for (uint i = 0; i < ARRAYSIZE(kPreviews); i++) {
+			if (kPreviews[i].day == _noteDay && kPreviews[i].address == address) {
+				header = kPreviews[i].header;
+				body = kPreviews[i].body;
+				break;
+			}
+		}
+	}
+	if (header) {
+		Common::U32String text;
+		if (!_script.readTextFile(header, text))
+			_script.getTextAsset(header, text);
+		_script.setPDAText(kHeaderItem, text, kNoteFontSize, true);
+		text.clear();
+		if (!_script.readTextFile(body, text))
+			_script.getTextAsset(body, text);
+		replaceScrollText(text);
+	} else {
+		_script.setPDAText(kHeaderItem, Common::U32String("Field Notes"), kNoteFontSize, true);
+		replaceScrollText(noteDayText());
+		_script._computer.setRecord(_noteDay < kNoteDayCount ? kNoteDayItems[noteDay(_noteDay)] : 0);
+	}
+	// 0x5ceaa0: mail to Mark Cook counts for iNumWillmoreEMailsToCook; on page 1 it also sets the NSA flag
+	if (address == kAddressCook) {
+		if (_noteDay == 1 && _script._cookEmailFlag)
+			_script._variables[_script._cookEmailFlag] = 1;
+		if (_script._cookEmailCount)
+			_script._variables[_script._cookEmailCount] = _script.getVariable(_script._cookEmailCount) + 1;
+	}
+}
+
+void PdaHooks::addrSelPDA(int32 n) {
+	// 0x4ec520: n is the row's index in the working list; it becomes the PDA list's only address
+	if (n < 0 || (uint)n >= _addrWork.size())
+		return;
+	_addrWork[n].selected = true;
+	setAddrMode('D');
+	if (_addrDest) {
+		_addrDest->clear();
+		for (uint i = 0; i < _addrWork.size(); i++)
+			if (_addrWork[i].selected)
+				_addrDest->push_back(_addrWork[i].id);
+	}
+	for (uint i = 0; i < _addrWork.size(); i++)
+		_addrWork[i].selected = false;
+	setAddrMode('D');
+	_addrTop = 0;
+	drawAddrs();
+	notesPreview(_addrWork[n].id);
 }
 
 void PdaHooks::showNoteMarker() {

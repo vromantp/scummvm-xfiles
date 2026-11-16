@@ -100,8 +100,11 @@ private:
 	void addrSelected(int32 n);
 	void scrollAddrs(char c, int32 dir);
 	void createAddrList(char c);
+	void addrSelPDA(int32 n);
+	void notesPreview(uint32 address);
 	void noteFlipDay(int32 n);
 	void showNoteDayText();
+	Common::U32String noteDayText() const;
 	void showNoteMarker();
 	bool hasNote(uint32 id) const;
 	bool dayHasNote(uint day, uint32 note) const;

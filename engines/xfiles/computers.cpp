@@ -257,8 +257,8 @@ void ComputerHooks::addHooks(HookTable<Script> &t) {
 		s._computer.forwardObject((char)c.args[0]);
 		return true;
 	});
-	t.add("EmailSend", [](Script &s, const HookCall &) {
-		s._computer.emailSend();
+	t.add("EmailSend", [](Script &s, const HookCall &c) {
+		s._computer.emailSend(c.event, c.fields);
 		return true;
 	});
 	t.add("LoginInit", [](Script &s, const HookCall &c) {
@@ -447,7 +447,7 @@ void ComputerHooks::forwardObject(char kind) {
 	}
 }
 
-void ComputerHooks::emailSend() {
+void ComputerHooks::emailSend(int event, const Common::Array<int32> &fields) {
 	// 0x475760
 	struct Pair {
 		uint32 record, item;
@@ -465,6 +465,44 @@ void ComputerHooks::emailSend() {
 	Common::Array<uint32> recipients;
 	if (!_script._pda.mailRecipients(recipients))
 		return;
+	if (_forwardKind == 'N') {
+		// 0x4e6ea0: the PDA notepad send; the record is the shown notepad day (0x4e71a0)
+		static const Pair kNoteMail[] = {
+			{ 45344, 63620 }, { 45345, 63664 }, { 45346, 63628 }, { 45348, 63636 }, { 45347, 63658 }, { 45349, 63638 },
+			{ 45350, 63634 }, { 50378, 63656 }, { 63395, 63622 }, { 63389, 63632 }, { 63393, 63614 }, { 63397, 63660 },
+			{ 63399, 63618 }, { 63401, 63626 }, { 63403, 63646 }, { 63405, 63642 }, { 63409, 63654 }, { 63411, 63598 },
+			{ 63413, 63620 }, { 63415, 63648 }, { 63417, 63650 }, { 63419, 63644 }
+		};
+		uint32 mailItem = 0;
+		for (uint i = 0; i < ARRAYSIZE(kNoteMail); i++) {
+			if (kNoteMail[i].record == _record) {
+				mailItem = kNoteMail[i].item;
+				break;
+			}
+		}
+		if (!mailItem)
+			return;
+		Common::Array<uint32> noteMembers;
+		itemMembers(mailItem, noteMembers);
+		for (uint r = 0; r < recipients.size(); r++) {
+			for (uint i = 0; i < ARRAYSIZE(kIndexIds); i++) {
+				if (kIndexIds[i] != recipients[r])
+					continue;
+				// Mark Cook's mail of the day 2 note: only before bWongBackgroundChecked (variable 1980)
+				bool cook = mailItem == 63664 && i == 1;
+				if (cook && _script.getVariable(1980) == 1)
+					break;
+				if (cook)
+					_script.runActionList(44089, event, fields);
+				if (i < noteMembers.size() && noteMembers[i] != 0)
+					_script._pda.queueEmail(noteMembers[i]);
+				if (cook)
+					_script._pda.queueEmail(64526);
+				break;
+			}
+		}
+		return;
+	}
 	const Pair *table = nullptr;
 	uint tableSize = 0;
 	if (_forwardKind == 'I') {

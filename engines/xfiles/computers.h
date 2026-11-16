@@ -47,6 +47,8 @@ public:
 
 	/** The photo viewer is up (PhotoInit to PhotoClose): the engine draws the pictures over the layout. */
 	bool isPhotoViewerOpen() const { return _photoOpen; }
+	/** The record shown (0x6b9b94); the PDA notepad sets it to the shown day's item (0x4e71a0). */
+	void setRecord(uint32 asset) { _record = asset; }
 	const Common::Array<uint> &getPhotoThumbs() const { return _photoThumbs; }
 	int getPhotoEnlarged() const { return _photoEnlarged; }
 	/** The layout item (0x6581e0) of thumbnail slot k, and of the enlarged picture. */
@@ -95,7 +97,7 @@ private:
 	/** 0x42a120: remember the kind and draw the forwarded mail's subject, attachment or article. */
 	void forwardObject(char kind);
 	/** 0x475760: queue the forwarded record's mails for the recipients. */
-	void emailSend();
+	void emailSend(int event, const Common::Array<int32> &fields);
 	/** The members of an interface item's asset list, in order, enabled or not. */
 	void itemMembers(uint32 item, Common::Array<uint32> &members);
 	/** Focus a log-in field (state 0 to 3) and put the caret behind its text (0x4867e0). */

@@ -730,8 +730,8 @@ void Script::addStateHooks() {
 	});
 	t.add("RegCookEmail", [](Script &s, const HookCall &c) {
 		// 0x48e830 keeps the two handles. The only reader is the notepad's send-to-address code (0x4e6b90, called
-		// by AddrSelPDA), which is not ported: sent to address 45290 it adds 1 to the count and, on notepad day 1,
-		// sets the flag
+		// by AddrSelPDA, PdaHooks::notesPreview): sent to address 45290 it adds 1 to the count and, on notepad
+		// day 1, sets the flag
 		if (!c.isVariable(0) || !c.isVariable(1))
 			return false;
 		s._cookEmailCount = c.variableArg(0);

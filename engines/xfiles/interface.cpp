@@ -624,6 +624,15 @@ void Interface::freeItems() {
 	_itemIds.clear();
 }
 
+void Interface::setSuspended(bool suspended) {
+	_suspended = suspended;
+	_suspendedItems.clear();
+	if (suspended) {
+		for (uint i = 0; i < _items.size(); i++)
+			_suspendedItems.push_back(_items[i].id);
+	}
+}
+
 bool Interface::isModal() const {
 	if (_suspended)
 		return true;
@@ -871,11 +880,11 @@ void Interface::drawItems(Graphics::Surface &dst) const {
 			modalLayout = i;
 	}
 	for (uint i = 0; i < _items.size(); i++) {
-		// FadeBack(1) suspends the items of the layouts already shown; a layout shown with it (the PDA, a photo) is
-		// activated after the suspension and stays lit
+		// FadeBack(1) suspends the items already shown; an item activated after it stays lit: a layout shown with it
+		// (the PDA, a photo) and Help's explanation (items 50470 and 51090 come after 68589's FadeBack(1))
 		bool dimItem = _items[i].id != kNeverTintedItem &&
 		               ((int)_items[i].layoutIndex < modalLayout ||
-		                (_suspended && Common::find(_suspendedLayouts.begin(), _suspendedLayouts.end(), _layouts[_items[i].layoutIndex]) != _suspendedLayouts.end()));
+		                (_suspended && Common::find(_suspendedItems.begin(), _suspendedItems.end(), _items[i].id) != _suspendedItems.end()));
 		if (dimItem) {
 			Common::Rect area = _items[i].rect;
 			area.clip(Common::Rect(dst.w, dst.h));

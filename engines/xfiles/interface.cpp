@@ -92,6 +92,10 @@ static const uint32 kNonModalLayouts[] = {
 // Layouts the activation itself exempts (0x42b250), whatever the list holds
 static const uint32 kAlwaysNonModalLayouts[] = { 49738, 49781, 49783, 49785, 72933, 50460 };
 
+// The one item the suspend tint skips (0x433760 compares the item ID with 0x6b19b4): the paper folder's inner
+// picture, which stays lit behind the folder's sheets
+static const uint32 kNeverTintedItem = 56211;
+
 /**
  * A font laid out as GDI's DrawTextA does: no kerning (FreeType applies the kern table, GDI does not).
  * Owns the wrapped font.
@@ -869,8 +873,9 @@ void Interface::drawItems(Graphics::Surface &dst) const {
 	for (uint i = 0; i < _items.size(); i++) {
 		// FadeBack(1) suspends the items of the layouts already shown; a layout shown with it (the PDA, a photo) is
 		// activated after the suspension and stays lit
-		bool dimItem = (int)_items[i].layoutIndex < modalLayout ||
-		               (_suspended && Common::find(_suspendedLayouts.begin(), _suspendedLayouts.end(), _layouts[_items[i].layoutIndex]) != _suspendedLayouts.end());
+		bool dimItem = _items[i].id != kNeverTintedItem &&
+		               ((int)_items[i].layoutIndex < modalLayout ||
+		                (_suspended && Common::find(_suspendedLayouts.begin(), _suspendedLayouts.end(), _layouts[_items[i].layoutIndex]) != _suspendedLayouts.end()));
 		if (dimItem) {
 			Common::Rect area = _items[i].rect;
 			area.clip(Common::Rect(dst.w, dst.h));

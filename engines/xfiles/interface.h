@@ -165,7 +165,7 @@ public:
 	void drawDragged(Graphics::Surface &dst, uint32 ideaId, const Common::Point &pos) const;
 
 	/** The width of a text in an item font (Script wraps by it), -1 if the font is missing. */
-	int measureItemText(const Common::U32String &text, int size, bool bold, bool sans) const;
+	int measureItemText(const Common::U32String &text, int size, bool bold, int face) const;
 
 private:
 	/** A picture (an entry of a .pff archive) or a movie, looped. */
@@ -247,7 +247,7 @@ private:
 	void syncItemTexts(const Script &script);
 	void drawItemText(Graphics::Surface &dst, const Item &item) const;
 	/** Courier New 400 or 700 at a character height, from Liberation Mono (kept); nullptr if unavailable. */
-	Graphics::Font *getItemFont(int size, bool bold, bool sans) const;
+	Graphics::Font *getItemFont(int size, bool bold, int face) const;
 	void drawIcons(Graphics::Surface &dst, const Common::Array<Icon> &icons, bool dim = false, uint32 heldId = 0) const;
 	/** Multiply the pixels of area that differ from before (a copy of the area) by the suspend tint. */
 	static void tintChanged(Graphics::Surface &dst, const Graphics::Surface &before, const Common::Rect &area);

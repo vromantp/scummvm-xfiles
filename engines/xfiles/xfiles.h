@@ -118,7 +118,7 @@ public:
 	void playClip(uint32 id, int16 x, int16 y) override;
 	void stopViewAsset(uint32 id) override;
 	bool readAssetFile(uint32 id, Common::Array<byte> &data) override;
-	int measureText(const Common::U32String &text, int size, bool bold, bool sans) const override;
+	int measureText(const Common::U32String &text, int size, bool bold, int face) const override;
 	bool queryInventoryIcon(uint32 id, bool &hasIcon) const override;
 	void heldItemChanged(uint32 id) override;
 	bool delayPlay(uint32 asset, uint ms) override;

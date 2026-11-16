@@ -184,8 +184,8 @@ public:
 	virtual bool deferInventoryIcon(uint32 id) { return false; }
 	/** The bytes of the file of a file asset (an e-mail's text), false if there is none. */
 	virtual bool readAssetFile(uint32 id, Common::Array<byte> &data) { return false; }
-	/** The width in pixels of a text in an item's font (Courier New, or Arial when sans), -1 if unknown. */
-	virtual int measureText(const Common::U32String &text, int size, bool bold, bool sans) const { return -1; }
+	/** The width in pixels of a text in an item's font (a TextFace), -1 if unknown. */
+	virtual int measureText(const Common::U32String &text, int size, bool bold, int face) const { return -1; }
 	/**
 	 * The value the registry holds for a preference (RegPreferences, 0x4ccda0)
 	 * that this port takes from the ScummVM settings: false leaves the answer
@@ -624,12 +624,18 @@ public:
 		kAlignCenter,
 		kAlignRight
 	};
+	/** The face of an item text. */
+	enum TextFace {
+		kFaceMono = 0, ///< Courier New (Liberation Mono)
+		kFaceSans = 1, ///< Arial (Liberation Sans)
+		kFaceHand = 2  ///< ZonkersHand (Jrn.ttr), Liberation Sans if the file is missing
+	};
 	/** Text drawn into an interface item (the phone's display, the PDA's texts). */
 	struct ItemText {
 		Common::U32StringArray lines;  ///< Laid out lines
 		uint32 color;   ///< RGB
 		bool bold;
-		bool sans;      ///< Arial (Liberation Sans) instead of Courier New
+		int face;       ///< TextFace
 		int size;       ///< Character height in pixels (GDI's -lfHeight)
 		int lineHeight; ///< Pixels from one line to the next
 		TextAlign align;
@@ -822,7 +828,7 @@ private:
 	// Item texts (itemtext.cpp)
 	/** Lay out and set the text of an item (0x4be2c0); wrapWidth 0: a line per newline only. */
 	void setItemText(uint32 item, const Common::U32String &text, int size, bool bold, uint32 color, TextAlign align,
-		bool shadow, int wrapWidth, bool sans = false);
+		bool shadow, int wrapWidth, int face = kFaceMono);
 	/** PDA text: Courier New, regular, black, left, no shadow, wrapped at width (0x4be2c0); ScrollTextList's colour and Arial are optional. */
 	void setPDAText(uint32 item, const Common::U32String &text, int size, bool doubleWidth, uint32 color = 0,
 		bool bold = false, bool sans = false);

@@ -1039,8 +1039,8 @@ bool XFilesEngine::readAssetFile(uint32 id, Common::Array<byte> &data) {
 	return ok;
 }
 
-int XFilesEngine::measureText(const Common::U32String &text, int size, bool bold, bool sans) const {
-	return _interface ? _interface->measureItemText(text, size, bold, sans) : -1;
+int XFilesEngine::measureText(const Common::U32String &text, int size, bool bold, int face) const {
+	return _interface ? _interface->measureItemText(text, size, bold, face) : -1;
 }
 
 void XFilesEngine::playAsset(uint32 id, byte mode, bool positional, int16 x, int16 y) {

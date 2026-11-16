@@ -29,7 +29,9 @@ namespace XFiles {
 // newline) for the phone, the PDA and the computers, and the reading of text assets and text files
 
 /** Pixels from line to line (font.metrics of pda-usage-run1: 12 gives 15, 14 gives 17; the phone's 15 gives 17). */
-static int lineHeightOf(int size) {
+static int lineHeightOf(int size, int face) {
+	if (face == Script::kFaceHand)
+		return 22; // ZonkersHand 14: GDI height 22
 	return size <= 12 ? 15 : 17;
 }
 
@@ -42,14 +44,17 @@ static int charWidthOf(int size) {
 struct TextMeter {
 	const ScriptHooks *hooks;
 	int size;
-	bool bold, sans;
+	bool bold;
+	int face;
 
 	int width(const Common::U32String &text) const {
-		if (!sans)
+		if (face == Script::kFaceMono)
 			return text.size() * charWidthOf(size);
-		int w = hooks ? hooks->measureText(text, size, bold, sans) : -1;
-		// Without fonts (vcdump): Arial 12 averages 5 px per character
-		return w >= 0 ? w : text.size() * size * 5 / 12;
+		int w = hooks ? hooks->measureText(text, size, bold, face) : -1;
+		if (w >= 0)
+			return w;
+		// Without fonts (vcdump): ZonkersHand averages 7 px; Arial 12 averages 5 px per character
+		return face == Script::kFaceHand ? text.size() * 7 : text.size() * size * 5 / 12;
 	}
 };
 
@@ -83,20 +88,20 @@ static void wrapLine(const Common::U32String &line, int limit, const TextMeter &
 }
 
 void Script::setItemText(uint32 item, const Common::U32String &text, int size, bool bold, uint32 color, TextAlign align,
-		bool shadow, int wrapWidth, bool sans) {
+		bool shadow, int wrapWidth, int face) {
 	ItemText &t = _itemTexts[item];
 	t.lines.clear();
 	t.color = color;
 	t.bold = bold;
-	t.sans = sans;
+	t.face = face;
 	t.size = size;
-	t.lineHeight = lineHeightOf(size);
+	t.lineHeight = lineHeightOf(size, face);
 	t.align = align;
 	t.shadow = shadow;
 	t.firstLine = 0;
 	// Courier New wraps at whole characters; Arial at the pixel width
-	TextMeter meter = { _hooks, size, bold, sans };
-	int limit = sans ? wrapWidth : MAX(1, wrapWidth / charWidthOf(size)) * charWidthOf(size);
+	TextMeter meter = { _hooks, size, bold, face };
+	int limit = face != Script::kFaceMono ? wrapWidth : MAX(1, wrapWidth / charWidthOf(size)) * charWidthOf(size);
 	Common::U32String line;
 	for (uint i = 0; i <= text.size(); i++) {
 		if (i < text.size() && text[i] != '\n') {
@@ -119,7 +124,7 @@ void Script::setPDAText(uint32 item, const Common::U32String &text, int size, bo
 	int width = 0;
 	if (_data.getInterfaceItem(item, data))
 		width = (data.rect.right - data.rect.left) * (doubleWidth ? 2 : 1);
-	setItemText(item, text, size, bold, color, kAlignLeft, false, width, sans);
+	setItemText(item, text, size, bold, color, kAlignLeft, false, width, sans ? kFaceSans : kFaceMono);
 }
 
 bool Script::getTextAsset(uint32 entry, Common::U32String &text) {

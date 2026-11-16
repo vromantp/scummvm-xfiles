@@ -516,8 +516,7 @@ void Script::addInterfaceHooks() {
 	});
 	t.add("SuicideNote", [](Script &s, const HookCall &c) {
 		// (Event::1) 0x4f9fc0: one of three note texts (table 0x659a00) on the activated item. The face is
-		// ZonkersHand (Jrn.ttr), which the fonts do not have: the sans face stands in. 14 high, black, left,
-		// wrapped at the item's own width (+0x194 is 1)
+		// ZonkersHand 14 (Jrn.ttr), black, left, wrapped at the item's own width (+0x194 is 1), 22 px lines
 		if (!c.has(1) || !c.args[0])
 			return false;
 		static const uint32 kNotes[3] = {62868, 62870, 62872};
@@ -530,7 +529,7 @@ void Script::addInterfaceHooks() {
 		int width = 0;
 		if (s._data.getInterfaceItem(c.args[0], item))
 			width = item.rect.right - item.rect.left;
-		s.setItemText(c.args[0], text, 14, false, 0x000000, Script::kAlignLeft, false, width, true);
+		s.setItemText(c.args[0], text, 14, false, 0x000000, Script::kAlignLeft, false, width, Script::kFaceHand);
 		return true;
 	});
 	t.add("JournalInit", [](Script &s, const HookCall &c) {
@@ -803,7 +802,7 @@ bool Script::isHolding() const {
 }
 
 void Script::showJournalPages() {
-	// ZonkersHand 14 in the exe: the sans face stands in, as for SuicideNote
+	// ZonkersHand 14 (Jrn.ttr), wrapped at the item's own width, 22 px lines
 	for (uint k = 0; k < 2; k++) {
 		uint32 item = k == 0 ? kJournalLeftItem : kJournalRightItem;
 		uint index = _journalLeft + k;
@@ -814,7 +813,7 @@ void Script::showJournalPages() {
 		int width = 0;
 		if (_data.getInterfaceItem(item, data))
 			width = data.rect.right - data.rect.left;
-		setItemText(item, text, 14, false, 0x000000, kAlignLeft, false, width, true);
+		setItemText(item, text, 14, false, 0x000000, kAlignLeft, false, width, kFaceHand);
 	}
 }
 
@@ -842,7 +841,7 @@ void Script::showBiblePages(bool init) {
 		int width = 0;
 		if (_data.getInterfaceItem(item, data))
 			width = data.rect.right - data.rect.left;
-		setItemText(item, text, 12, false, 0x000000, kAlignLeft, false, width, true);
+		setItemText(item, text, 12, false, 0x000000, kAlignLeft, false, width, kFaceSans);
 	}
 }
 

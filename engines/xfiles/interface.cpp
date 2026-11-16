@@ -28,6 +28,7 @@
 #include "graphics/surface.h"
 
 #include "xfiles/detection.h"
+#include "xfiles/discfiles.h"
 #include "xfiles/interface.h"
 #include "xfiles/movie.h"
 #include "xfiles/pictures.h"
@@ -866,28 +867,37 @@ void Interface::drawItems(Graphics::Surface &dst) const {
 	}
 }
 
-Graphics::Font *Interface::getItemFont(int size, bool bold, bool sans) const {
-	uint key = size << 2 | (sans ? 2 : 0) | (bold ? 1 : 0);
+Graphics::Font *Interface::getItemFont(int size, bool bold, int face) const {
+	uint key = size << 3 | face << 1 | (bold ? 1 : 0);
 	if (_itemFonts.contains(key))
 		return _itemFonts[key];
 	Graphics::Font *font = nullptr;
 #ifdef USE_FREETYPE2
-	if (sans) {
-		// Arial: Liberation Sans has its metrics
-		Graphics::TTFRenderMode mode = _smooth ? Graphics::kTTFRenderModeLight : Graphics::kTTFRenderModeMonochrome;
-		font = Graphics::loadTTFFontFromArchive(bold ? "LiberationSans-Bold.ttf" : "LiberationSans-Regular.ttf", size, Graphics::kTTFSizeModeCharacter, 0, 0, mode);
-	} else {
-		// Courier New: Liberation Mono has its metrics
-		Graphics::TTFRenderMode mode = _smooth ? Graphics::kTTFRenderModeLight : Graphics::kTTFRenderModeMonochrome;
-		font = Graphics::loadTTFFontFromArchive(bold ? "LiberationMono-Bold.ttf" : "LiberationMono-Regular.ttf", size, Graphics::kTTFSizeModeCharacter, 0, 0, mode);
+	Graphics::TTFRenderMode mode = _smooth ? Graphics::kTTFRenderModeLight : Graphics::kTTFRenderModeMonochrome;
+	if (face == Script::kFaceHand) {
+		// ZonkersHand: the game's Jrn.ttr at GDI's lfHeight -14 (character height)
+		Common::SeekableReadStream *stream = _files.openFile(0, "Jrn.ttr");
+		if (stream)
+			font = Graphics::loadTTFFont(stream, DisposeAfterUse::YES, size, Graphics::kTTFSizeModeCharacter, 0, 0, mode);
+		if (!font)
+			face = Script::kFaceSans; // Liberation Sans stands in
+	}
+	if (!font) {
+		if (face == Script::kFaceSans) {
+			// Arial: Liberation Sans has its metrics
+			font = Graphics::loadTTFFontFromArchive(bold ? "LiberationSans-Bold.ttf" : "LiberationSans-Regular.ttf", size, Graphics::kTTFSizeModeCharacter, 0, 0, mode);
+		} else {
+			// Courier New: Liberation Mono has its metrics
+			font = Graphics::loadTTFFontFromArchive(bold ? "LiberationMono-Bold.ttf" : "LiberationMono-Regular.ttf", size, Graphics::kTTFSizeModeCharacter, 0, 0, mode);
+		}
 	}
 #endif
 	_itemFonts[key] = font;
 	return font;
 }
 
-int Interface::measureItemText(const Common::U32String &text, int size, bool bold, bool sans) const {
-	Graphics::Font *font = getItemFont(size, bold, sans);
+int Interface::measureItemText(const Common::U32String &text, int size, bool bold, int face) const {
+	Graphics::Font *font = getItemFont(size, bold, face);
 	return font ? font->getStringWidth(text) : -1;
 }
 
@@ -896,7 +906,7 @@ void Interface::drawItemText(Graphics::Surface &dst, const Item &item) const {
 	// script, drawn from the item's top left, a line per line height, clipped to the item.
 	// A shadow is the same in black, 1 px right and down, drawn first.
 	const Script::ItemText &text = item.text;
-	Graphics::Font *font = getItemFont(text.size, text.bold, text.sans);
+	Graphics::Font *font = getItemFont(text.size, text.bold, text.face);
 	if (!font)
 		return;
 	Common::Rect clip = item.rect;
@@ -908,6 +918,9 @@ void Interface::drawItemText(Graphics::Surface &dst, const Item &item) const {
 		text.align == Script::kAlignRight ? Graphics::kTextAlignRight : Graphics::kTextAlignLeft;
 	uint32 colors[2] = { dst.format.RGBToColor(0, 0, 0),
 		dst.format.RGBToColor((text.color >> 16) & 0xff, (text.color >> 8) & 0xff, text.color & 0xff) };
+	// GDI puts the baseline 15 px (ZonkersHand's ascent at 14) below the line top; FreeType's ascent differs
+	static const int kHandAscent = 15;
+	int dy = text.face == Script::kFaceHand ? kHandAscent - font->getFontAscent() : 0;
 	for (int pass = text.shadow ? 0 : 1; pass < 2; pass++) {
 		int offset = pass == 0 ? 1 : 0;
 		for (uint i = text.firstLine; i < text.lines.size(); i++) {
@@ -915,7 +928,7 @@ void Interface::drawItemText(Graphics::Surface &dst, const Item &item) const {
 			if (y >= item.rect.height())
 				break;
 			font->drawString(&area, text.lines[i], item.rect.left - clip.left + offset,
-				item.rect.top - clip.top + y + offset, item.rect.width(), colors[pass], align);
+				item.rect.top - clip.top + y + offset + dy, item.rect.width(), colors[pass], align);
 		}
 	}
 }

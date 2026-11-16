@@ -149,9 +149,19 @@ bool Script::readTextFile(uint32 asset, Common::U32String &text) {
 	if (!_hooks || !_hooks->readAssetFile(asset, data))
 		return false;
 	Common::String raw;
+	// The exe's 0x447430: a tab becomes four spaces, a CR next to an LF is dropped, a lone CR becomes LF.
 	for (uint i = 0; i < data.size(); i++) {
-		if (data[i] != '\r')
-			raw += (char)data[i];
+		byte c = data[i];
+		if (c == '\t') {
+			raw += "    ";
+		} else if (c == '\r') {
+			bool nextLF = i + 1 < data.size() && data[i + 1] == '\n';
+			bool prevLF = i > 0 && data[i - 1] == '\n';
+			if (!nextLF && !prevLF)
+				raw += '\n';
+		} else {
+			raw += (char)c;
+		}
 	}
 	text = Common::U32String(raw, Common::kWindows1252);
 	return true;

@@ -70,6 +70,9 @@ public:
 	void close();
 	bool isOpen() const { return _charView != 0; }
 	uint32 getCharView() const { return _charView; }
+	/** The box is open and lists a topic. DBox_SetShown 0x43ead0 builds nothing when no enabled topic is listed (Talk
+	 *  or History): a box whose last topics were disabled by their asks is not drawn and takes no clicks. */
+	bool isVisible() const { return isOpen() && (!_talk.empty() || !_history.empty()); }
 
 	/** The topics of both tabs, in order; the scroll position is kept. */
 	void setTopics(const Common::Array<Topic> &talk, const Common::Array<Topic> &history);

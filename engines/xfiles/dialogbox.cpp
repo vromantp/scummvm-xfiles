@@ -216,7 +216,7 @@ Common::Rect DialogBox::getThumbRect() const {
 
 bool DialogBox::contains(const Common::Point &pos) const {
 	const PictureAsset *folder = _pictures[kPicTalk];
-	return isOpen() && getRect(0, 0, folder->getWidth(), folder->getHeight()).contains(pos);
+	return isVisible() && getRect(0, 0, folder->getWidth(), folder->getHeight()).contains(pos);
 }
 
 uint32 DialogBox::topicAt(const Common::Point &pos) const {
@@ -276,7 +276,7 @@ DialogBox::Hit DialogBox::click(const Common::Point &pos, uint32 &topic) {
 }
 
 void DialogBox::draw(Graphics::Surface &dst, const Common::Point &mouse, bool blueFolder) const {
-	if (!isOpen())
+	if (!isVisible())
 		return;
 	_pictures[_historyTab ? kPicHistory : kPicTalk]->draw(dst, _pos.x, _pos.y, blueFolder);
 	if (_history.empty())

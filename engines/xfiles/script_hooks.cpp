@@ -47,6 +47,13 @@ static const uint32 kJournalSource = 49422;
 static const uint32 kJournalLeftItem = 46370;
 static const uint32 kJournalRightItem = 46371;
 
+/** Scully's Bible (XFiles.exe 0x4f8970): the page list's item, the two page items and the two edge buttons. */
+static const uint32 kBibleSource = 80907;
+static const uint32 kBibleLeftItem = 80868;
+static const uint32 kBibleRightItem = 80869;
+static const uint32 kBibleBackItem = 80870;
+static const uint32 kBibleForwardItem = 80871;
+
 /** DrawGunRauch's view (XFiles.exe 0x4f97d0): the Rauch porch shootout. */
 static const uint32 kRauchShootoutView = 39746;
 
@@ -572,6 +579,46 @@ void Script::addInterfaceHooks() {
 	t.add("JournalDestroy", [](Script &, const HookCall &) {
 		return true; // 0x4bfb00 only frees the font
 	});
+	t.add("BibleInit", [](Script &s, const HookCall &) {
+		// 0x4f8970: the enabled pages of item 80907; the first spread, the back button off, the forward button on
+		s._biblePages.clear();
+		VCInterfaceItem item;
+		Common::Array<uint32> members;
+		if (s._data.getInterfaceItem(kBibleSource, item))
+			s._data.getMembers(item.assets, members);
+		for (uint i = 0; i < members.size(); i++) {
+			if (s.isEnabled(members[i]))
+				s._biblePages.push_back(members[i]);
+		}
+		s._bibleLeft = 0;
+		s.setItemEnabled(kBibleBackItem, false);
+		s.setItemEnabled(kBibleForwardItem, true);
+		// No count check on the right page in the exe; an empty list gives both pages an empty text
+		s.showBiblePages(true);
+		return true;
+	});
+	t.add("BibleFlip", [](Script &s, const HookCall &c) {
+		// 0x4f8d40: dir 1 goes back, any other value forward; the last spread is left index 8 (untested, not in any run)
+		if (!c.has(1))
+			return false;
+		s.setItemEnabled(kBibleBackItem, true);
+		s.setItemEnabled(kBibleForwardItem, true);
+		if (c.args[0] == 1) {
+			if (s._bibleLeft == 0)
+				return true;
+			s._bibleLeft -= 2;
+			if (s._bibleLeft == 0)
+				s.setItemEnabled(kBibleBackItem, false);
+		} else {
+			if (s._bibleLeft > 7)
+				return true;
+			s._bibleLeft += 2;
+			if (s._bibleLeft > 7)
+				s.setItemEnabled(kBibleForwardItem, false);
+		}
+		s.showBiblePages(false);
+		return true;
+	});
 	t.add("SetIItemFocus", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
@@ -768,6 +815,34 @@ void Script::showJournalPages() {
 		if (_data.getInterfaceItem(item, data))
 			width = data.rect.right - data.rect.left;
 		setItemText(item, text, 14, false, 0x000000, kAlignLeft, false, width, true);
+	}
+}
+
+void Script::showBiblePages(bool init) {
+	// GetFont(3, 12) in the exe: the sans face stands in. Outside the init, a page the exe does not set keeps its text
+	uint count = _biblePages.size();
+	for (uint k = 0; k < 2; k++) {
+		uint index = _bibleLeft + k;
+		bool set;
+		if (init)
+			set = true;
+		else if (k == 0)
+			set = _bibleLeft < count;
+		else
+			set = _bibleLeft < count && _bibleLeft != 10 && index < count;
+		if (!set)
+			continue;
+		uint32 item = k == 0 ? kBibleLeftItem : kBibleRightItem;
+		if (index < count)
+			debugC(2, kDebugScript, "bible left=%u page %u item %u", _bibleLeft, _biblePages[index], item);
+		Common::U32String text;
+		if (index < count && !readTextFile(_biblePages[index], text))
+			getTextAsset(_biblePages[index], text);
+		VCInterfaceItem data;
+		int width = 0;
+		if (_data.getInterfaceItem(item, data))
+			width = data.rect.right - data.rect.left;
+		setItemText(item, text, 12, false, 0x000000, kAlignLeft, false, width, true);
 	}
 }
 

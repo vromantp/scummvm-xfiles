@@ -856,6 +856,12 @@ private:
 	/** The .HOT click actions (HotSpot_ClickAction 0x4b4a20, docs/formats/hot.md "Click actions", B-031). */
 	int hotActionFor(uint32 kind, bool &gunAnimation) const;
 	void hotAction(int n);
+	/** hotAction 1, 2, 4, 5: rewrite the enable flags of the view's assets (0x4b5680, 0x4b59f0); true: none is left enabled. */
+	bool hotRewriteAssetFlags(int n);
+	/** hotAction 27: Suicide Note White or Yellow (table 0x6549a0). */
+	void hotSuicideNote();
+	/** hotAction 3: Easter candy, Mel shot 1-5 (table 0x6549a8). */
+	void hotEasterCandy();
 	void setViewState(char letter);
 	void setViewByExe(uint32 view);
 	void setShootoutVariables();

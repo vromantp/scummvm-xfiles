@@ -367,19 +367,8 @@ void Script::hotAction(int n) {
 	// that no asset is left enabled. Action 0 does the same in the exe with a rule the doc does not give: left out
 	// (B-031)
 	bool success = false;
-	if (n == 1 || n == 2 || n == 4 || n == 5) {
-		VCView v;
-		Common::Array<uint32> assets;
-		if (_data.getView(_pos.view, v))
-			_data.getMembers(v.assets, assets);
-		uint count = assets.size();
-		uint chosen = count;
-		if (!assets.empty() && isEnabled(assets[0]))
-			chosen = (n == 1 || n == 4) ? 2 : 1;
-		for (uint i = 0; i < count; i++)
-			_enabled[assets[i]] = i == chosen;
-		success = chosen >= count;
-	}
+	if (n == 1 || n == 2 || n == 4 || n == 5)
+		success = hotRewriteAssetFlags(n);
 
 	// The view state is written before the view's deactivation runs: the exe only queues it (0x42b230), and the
 	// view's Object Deactivation tests the state (view 5487: 'r' kills the stairs goon and enables its exits)
@@ -406,23 +395,12 @@ void Script::hotAction(int n) {
 			_hooks->suspendScene();
 		}
 		if (n == 27) {
-			// Suicide Note White or Yellow (table 0x6549a0); no cursor, asset or re-show
-			static const uint32 kLayouts[2] = {62847, 62849};
-			Dice dice = newDice(0x4b4ffe);
-			showLayout(kLayouts[roll(dice, 0, 1)]);
+			hotSuicideNote();
 			return;
 		}
 	}
 	if (n == 3) {
-		// Easter candy: Mel shot 1-5 (table 0x6549a8)
-		static const uint32 kLayouts[5] = {84686, 84695, 84704, 84713, 84722};
-		Dice dice = newDice(0x4b4c7f);
-		uint32 layout = kLayouts[roll(dice, 0, 4)];
-		if (_hooks)
-			_hooks->showCursorAnimation(73520);
-		showLayout(layout);
-		_pos.gone = false;
-		activateOrHoldView();
+		hotEasterCandy();
 		return;
 	}
 	if (act.cursor && _hooks)
@@ -442,6 +420,39 @@ void Script::hotAction(int n) {
 		setViewByExe(act.setView);
 	else if (leaveSet && !(act.reshow && !success))
 		enter(leavePath[1], leavePath[2], leavePath[3], leavePath[0]);
+}
+
+bool Script::hotRewriteAssetFlags(int n) {
+	VCView v;
+	Common::Array<uint32> assets;
+	if (_data.getView(_pos.view, v))
+		_data.getMembers(v.assets, assets);
+	uint count = assets.size();
+	uint chosen = count;
+	if (!assets.empty() && isEnabled(assets[0]))
+		chosen = (n == 1 || n == 4) ? 2 : 1;
+	for (uint i = 0; i < count; i++)
+		_enabled[assets[i]] = i == chosen;
+	return chosen >= count;
+}
+
+void Script::hotSuicideNote() {
+	// Suicide Note White or Yellow (table 0x6549a0); no cursor, asset or re-show
+	static const uint32 kLayouts[2] = {62847, 62849};
+	Dice dice = newDice(0x4b4ffe);
+	showLayout(kLayouts[roll(dice, 0, 1)]);
+}
+
+void Script::hotEasterCandy() {
+	// Easter candy: Mel shot 1-5 (table 0x6549a8)
+	static const uint32 kLayouts[5] = {84686, 84695, 84704, 84713, 84722};
+	Dice dice = newDice(0x4b4c7f);
+	uint32 layout = kLayouts[roll(dice, 0, 4)];
+	if (_hooks)
+		_hooks->showCursorAnimation(73520);
+	showLayout(layout);
+	_pos.gone = false;
+	activateOrHoldView();
 }
 
 void Script::enter(uint32 node, uint32 location, uint32 viewPoint, uint32 view, bool deactivateAll) {

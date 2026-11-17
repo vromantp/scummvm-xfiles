@@ -309,6 +309,12 @@ private:
 	/** The picture of a photo scaled to w x h (a frame of its asset at its time, cropped), cached; null without a frame. */
 	const Graphics::Surface *getPhotoPicture(const VCPhoto &photo, int w, int h);
 	void handleClick(const Common::Point &pos);
+	/** handleClick with the dialog box open: a topic, a click inside, outside or on an icon. true: the click is used up. */
+	bool clickDialogBox(const Interface::Hit &hit, const Common::Point &pos);
+	/** AIIconObj's click (0x5091d0). */
+	void clickAIIcon();
+	/** A click on a character view: the view's triggers, then the dialog box unless a reaction clip plays. */
+	void clickCharView(uint32 id);
 	/** The step a click at pos gives, as handleClick resolves it ("click:ID", "nav:ID", "ask:ID", "aiclick"), or empty. */
 	Common::String stepAt(const Common::Point &pos) const;
 	/** Debug: log the screen point that gives step (`-- point STEP X,Y`, or `off-screen`), found on a 4-pixel grid. */

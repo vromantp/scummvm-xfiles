@@ -227,26 +227,8 @@ void XFilesEngine::handleClick(const Common::Point &pos) {
 		return;
 	}
 
-	if (_dialogBox.isOpen()) {
-		// A click outside the box closes it (assumed; DisplayDBox(0) also
-		// does); one on an icon goes on to the icon
-		uint32 topic = 0;
-		DialogBox::Hit boxHit = _dialogBox.click(pos, topic);
-		if (boxHit == DialogBox::kHitTopic) {
-			askTopic(topic);
-			return;
-		}
-		if (boxHit == DialogBox::kHitInside)
-			return;
-		// An emotion or action icon leaves the box open (box-click-kinds); an inventory item or the kit closes it
-		if (hit.kind != Interface::kHitEmotion && hit.kind != Interface::kHitAction &&
-				hit.kind != Interface::kHitIdea) {
-			_dialogBox.close();
-			_script->closeBox();
-		}
-		if (hit.kind == Interface::kHitNone)
-			return;
-	}
+	if (_dialogBox.isOpen() && clickDialogBox(hit, pos))
+		return;
 
 	switch (hit.kind) {
 	case Interface::kHitInventory:
@@ -276,15 +258,7 @@ void XFilesEngine::handleClick(const Common::Point &pos) {
 		_dragMoved = false;
 		return;
 	case Interface::kHitAIIcon:
-		// AIIconObj's click (0x5091d0): a glowing icon goes to its level's view (0x509aa0); without a glow the exe runs
-		// the next hint-list action whose condition holds (0x5097e0)
-		if (_script->isHintGlowing()) {
-			debugC(1, kDebugScript, "-- click: AI icon glowing, level %d", _script->getHintGlowLevel());
-			_script->clickAIIcon();
-		} else {
-			debugC(1, kDebugScript, "-- click: AI icon without a glow");
-			_script->clickAIHint();
-		}
+		clickAIIcon();
 		return;
 	default:
 		break;
@@ -305,17 +279,9 @@ void XFilesEngine::handleClick(const Common::Point &pos) {
 		debugC(1, kDebugScript, "-- click:%u (explorable)", viewHit.id);
 		_script->click(viewHit.id);
 		break;
-	case ViewHit::kCharView: {
-		debugC(1, kDebugScript, "-- click:%u (character view)", viewHit.id);
-		// The view's triggers handle inventory items held over the
-		// character; the exe opens the dialog box unless a reaction clip
-		// plays for the item in hand
-		_script->click(viewHit.id, &_mouse);
-		VCCharView cv;
-		if (_script->opensBoxOnClick() && _data->getCharView(viewHit.id, cv))
-			openDialogBox(cv);
+	case ViewHit::kCharView:
+		clickCharView(viewHit.id);
 		break;
-	}
 	case ViewHit::kNav:
 		_script->setClickPoint(_mouse);
 		_script->step(Common::String::format("nav:%u", viewHit.id));
@@ -326,6 +292,49 @@ void XFilesEngine::handleClick(const Common::Point &pos) {
 			_script->gunClick();
 		break;
 	}
+}
+
+bool XFilesEngine::clickDialogBox(const Interface::Hit &hit, const Common::Point &pos) {
+	// A click outside the box closes it (assumed; DisplayDBox(0) also
+	// does); one on an icon goes on to the icon
+	uint32 topic = 0;
+	DialogBox::Hit boxHit = _dialogBox.click(pos, topic);
+	if (boxHit == DialogBox::kHitTopic) {
+		askTopic(topic);
+		return true;
+	}
+	if (boxHit == DialogBox::kHitInside)
+		return true;
+	// An emotion or action icon leaves the box open (box-click-kinds); an inventory item or the kit closes it
+	if (hit.kind != Interface::kHitEmotion && hit.kind != Interface::kHitAction &&
+			hit.kind != Interface::kHitIdea) {
+		_dialogBox.close();
+		_script->closeBox();
+	}
+	return hit.kind == Interface::kHitNone;
+}
+
+void XFilesEngine::clickAIIcon() {
+	// AIIconObj's click (0x5091d0): a glowing icon goes to its level's view (0x509aa0); without a glow the exe runs
+	// the next hint-list action whose condition holds (0x5097e0)
+	if (_script->isHintGlowing()) {
+		debugC(1, kDebugScript, "-- click: AI icon glowing, level %d", _script->getHintGlowLevel());
+		_script->clickAIIcon();
+	} else {
+		debugC(1, kDebugScript, "-- click: AI icon without a glow");
+		_script->clickAIHint();
+	}
+}
+
+void XFilesEngine::clickCharView(uint32 id) {
+	debugC(1, kDebugScript, "-- click:%u (character view)", id);
+	// The view's triggers handle inventory items held over the
+	// character; the exe opens the dialog box unless a reaction clip
+	// plays for the item in hand
+	_script->click(id, &_mouse);
+	VCCharView cv;
+	if (_script->opensBoxOnClick() && _data->getCharView(id, cv))
+		openDialogBox(cv);
 }
 
 Common::String XFilesEngine::stepAt(const Common::Point &pos) const {

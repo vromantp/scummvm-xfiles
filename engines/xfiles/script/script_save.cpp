@@ -57,7 +57,7 @@ void Script::restore(const VCSave &save) {
 	// A save's history is a set (an older engine save may repeat a topic:
 	// each repeat still counts)
 	_history.clear();
-	_asked.clear();
+	_dlg.asked.clear();
 	_assetActive.clear();
 	for (uint i = 0; i < save.history.size(); i++)
 		recordTopic(save.history[i]);
@@ -194,7 +194,7 @@ void Script::snapshot(VCSave &save) const {
 	// Each group 0 icon keeps its own shown flag
 	save.evidence = _evidence;
 	save.kit = _kit;
-	save.dialogBox = _box;
+	save.dialogBox = _dlg.box;
 	// Only five full-screen layouts are kept, the last one shown
 	static const uint32 kKeptLayouts[] = { 57082, 84328, 84370, 72504, 58553 };
 	save.layout = 0;

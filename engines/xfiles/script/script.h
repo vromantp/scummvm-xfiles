@@ -427,7 +427,7 @@ public:
 	 */
 	void openBox(uint32 charViewId);
 	/** The conversation box was closed. */
-	void closeBox() { _box = 0; }
+	void closeBox() { _dlg.box = 0; }
 	/**
 	 * Ask a conversation topic of a character in the current view, opening
 	 * its box if needed: the question and the answer, then the topic's
@@ -503,7 +503,7 @@ public:
 	 * The last click() on a character view leaves the dialog box to the caller (0x436080): nothing is in hand, or the
 	 * held item has no reaction clip and no trigger took it.
 	 */
-	bool opensBoxOnClick() const { return _clickOpensBox; }
+	bool opensBoxOnClick() const { return _dlg.clickOpensBox; }
 	/** A tool's delayed reaction clip is due (the engine's timer for ScriptHooks::delayPlay). */
 	void playReaction(uint32 asset) { playStock(asset); }
 	/**
@@ -512,7 +512,7 @@ public:
 	 */
 	void addInventoryIcon(uint32 id);
 	/** How often a conversation topic was asked. */
-	uint getAskCount(uint32 id) const { return _asked.getValOrDefault(id, 0); }
+	uint getAskCount(uint32 id) const { return _dlg.asked.getValOrDefault(id, 0); }
 	int32 getVariable(uint32 id) const;
 	/** The e-mail lists, for the state dump. */
 	const Common::Array<uint32> &getEmails() const { return _pda.getEmails(); }
@@ -926,13 +926,11 @@ private:
 	Common::HashMap<uint32, bool> _enabled;    ///< Objects without a VCEnabled are always enabled
 	Common::HashMap<uint, Timer> _timers;      ///< Running timers
 	uint32 _timerSerial;
-	Common::HashMap<uint32, uint> _asked;      ///< How often each conversation was asked
 	uint32 _random;                            ///< State of the random numbers
 	bool _soundEnds;                           ///< Sound ends are known (`media` step, or an engine): see playAsset()
 	bool _fixedSeeds;                          ///< See setFixedSeeds()
 	uint32 _seedBase;
 	Common::HashMap<uint32, uint32> _diceBuilt; ///< Generators built per call site, with _fixedSeeds
-	uint32 _box;                               ///< Character view whose conversation box is open, or 0
 	Common::Array<Layout> _layouts;
 	Common::Array<uint32> _kit;
 	Common::Array<uint32> _inventory, _evidence, _history;
@@ -959,12 +957,9 @@ private:
 	Common::HashMap<uint32, ItemText> _itemTexts;
 	uint32 _focus;
 	uint32 _currNodeVariable;                  ///< RegCurrNode
-	bool _boxShown;                            ///< The open box is shown (hidden while one of its topics plays)
-	uint32 _ideaTopic;                         ///< The topic PlayItemTopic queued, deactivated when its clips end (0 for none)
 	Common::Array<uint32> _shanksVars[3];      ///< RegShanksNode2, 3 and 6: their variables, in argument order
 	Common::Array<uint32> _nodeVars[7];        ///< RegNode2..6Vars, RegLink2/3Vars: their variables, in argument order
 	uint32 _viewSpecialVariable;               ///< RegViewSpecial: iCurrViewSpecial
-	bool _clickOpensBox;                       ///< See opensBoxOnClick()
 	uint32 _heldVariable;                      ///< RegCurrInvVar: iCurrInventory
 	int32 _heldNone;                           ///< Its Inventory_None value
 	uint32 _gunValue;                          ///< The inventory value OnGunClick set (0 until the gun is taken)
@@ -1027,18 +1022,11 @@ private:
 		bool first;   ///< The view's loop before the first clip after the question
 		bool later;   ///< The view's loop before the answer when a clip came before it
 	};
-	Common::HashMap<uint32, JumpCut> _jumpCuts;
-	JumpCut _jumpCut;                          ///< Of the topic being played
 	struct TopicClip {
 		uint32 id;
 		uint32 limit;   ///< 750 for a piece of the view loop, 0 for an asset
 		uint32 end;     ///< Out point override after a merge
 	};
-	bool _planning;                            ///< playTopic collects its clips in _topicClips
-	Common::Array<TopicClip> _topicClips;
-	uint32 _nextVideoEnd;                      ///< For queueVideo() while a merged clip is played
-	bool _clipsActivated;                      ///< mergeTopicClips() fired the clips' Object Activation: queueing and playing skip it
-	bool _clipQueued;                          ///< A clip after the question is queued (topic +0x150)
 	Common::HashMap<uint32, uint> _assetActive; ///< Asset ID -> users of its asset object, see activateAsset()
 	uint _fireSerial;                          ///< Counts the events fired from outside (see _viewSerial)
 	bool _inEvent;                             ///< An event spans several fire() calls: they share a _fireSerial
@@ -1084,6 +1072,23 @@ private:
 		uint32 stateVariable = 0;                ///< The variable RegViewState registered; hotAction writes letters into it
 	};
 	Position _pos;
+
+	/** The conversation box and the topic being played */
+	struct Dialog {
+		uint32 box = 0;                            ///< Character view whose conversation box is open, or 0
+		bool boxShown = false;                     ///< The open box is shown (hidden while one of its topics plays)
+		uint32 ideaTopic = 0;                       ///< The topic PlayItemTopic queued, deactivated when its clips end (0 for none)
+		bool clickOpensBox = false;                  ///< See opensBoxOnClick()
+		Common::HashMap<uint32, JumpCut> jumpCuts;
+		JumpCut jumpCut = JumpCut();                 ///< Of the topic being played
+		bool planning = false;                     ///< playTopic collects its clips in topicClips
+		Common::Array<TopicClip> topicClips;
+		uint32 nextVideoEnd = 0;                    ///< For queueVideo() while a merged clip is played
+		bool clipsActivated = false;                 ///< mergeTopicClips() fired the clips' Object Activation: queueing and playing skip it
+		bool clipQueued = false;                     ///< A clip after the question is queued (topic +0x150)
+		Common::HashMap<uint32, uint> asked;      ///< How often each conversation was asked
+	};
+	Dialog _dlg;
 };
 
 } // End of namespace XFiles

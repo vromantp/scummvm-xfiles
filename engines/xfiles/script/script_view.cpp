@@ -84,7 +84,7 @@ void Script::stopAllForTravel() {
 	videos.swap(_videoQueue);
 	Common::Array<VideoPlay> plays;
 	plays.swap(_videoPlays);
-	_ideaTopic = 0;
+	_dlg.ideaTopic = 0;
 	_heldSounds.clear();
 	_pendingStops.clear();
 	for (uint i = 0; i < sounds.size(); i++)
@@ -479,7 +479,7 @@ void Script::enter(uint32 node, uint32 location, uint32 viewPoint, uint32 view, 
 	_pos.location = location;
 	_pos.viewPoint = viewPoint;
 	_pos.view = view;
-	_box = 0;
+	_dlg.box = 0;
 	log("  == enter " + getObjectLabel(_data, node) + " / " + getObjectLabel(_data, location) + " / " +
 		getObjectLabel(_data, viewPoint) + " / " + getObjectLabel(_data, view));
 	if (deactivateAll)
@@ -937,7 +937,7 @@ void Script::step(const Common::String &s) {
 		// XFilesEngine::openDialogBox does: the topics activate now, not
 		// at the first ask
 		VCCharView charView;
-		if (_clickOpensBox && _data.getCharView(id, charView) && hasTopicOrIdea(id))
+		if (_dlg.clickOpensBox && _data.getCharView(id, charView) && hasTopicOrIdea(id))
 			openBox(id);
 	} else if (kind == "answer") {
 		answerEndGame(true); // the question of EndGame answered (the engine reads yes or no from the step)
@@ -1044,14 +1044,14 @@ void Script::availableSteps(Common::Array<Common::String> &steps) {
 		add("answer:no");
 	}
 
-	if (_box) {
+	if (_dlg.box) {
 		Common::Array<uint32> topics, icons;
-		getBoxTopics(_box, topics);
+		getBoxTopics(_dlg.box, topics);
 		for (uint i = 0; i < topics.size(); i++)
 			add(Common::String::format("ask:%u", topics[i]));
 		getBoxIdeaIcons(icons);
 		for (uint i = 0; i < icons.size(); i++)
-			add(Common::String::format("idea:%u:%u", icons[i], _box));
+			add(Common::String::format("idea:%u:%u", icons[i], _dlg.box));
 	}
 
 	// Mouse steps on one object; `always` is the click that needs no trigger

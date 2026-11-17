@@ -44,8 +44,8 @@ void Script::openBox(uint32 charViewId) {
 	// XFiles.exe 0x4767a0: each enabled topic gets a runtime object listed
 	// in the box, whose activation (0x47d010) fires its Object Activation
 	// triggers and plays nothing.
-	_box = charViewId;
-	_boxShown = true;
+	_dlg.box = charViewId;
+	_dlg.boxShown = true;
 	Common::Array<uint32> topics;
 	getBoxTopics(charViewId, topics);
 	for (uint i = 0; i < topics.size(); i++) {
@@ -57,7 +57,7 @@ void Script::openBox(uint32 charViewId) {
 
 bool Script::getBoxIdeaMaps(Common::Array<uint32> &maps) const {
 	VCCharView charView;
-	return _box && _data.getCharView(_box, charView) && charView.ideaMaps && _data.getMembers(charView.ideaMaps, maps);
+	return _dlg.box && _data.getCharView(_dlg.box, charView) && charView.ideaMaps && _data.getMembers(charView.ideaMaps, maps);
 }
 
 void Script::activateIdeaIcons() {
@@ -78,7 +78,7 @@ void Script::getBoxIdeaIcons(Common::Array<uint32> &icons) const {
 	// The icons of the shown box's character are drawn as any icon in pane 0 (0x4d17f0, 0x459730, 0x50ec90)
 	icons.clear();
 	Common::Array<uint32> maps;
-	if (!_boxShown || !getBoxIdeaMaps(maps))
+	if (!_dlg.boxShown || !getBoxIdeaMaps(maps))
 		return;
 	for (uint i = 0; i < maps.size(); i++) {
 		VCIdeaMap map;
@@ -104,7 +104,7 @@ void Script::activateTopic(uint32 conversationId) {
 	// (0x47ca30), which reads FixJumpCut(first, later) among the actions of
 	// those triggers into +0x148 and +0x14c of the topic's object
 	fire(conversationId, kEventObjectActivation);
-	_jumpCuts.erase(conversationId);
+	_dlg.jumpCuts.erase(conversationId);
 	Common::Array<uint32> triggers;
 	_data.getMembers(getTriggers(conversationId), triggers);
 	for (uint i = 0; i < triggers.size(); i++) {
@@ -119,7 +119,7 @@ void Script::activateTopic(uint32 conversationId) {
 			JumpCut cut;
 			cut.first = getValue(a.args[0], EventFields(), LocalVariables()) != 0;
 			cut.later = getValue(a.args[1], EventFields(), LocalVariables()) != 0;
-			_jumpCuts[conversationId] = cut;
+			_dlg.jumpCuts[conversationId] = cut;
 			return;
 		}
 	}
@@ -230,10 +230,10 @@ void Script::enableTarget(uint32 target, bool value) {
 			_inventory.erase(it);
 	}
 	// An idea icon enabled while the box is shown, with the icon in its character's map, gets an object (0x4a1420)
-	if (value && !was && _boxShown && _data.getClassOf(target) == kClassIdeaIcon && isIdeaIconOfBox(target))
+	if (value && !was && _dlg.boxShown && _data.getClassOf(target) == kClassIdeaIcon && isIdeaIconOfBox(target))
 		fire(target, kEventObjectActivation);
 	// A topic enabled while its box is open joins the box (0x476340)
-	if (value && _box && isBoxTopic(_box, target))
+	if (value && _dlg.box && isBoxTopic(_dlg.box, target))
 		activateTopic(target);
 	// A character view, nav or explorable of the view comes and goes
 	// with its flag (0x492170, 0x46de10, 0x46efc0; 0x47ff40)
@@ -331,7 +331,7 @@ void Script::queueShowItem(uint32 itemId, bool shown) {
 void Script::ask(uint32 conversationId) {
 	// XFiles.exe 0x46d0d0: a click on a topic in the box queues its
 	// playlist (0x4e9080), then fires its Mouse Click triggers.
-	if (!_box || !isBoxTopic(_box, conversationId)) {
+	if (!_dlg.box || !isBoxTopic(_dlg.box, conversationId)) {
 		VCView view;
 		Common::Array<uint32> charViews;
 		if (_data.getView(_pos.view, view))
@@ -349,7 +349,7 @@ void Script::ask(uint32 conversationId) {
 	if (_data.getConversation(conversationId, c) && c.recorded)
 		recordTopic(conversationId);
 	// The playlist and the triggers are one event (see _viewSerial)
-	_boxShown = false; // the box is hidden while the topic plays
+	_dlg.boxShown = false; // the box is hidden while the topic plays
 	_fireSerial++;
 	_inEvent = true;
 	playTopic(conversationId, true);
@@ -432,17 +432,17 @@ void Script::idea(uint32 iconId, uint32 charView) {
 	// Activation and its playlist with +0x144 clear; no Mouse Click and no Drop triggers. The box comes back
 	// after the clips, so it stays open here.
 	uint32 conversation;
-	if (!_box || !findIdeaTopic(charView ? charView : _box, iconId, conversation) || !conversation)
+	if (!_dlg.box || !findIdeaTopic(charView ? charView : _dlg.box, iconId, conversation) || !conversation)
 		return;
 	// Recorded whatever +0x40 holds (PlayItemTopic does not test it)
 	recordTopic(conversation);
 	activateTopic(conversation);
-	_boxShown = false; // 0x49c06f hid the box
+	_dlg.boxShown = false; // 0x49c06f hid the box
 	playTopic(conversation, false);
 	// The box comes back when the clips end
-	_ideaTopic = conversation;
+	_dlg.ideaTopic = conversation;
 	if (_videoQueue.empty() && _clips.empty()) {
-		_boxShown = true;
+		_dlg.boxShown = true;
 		activateIdeaIcons();
 	}
 	endIdeaTopic();
@@ -451,7 +451,7 @@ void Script::idea(uint32 iconId, uint32 charView) {
 void Script::recordTopic(uint32 conversationId) {
 	// Not asked yet: into the game state's history (0x41aa80), a set the
 	// save writes sorted by ID; else its count + 1 (0x4667a0)
-	if (_asked[conversationId]++)
+	if (_dlg.asked[conversationId]++)
 		return;
 	uint i = 0;
 	while (i < _history.size() && _history[i] < conversationId)
@@ -463,16 +463,16 @@ void Script::playTopic(uint32 conversationId, bool inBox) {
 	// The topic's playlist merges adjacent ranges of one file before any of
 	// its sounds is activated (Playlist_MergeRanges 0x4f1930): collect the
 	// clips, merge, then play
-	_planning = true;
-	_topicClips.clear();
+	_dlg.planning = true;
+	_dlg.topicClips.clear();
 	playTopicClips(conversationId, inBox);
-	_planning = false;
+	_dlg.planning = false;
 	mergeTopicClips();
 }
 
 void Script::mergeTopicClips() {
 	Common::Array<TopicClip> clips;
-	clips.swap(_topicClips);
+	clips.swap(_dlg.topicClips);
 	Common::Array<TopicClip> list;
 	for (uint i = 0; i < clips.size(); i++) {
 		TopicClip &s = clips[i];
@@ -500,17 +500,17 @@ void Script::mergeTopicClips() {
 		else
 			fire(list[i].id, kEventObjectActivation);
 	}
-	_clipsActivated = true;
+	_dlg.clipsActivated = true;
 	for (uint i = 0; i < list.size(); i++) {
 		const TopicClip &s = list[i];
-		_nextVideoEnd = s.end;
+		_dlg.nextVideoEnd = s.end;
 		if (s.limit)
 			queueVideo(s.id, s.limit, false, true);
 		else
 			playAsset(s.id, kModePlayOnce, nullptr);
-		_nextVideoEnd = 0;
+		_dlg.nextVideoEnd = 0;
 	}
-	_clipsActivated = false;
+	_dlg.clipsActivated = false;
 }
 
 void Script::playTopicClips(uint32 conversationId, bool inBox) {
@@ -530,13 +530,13 @@ void Script::playTopicClips(uint32 conversationId, bool inBox) {
 		warning("Script: #%u is not a conversation", conversationId);
 		return;
 	}
-	_jumpCut = _jumpCuts.getValOrDefault(conversationId, JumpCut());
-	_clipQueued = false;
+	_dlg.jumpCut = _dlg.jumpCuts.getValOrDefault(conversationId, JumpCut());
+	_dlg.clipQueued = false;
 	// Counted by recordTopic(); 0 for a topic that is never recorded.
 	// count < 2 is Topic_Play's repeat flag clear: a box click on a topic
 	// not yet in History, or a dropped item's topic asked once (0x4e9440
 	// checks count < 2 again for a character with an Atoms topic)
-	uint count = _asked.getValOrDefault(conversationId, 0);
+	uint count = _dlg.asked.getValOrDefault(conversationId, 0);
 	playList(c.question);
 	if (count < 2) {
 		beforeAnswer();
@@ -556,7 +556,7 @@ void Script::playTopicClips(uint32 conversationId, bool inBox) {
 		if (c.atom) {
 			beforeLead();
 			playList(c.atom);
-			_clipQueued = true;
+			_dlg.clipQueued = true;
 		}
 		beforeAnswer();
 		playList(c.answer);
@@ -573,7 +573,7 @@ void Script::playTopicClips(uint32 conversationId, bool inBox) {
 			if (inBox) {
 				beforeLead();
 				playStock(stock[0]);
-				_clipQueued = true;
+				_dlg.clipQueued = true;
 				if (stock[kStockWhatsTheMatter] && roll(dice) < 4) {
 					queueViewLoop();
 					playStock(stock[kStockWhatsTheMatter]);
@@ -592,7 +592,7 @@ void Script::playTopicClips(uint32 conversationId, bool inBox) {
 	if (c.atom && roll(dice) < 9) {
 		beforeLead();
 		playList(c.atom);
-		_clipQueued = true;
+		_dlg.clipQueued = true;
 		if (c.answer && roll(dice) < 4) {
 			beforeAnswer();
 			playList(c.answer);
@@ -612,13 +612,13 @@ void Script::playTopicClips(uint32 conversationId, bool inBox) {
 		if (reply) {
 			beforeLead();
 			playStock(reply);
-			_clipQueued = true;
+			_dlg.clipQueued = true;
 		}
 		if (stock[kStockWhatsTheMatter] && count > 2 && roll(dice) < 4) {
 			queueViewLoop();
 			beforeLead();
 			playStock(stock[kStockWhatsTheMatter]);
-			_clipQueued = true;
+			_dlg.clipQueued = true;
 		}
 	}
 	beforeAnswer();
@@ -626,12 +626,12 @@ void Script::playTopicClips(uint32 conversationId, bool inBox) {
 }
 
 void Script::beforeLead() {
-	if (_jumpCut.first && !_clipQueued)
+	if (_dlg.jumpCut.first && !_dlg.clipQueued)
 		queueViewLoop();
 }
 
 void Script::beforeAnswer() {
-	if (_jumpCut.later && _clipQueued)
+	if (_dlg.jumpCut.later && _dlg.clipQueued)
 		queueViewLoop();
 }
 
@@ -643,9 +643,9 @@ void Script::queueViewLoop() {
 	uint32 id = getViewLoop();
 	if (!id)
 		return;
-	if (_planning) {
+	if (_dlg.planning) {
 		TopicClip clip = { id, 750, 0 };
-		_topicClips.push_back(clip);
+		_dlg.topicClips.push_back(clip);
 		return;
 	}
 	queueVideo(id, 750, false, true);
@@ -686,9 +686,9 @@ void Script::playList(uint32 listId) {
 }
 
 void Script::playClip(uint32 assetId) {
-	if (_planning) {
+	if (_dlg.planning) {
 		TopicClip clip = { assetId, 0, 0 };
-		_topicClips.push_back(clip);
+		_dlg.topicClips.push_back(clip);
 		return;
 	}
 	playAsset(assetId, kModePlayOnce, nullptr);

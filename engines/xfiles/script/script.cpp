@@ -81,7 +81,7 @@ static uint32 getTriggerOffset(uint32 classId) {
 	}
 }
 
-Script::Script(const VCData &data) : _data(data), _hooks(nullptr), _phone(*this, data), _computer(*this), _pda(*this, data), _prefs(*this), _texts(nullptr), _timerSerial(0), _random(1), _soundEnds(false), _fixedSeeds(false), _seedBase(0), _box(0), _restoreMode(-1), _disc(1), _photosOnCamera(0), _cameraEnabled(false), _evidenceRowShown(false), _hintList(0), _hintTrigger(0), _hintCursor(0), _hintGlow(0), _hintGlowOn(false), _aiSoundEndPending(false), _aiSuspended(false), _tint(0), _restored(false), _restorePending(false), _focus(0), _held(0), _currNodeVariable(0), _boxShown(false), _ideaTopic(0), _viewSpecialVariable(0), _clickOpensBox(false), _heldVariable(0), _heldNone(0), _gunValue(0), _heldCursorItem(0), _binocularsMode(0), _binocularsHeld(false), _planning(false), _nextVideoEnd(0), _clipsActivated(false), _clipQueued(false), _fireSerial(0), _inEvent(false), _viewSerial(0), _videoNextPending(false), _fireDepth(0), _nextId(0), _endGamePending(false), _endGameVar(0), _endGameValue(0), _prefArtificialIntuition(0), _cookEmailCount(0), _cookEmailFlag(0), _uberParanoia(0), _journalLeft(0), _bibleLeft(0) {
+Script::Script(const VCData &data) : _data(data), _hooks(nullptr), _phone(*this, data), _computer(*this), _pda(*this, data), _prefs(*this), _texts(nullptr), _timerSerial(0), _random(1), _soundEnds(false), _fixedSeeds(false), _seedBase(0), _restoreMode(-1), _disc(1), _photosOnCamera(0), _cameraEnabled(false), _evidenceRowShown(false), _hintList(0), _hintTrigger(0), _hintCursor(0), _hintGlow(0), _hintGlowOn(false), _aiSoundEndPending(false), _aiSuspended(false), _tint(0), _restored(false), _restorePending(false), _focus(0), _held(0), _currNodeVariable(0), _viewSpecialVariable(0), _heldVariable(0), _heldNone(0), _gunValue(0), _heldCursorItem(0), _binocularsMode(0), _binocularsHeld(false), _fireSerial(0), _inEvent(false), _viewSerial(0), _videoNextPending(false), _fireDepth(0), _nextId(0), _endGamePending(false), _endGameVar(0), _endGameValue(0), _prefArtificialIntuition(0), _cookEmailCount(0), _cookEmailFlag(0), _uberParanoia(0), _journalLeft(0), _bibleLeft(0) {
 	memset(_prefVariables, 0, sizeof(_prefVariables));
 	memset(_shootVars, 0, sizeof(_shootVars));
 	memset(_shootIdx, 0, sizeof(_shootIdx));
@@ -89,7 +89,6 @@ Script::Script(const VCData &data) : _data(data), _hooks(nullptr), _phone(*this,
 	memset(_shootPerm, 0, sizeof(_shootPerm));
 	_shootCur = 0;
 	_once = &_ownOnce;
-	_jumpCut.first = _jumpCut.later = false;
 	memset(_flashlight, 0, sizeof(_flashlight));
 	memset(_tintColor, 0, sizeof(_tintColor));
 	addHooks();
@@ -795,9 +794,9 @@ void Script::click(uint32 id, const Common::Point *at) {
 	// in box-click-kinds and newgame-to-comityinn); one on an interface item, an emotion icon or an action icon leaves it open
 	// (the next topic click is still a box click, the box's topics are not activated again)
 	uint32 clickClass = _data.getClassOf(id);
-	_clickOpensBox = !isHolding();
+	_dlg.clickOpensBox = !isHolding();
 	if (clickClass != kClassInterfaceItem && clickClass != kClassEmotionIcon && clickClass != kClassActionIcon)
-		_box = 0;
+		_dlg.box = 0;
 	if (!isEnabled(id)) {
 		log("  " + getObjectLabel(_data, id) + " is disabled");
 		return;
@@ -809,12 +808,12 @@ void Script::click(uint32 id, const Common::Point *at) {
 	// A character view with an item in hand that no trigger took (0x436080): the slot's clip plays as a sound, with
 	// no trigger; none (slot 10 or empty) opens the box as with nothing in hand. With the gun the exe first plays
 	// the held item's animation once (blocking; not ported)
-	_clickOpensBox = !isHolding();
+	_dlg.clickOpensBox = !isHolding();
 	if (clickClass == kClassCharView && isHolding() && !isTestedOnClick(id, _heldVariable)) {
 		if (uint32 asset = getHeldReaction(id))
 			playStock(asset);
 		else
-			_clickOpensBox = true;
+			_dlg.clickOpensBox = true;
 	}
 	// A click on an emotion or action icon removes all of them (0x49bfe0, 0x4c0660); each one's deactivation
 	// (0x485020, 0x4c0610) also clears its enable flag (0x40f050)
@@ -845,7 +844,7 @@ void Script::spendIcons(uint32 classId) {
 }
 
 void Script::doubleClick(uint32 id) {
-	_box = 0;
+	_dlg.box = 0;
 	if (!isEnabled(id))
 		log("  " + getObjectLabel(_data, id) + " is disabled");
 	else

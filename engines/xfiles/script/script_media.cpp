@@ -76,7 +76,7 @@ void Script::playAsset(uint32 id, byte mode, const VCAction *sound3D) {
 		bool fresh = xs && !_sounds.contains(id);
 		if (xs)
 			_sounds[id] = true;
-		if (!_clipsActivated) {
+		if (!_dlg.clipsActivated) {
 			if (fresh)
 				activateAsset(id);
 			else if (!xs)
@@ -250,7 +250,7 @@ void Script::loadPreferences() {
 void Script::queueVideo(uint32 id, uint32 limit, bool loop, bool viewLoop) {
 	// A piece of the view's loop is the view's shown asset, already active: it fires neither Activation nor
 	// Deactivation (0x4ea320, B-162)
-	VideoPlay play = {limit, _nextVideoEnd, loop, _fireSerial, false, _clipsActivated || viewLoop, viewLoop, 0};
+	VideoPlay play = {limit, _dlg.nextVideoEnd, loop, _fireSerial, false, _dlg.clipsActivated || viewLoop, viewLoop, 0};
 	_videoQueue.push_back(id);
 	_videoPlays.push_back(play);
 	if (_videoQueue.size() == 1) {
@@ -311,8 +311,8 @@ void Script::endVideo(const char *how) {
 		releaseHeldSounds();
 		showView(); // Back to the view, with whatever the video's triggers changed
 		// The box comes back: its idea icons get their objects again, before an idea topic's deactivation
-		if (_box && !_boxShown) {
-			_boxShown = true;
+		if (_dlg.box && !_dlg.boxShown) {
+			_dlg.boxShown = true;
 			activateIdeaIcons();
 		}
 		endIdeaTopic();
@@ -323,10 +323,10 @@ void Script::endIdeaTopic() {
 	// The clips of an idea's topic (PlayItemTopic) have ended and the box is shown again (0x436230): the topic's
 	// object is deactivated, firing its Object Deactivation triggers (evidence1-to-skinnergone: 41642, which counts
 	// iAllQuestionsAskedSkinner up).
-	if (!_ideaTopic || !_videoQueue.empty() || !_clips.empty())
+	if (!_dlg.ideaTopic || !_videoQueue.empty() || !_clips.empty())
 		return;
-	uint32 topic = _ideaTopic;
-	_ideaTopic = 0;
+	uint32 topic = _dlg.ideaTopic;
+	_dlg.ideaTopic = 0;
 	fire(topic, kEventObjectDeactivation);
 }
 

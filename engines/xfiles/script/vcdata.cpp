@@ -482,7 +482,8 @@ bool VCData::getAsset(uint32 id, VCAsset &asset) const {
 		return false;
 	uint32 ptr = _hdb.readUint32(m + 6);
 	uint32 length = _hdb.readUint32(m + 10);
-	// +14 and +18 hold a 24-bit object ID with a flag byte on top (meaning unknown)
+	// +14 and +18 hold a 24-bit object ID; the top bytes are the authoring tool's disc
+	// placement mask, already resolved into the blob's file list, so they are dropped
 	uint32 extra = _hdb.readUint32(m + 18) & 0xffffff;
 	asset.id = id;
 	asset.name = _hdb.readUint32(m + 14) & 0xffffff;

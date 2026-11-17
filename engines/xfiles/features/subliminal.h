@@ -63,8 +63,8 @@ public:
 	/**
 	 * Pick and flash the words; now in ms. The three values are those of
 	 * RegUberVars (loss, paranoia, X-track), which choose the word list.
-	 * canShow is false while a video plays in the band without anything
-	 * drawn over it.
+	 * canShow is screen +0x950 (the picture is composed), kept by the
+	 * caller: sticky, set by show events, recomputed at a queued clip's start.
 	 */
 	void update(uint32 now, Script &script, int32 loss, int32 paranoia, int32 xTrack, bool canShow);
 	/** Draw the word picked this frame, once: it is gone from the next frame. */

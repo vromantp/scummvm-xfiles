@@ -499,10 +499,24 @@ void XFilesEngine::runGame() {
 			bool canKeep = _script->getVideoQueue().empty() && !_dialogBox.isOpen() && !_interface->pausesView();
 			_headCredits.update(gameMillis(), canKeep && !_interface->showsLayoutOtherThan(57082), canKeep);
 		}
-		// The words show over a view, the dialog box or the location card,
-		// not over a video alone
-		_subliminal.update(gameMillis(), *_script, getUberVariable(0), getUberVariable(1), getUberVariable(2),
-			_script->getVideoQueue().empty() || _captions.hasCard());
+		// Screen +0x950 (B-010, 0x433e20): sticky. A queued clip's start recomputes it (0x510c30); a view, the
+		// location card, a head credit, interface items, a tool or the open kit set it (show events)
+		{
+			const Common::Array<uint32> &queue = _script->getVideoQueue();
+			uint32 clip = queue.empty() ? 0 : queue[0];
+			int tool = _script->heldToolType();
+			bool shown = _captions.hasCard() || _headCredits.isShown() || _interface->showsLayoutOtherThan(57082) ||
+						 (tool >= 1 && tool <= 4) || (_interface->isKitOpen() && _script->getKitIcons().size() >= 2);
+			if (!clip)
+				_compose = true; // the view is shown or resumed
+			else if (clip != _composeClip) {
+				_compose = shown; // 0x488240 -> 0x433e20(screen, 0) at the clip's start
+				debugC(1, kDebugScript, "-- compose %d at %u (clip %u)", _compose, gameMillis(), clip);
+			} else if (shown)
+				_compose = true; // a show event during the clip
+			_composeClip = clip;
+		}
+		_subliminal.update(gameMillis(), *_script, getUberVariable(0), getUberVariable(1), getUberVariable(2), _compose);
 		bool still = !_script->getVideoQueue().empty() && isStillVideo(_script->getVideoQueue()[0]);
 		bool movie = !_script->getVideoQueue().empty() && !still;
 		_movieCursor = movie;
@@ -715,6 +729,8 @@ bool XFilesEngine::teardownGame() {
 	_headCredits.reset();
 	_headCredits.setEnabled(false); // only a new game, or a restore with the credits rolling, allows them
 	_subliminal.stop();
+	_compose = true; // start-up and the menu set the flag (0x4903fb, 0x44e204)
+	_composeClip = 0;
 	_interface->setSuspended(false);
 	_lastClickTime = 0;
 	_dragIdea = 0;

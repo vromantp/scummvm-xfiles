@@ -382,6 +382,8 @@ private:
 	Captions _captions;
 	HeadCredits _headCredits;
 	Subliminal _subliminal;
+	bool _compose = true;                 ///< Screen +0x950 (B-010): the picture is composed, so the words can show
+	uint32 _composeClip = 0;              ///< The queued clip whose start last recomputed _compose (0: none)
 	DialogBox _dialogBox;
 	uint32 _dialogBoxView;                ///< The view the box was opened in
 	Common::SeekableReadStream *_textsDll; ///< XFilesT.dll; _texts reads it lazily, so it lives as long as _texts

@@ -80,8 +80,8 @@ void XFilesEngine::syncView() {
 		} else {
 			// The restored clip time applies to the first player started
 			movie->play(asset.flags & kAssetLoop, _pendingClipTime);
-			// The clip's .HOT file: its entries open and close by the clip's time
-			if (!_hotMovie && _hot.load(_discFiles, asset, _script->getPreferenceValue(kPrefActionSceneDifficulty)))
+			// The clip's .HOT file, only for an asset with flag 0x10 (Player_ForAsset): its entries open and close by the clip's time
+			if (!_hotMovie && (asset.flags & kAssetHotSpots) && _hot.load(_discFiles, asset, _script->getPreferenceValue(kPrefActionSceneDifficulty)))
 				_hotMovie = movie;
 			debugC(2, kDebugScript, "-- view clip #%u from %d ms", ids[i], _pendingClipTime >= 0 ? _pendingClipTime : (int)asset.files[0].start);
 			_pendingClipTime = -1;

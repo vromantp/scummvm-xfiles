@@ -259,7 +259,7 @@ void XFilesEngine::playQueuedVideo(const Input &input) {
 		_videoStarted = gameMillis();
 		// The clip's .HOT file: its entries open and close by the clip's time, as for a view clip (B-031)
 		VCAsset asset;
-		if (_data->getAsset(id, asset) && _hot.load(_discFiles, asset, _script->getPreferenceValue(kPrefActionSceneDifficulty)))
+		if (_data->getAsset(id, asset) && (asset.flags & kAssetHotSpots) && _hot.load(_discFiles, asset, _script->getPreferenceValue(kPrefActionSceneDifficulty)))
 			_hotMovie = _video;
 	}
 	// A piece of the view's loop between conversation clips plays for a

@@ -134,6 +134,7 @@ enum VCAssetFlags {
 	kAssetRange = 0x02,    ///< The blob has an in/out range
 	kAssetText = 0x04,
 	kAssetLoop = 0x08,
+	kAssetHotSpots = 0x10, ///< The clip's .HOT entries are live (0x5eb540, Player_ForAsset 0x505f50)
 	kAssetStill = 0x40     ///< Background: a nav movie frame or a .pff picture
 };
 

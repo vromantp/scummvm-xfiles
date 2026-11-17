@@ -266,7 +266,7 @@ public:
 
 	void setHooks(ScriptHooks *hooks) {
 		_hooks = hooks;
-		_soundEnds = hooks != nullptr;
+		_media.soundEnds = hooks != nullptr;
 	}
 	/** The string table of XFilesT.dll, for phone book entries that name a string (may be nullptr). */
 	void setTexts(Common::WinResources *texts) { _texts = texts; }
@@ -480,14 +480,14 @@ public:
 	/// An event is half-run (inside fire(), a fade loop or a pending travel): a snapshot now would lose its rest
 	bool isBusy() const { return _fireDepth || _inEvent || _travel.pending; }
 	/** Queued videos; the first one is on screen. */
-	const Common::Array<uint32> &getVideoQueue() const { return _videoQueue; }
+	const Common::Array<uint32> &getVideoQueue() const { return _media.videoQueue; }
 	/** How long the first video plays, in ms; 0 for all of it. */
-	uint32 getVideoLimit() const { return _videoPlays.empty() ? 0 : _videoPlays[0].limit; }
+	uint32 getVideoLimit() const { return _media.videoPlays.empty() ? 0 : _media.videoPlays[0].limit; }
 	/** The out point of the first video when a topic merged the next range of its file into it (ms), 0 for its own. */
-	uint32 getVideoEnd() const { return _videoPlays.empty() ? 0 : _videoPlays[0].end; }
-	uint32 getVideoStart() const { return _videoPlays.empty() ? 0 : _videoPlays[0].start; }
+	uint32 getVideoEnd() const { return _media.videoPlays.empty() ? 0 : _media.videoPlays[0].end; }
+	uint32 getVideoStart() const { return _media.videoPlays.empty() ? 0 : _media.videoPlays[0].start; }
 	/** Whether the first video loops: it ends only when a Stop action stops it. */
-	bool isVideoLooped() const { return !_videoPlays.empty() && _videoPlays[0].loop; }
+	bool isVideoLooped() const { return !_media.videoPlays.empty() && _media.videoPlays[0].loop; }
 	bool isEnabled(uint32 id) const;
 	/** The first member of an asset list that is enabled (XFiles.exe 0x41fe60), 0 if none. */
 	uint32 firstEnabled(uint32 listId) const;
@@ -927,7 +927,6 @@ private:
 	Common::HashMap<uint, Timer> _timers;      ///< Running timers
 	uint32 _timerSerial;
 	uint32 _random;                            ///< State of the random numbers
-	bool _soundEnds;                           ///< Sound ends are known (`media` step, or an engine): see playAsset()
 	bool _fixedSeeds;                          ///< See setFixedSeeds()
 	uint32 _seedBase;
 	Common::HashMap<uint32, uint32> _diceBuilt; ///< Generators built per call site, with _fixedSeeds
@@ -968,13 +967,10 @@ private:
 	bool _binocularsHeld;                      ///< The binoculars' held object (0x51baf0) exists: putBack() runs its view change back
 	Common::Array<uint32> _pressed;            ///< See takePressedItems()
 	uint32 _held;                              ///< The interface item the mouse button is down on (press()), 0 for none
-	Common::HashMap<uint32, bool> _sounds;     ///< Sounds playing (asset objects active)
-	Common::HashMap<uint32, bool> _clips;      ///< Graphic clips placed by PlayAssetAt and playing
 	Common::HashMap<uint, int32> _preferences; ///< See setPreference()
 
 	/** The computer text entry buffers (XFiles.exe 0x6be918 and others). */
 	Common::HashMap<uint32, Common::Point> _itemOrigins; ///< See getItemOrigin()
-	Common::Array<uint32> _videoQueue;
 	struct VideoPlay {
 		uint32 limit;   ///< ms to play, 0 for all
 		uint32 end;     ///< Out point override in ms, 0 for none
@@ -985,8 +981,6 @@ private:
 		bool viewLoop;  ///< A piece of the view's loop: its asset is the view's, so it fires no Activation or Deactivation
 		uint32 start;   ///< In point override in ms from the start of the file (the binoculars' swap), 0 for none
 	};
-	Common::Array<VideoPlay> _videoPlays;      ///< Per queued video
-	bool _videoNextPending;                    ///< The queue's first video has not started yet (a video just ended)
 	/** A sound's play held back by a video (see playAsset()). */
 	struct HeldSound {
 		uint32 id;
@@ -994,7 +988,6 @@ private:
 		bool positional;
 		int x, y;
 	};
-	Common::Array<HeldSound> _heldSounds;      ///< Sounds waiting for the videos to end
 	uint32 _prefVariables[kPrefCount];         ///< The variable RegPreferences gave each preference, or 0
 	uint32 _prefArtificialIntuition;           ///< The variable RegPreferences gives Pref_bArtificialIntuition, or 0
 	uint32 _cookEmailCount;                    ///< The variable RegCookEmail gave iNumWillmoreEMailsToCook, or 0
@@ -1027,12 +1020,10 @@ private:
 		uint32 limit;   ///< 750 for a piece of the view loop, 0 for an asset
 		uint32 end;     ///< Out point override after a merge
 	};
-	Common::HashMap<uint32, uint> _assetActive; ///< Asset ID -> users of its asset object, see activateAsset()
 	uint _fireSerial;                          ///< Counts the events fired from outside (see _viewSerial)
 	bool _inEvent;                             ///< An event spans several fire() calls: they share a _fireSerial
 	uint _viewSerial;                          ///< _fireSerial of the event that held the view: the videos it waits for
 	uint _fireDepth;                           ///< Nesting of fire(): a pending travel runs when it returns to 0
-	Common::Array<uint32> _pendingStops;       ///< Stopped sounds and clips whose Object Deactivation waits for the event's end
 	struct ActionFrame {
 		const Common::Array<uint32> *actions;
 		uint next; ///< Index of the next action to run
@@ -1089,6 +1080,20 @@ private:
 		Common::HashMap<uint32, uint> asked;      ///< How often each conversation was asked
 	};
 	Dialog _dlg;
+
+	/** Videos, sounds and clips: what plays, what is queued, what waits */
+	struct Media {
+		bool soundEnds = false;                    ///< Sound ends are known (`media` step, or an engine): see playAsset()
+		Common::Array<uint32> videoQueue;
+		Common::Array<VideoPlay> videoPlays;      ///< Per queued video
+		bool videoNextPending = false;               ///< The queue's first video has not started yet (a video just ended)
+		Common::Array<HeldSound> heldSounds;      ///< Sounds waiting for the videos to end
+		Common::HashMap<uint32, bool> sounds;     ///< Sounds playing (asset objects active)
+		Common::HashMap<uint32, bool> clips;      ///< Graphic clips placed by PlayAssetAt and playing
+		Common::HashMap<uint32, uint> assetActive; ///< Asset ID -> users of its asset object, see activateAsset()
+		Common::Array<uint32> pendingStops;       ///< Stopped sounds and clips whose Object Deactivation waits for the event's end
+	};
+	Media _media;
 };
 
 } // End of namespace XFiles

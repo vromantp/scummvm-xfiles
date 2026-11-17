@@ -71,22 +71,22 @@ void Script::stopAllForTravel() {
 	if (_hooks)
 		_hooks->stopAllSounds();
 	Common::Array<uint32> clips;
-	for (Common::HashMap<uint32, bool>::const_iterator it = _clips.begin(); it != _clips.end(); ++it)
+	for (Common::HashMap<uint32, bool>::const_iterator it = _media.clips.begin(); it != _media.clips.end(); ++it)
 		clips.push_back(it->_key);
 	Common::sort(clips.begin(), clips.end());
 	for (uint i = 0; i < clips.size() && _hooks; i++)
 		_hooks->playAsset(clips[i], kModeStop, false, 0, 0);
 	Common::Array<uint32> sounds;
-	for (Common::HashMap<uint32, bool>::const_iterator it = _sounds.begin(); it != _sounds.end(); ++it)
+	for (Common::HashMap<uint32, bool>::const_iterator it = _media.sounds.begin(); it != _media.sounds.end(); ++it)
 		sounds.push_back(it->_key);
 	Common::sort(sounds.begin(), sounds.end());
 	Common::Array<uint32> videos;
-	videos.swap(_videoQueue);
+	videos.swap(_media.videoQueue);
 	Common::Array<VideoPlay> plays;
-	plays.swap(_videoPlays);
+	plays.swap(_media.videoPlays);
 	_dlg.ideaTopic = 0;
-	_heldSounds.clear();
-	_pendingStops.clear();
+	_media.heldSounds.clear();
+	_media.pendingStops.clear();
 	for (uint i = 0; i < sounds.size(); i++)
 		endSound(sounds[i], "stopped");
 	for (uint i = 0; i < clips.size(); i++)
@@ -102,17 +102,17 @@ void Script::stopShownVideos(bool dropQueued) {
 	// 0x4b4170: sound objects with a picture get a stop request (sounds without one keep playing). The
 	// engine's shown ones are the queued videos and the clips; they end as at a Stop action
 	if (dropQueued)
-		_heldSounds.clear();
+		_media.heldSounds.clear();
 	Common::Array<uint32> clips;
-	for (Common::HashMap<uint32, bool>::const_iterator it = _clips.begin(); it != _clips.end(); ++it)
+	for (Common::HashMap<uint32, bool>::const_iterator it = _media.clips.begin(); it != _media.clips.end(); ++it)
 		clips.push_back(it->_key);
 	Common::sort(clips.begin(), clips.end());
 	for (uint i = 0; i < clips.size() && _hooks; i++)
 		_hooks->playAsset(clips[i], kModeStop, false, 0, 0);
 	Common::Array<uint32> videos;
-	videos.swap(_videoQueue);
+	videos.swap(_media.videoQueue);
 	Common::Array<VideoPlay> plays;
-	plays.swap(_videoPlays);
+	plays.swap(_media.videoPlays);
 	for (uint i = 0; i < clips.size(); i++)
 		endClip(clips[i], "stopped");
 	for (uint i = 0; i < videos.size(); i++) {
@@ -509,7 +509,7 @@ void Script::activateOrHoldView() {
 	// of views (0x433000, the table 0x6bbff8 that 0x44f860 raises when a
 	// video's movie starts and lowers when it ends): the view, its
 	// triggers and its objects come after the video
-	if (_videoQueue.empty()) {
+	if (_media.videoQueue.empty()) {
 		activateView();
 	} else {
 		_pos.held = true;
@@ -519,8 +519,8 @@ void Script::activateOrHoldView() {
 		// and 19806 behind 19796) nor those queued before it that
 		// already play
 		_viewSerial = _fireSerial;
-		for (uint i = 0; i < _videoPlays.size(); i++)
-			_videoPlays[i].viewWait = (i > 0 || _videoNextPending) && _videoPlays[i].serial != _viewSerial;
+		for (uint i = 0; i < _media.videoPlays.size(); i++)
+			_media.videoPlays[i].viewWait = (i > 0 || _media.videoNextPending) && _media.videoPlays[i].serial != _viewSerial;
 		log("      view held until the video ends");
 	}
 }
@@ -675,7 +675,7 @@ void Script::updateViewAsset(uint32 id) {
 		deactivateAsset(old);
 		break;
 	}
-	_pos.assetHeld = !_videoQueue.empty();
+	_pos.assetHeld = !_media.videoQueue.empty();
 	if (!_pos.assetHeld)
 		activateViewAsset();
 }
@@ -695,18 +695,18 @@ void Script::activateViewAsset() {
 void Script::activateAsset(uint32 id) {
 	// XFiles.exe 0x446580 shares the asset object of a second user; its Object Activation fires on the first
 	// use only (0x45a330, B-162)
-	uint &count = _assetActive[id];
+	uint &count = _media.assetActive[id];
 	if (count++ == 0)
 		fire(id, kEventObjectActivation);
 }
 
 void Script::deactivateAsset(uint32 id, bool fireEvent) {
-	if (!_assetActive.contains(id))
+	if (!_media.assetActive.contains(id))
 		return;
-	uint &count = _assetActive[id];
+	uint &count = _media.assetActive[id];
 	if (--count > 0)
 		return;
-	_assetActive.erase(id);
+	_media.assetActive.erase(id);
 	if (fireEvent)
 		fire(id, kEventObjectDeactivation);
 }
@@ -916,7 +916,7 @@ void Script::step(const Common::String &s) {
 		releaseItem(_pressed[i]);
 	_pressed.clear();
 	if (kind == "wait" && isVideoLooped())
-		log(Common::String::format("  (video #%u loops)", _videoQueue[0]));
+		log(Common::String::format("  (video #%u loops)", _media.videoQueue[0]));
 	else if (kind == "wait")
 		finishVideo();
 	else if (kind == "aiclick") {
@@ -991,7 +991,7 @@ void Script::step(const Common::String &s) {
 		// menu:new|load|previous|quit: a click in the start-up menu after a game end (steps.py, B-203). The restart is
 		// the caller's (vcdump, the engine's runMenu); nothing happens in the interpreter
 	} else if (kind == "media")
-		_soundEnds = true; // the step list has the sound ends (steps.py `end:`): later plays of a playing asset are dropped
+		_media.soundEnds = true; // the step list has the sound ends (steps.py `end:`): later plays of a playing asset are dropped
 }
 
 void Script::availableSteps(Common::Array<Common::String> &steps) {
@@ -1020,7 +1020,7 @@ void Script::availableSteps(Common::Array<Common::String> &steps) {
 		}
 	} add = {steps, seen};
 
-	if (!_videoQueue.empty())
+	if (!_media.videoQueue.empty())
 		add("wait");
 
 	Common::Array<uint> timers;
@@ -1031,9 +1031,9 @@ void Script::availableSteps(Common::Array<Common::String> &steps) {
 		add(Common::String::format("timer:%u", timers[i]));
 
 	Common::Array<uint32> ends;
-	for (Common::HashMap<uint32, bool>::const_iterator it = _sounds.begin(); it != _sounds.end(); ++it)
+	for (Common::HashMap<uint32, bool>::const_iterator it = _media.sounds.begin(); it != _media.sounds.end(); ++it)
 		ends.push_back(it->_key);
-	for (Common::HashMap<uint32, bool>::const_iterator it = _clips.begin(); it != _clips.end(); ++it)
+	for (Common::HashMap<uint32, bool>::const_iterator it = _media.clips.begin(); it != _media.clips.end(); ++it)
 		ends.push_back(it->_key);
 	Common::sort(ends.begin(), ends.end());
 	for (uint i = 0; i < ends.size(); i++)

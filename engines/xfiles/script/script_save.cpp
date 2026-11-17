@@ -58,7 +58,7 @@ void Script::restore(const VCSave &save) {
 	// each repeat still counts)
 	_history.clear();
 	_dlg.asked.clear();
-	_assetActive.clear();
+	_media.assetActive.clear();
 	for (uint i = 0; i < save.history.size(); i++)
 		recordTopic(save.history[i]);
 	_pda.restore(save);
@@ -113,8 +113,8 @@ void Script::restoreView() {
 		VCAsset a;
 		if (!_data.getAsset(id, a))
 			continue;
-		_sounds[id] = true;
-		_assetActive[id]++; // No Object Activation (kind 27), but its end deactivates the asset object
+		_media.sounds[id] = true;
+		_media.assetActive[id]++; // No Object Activation (kind 27), but its end deactivates the asset object
 		log(Common::String::format("  restored sound #%u at %u%s", id, save.sounds[i + 2], save.sounds[i + 1] ? ", looped" : ""));
 		if (_hooks)
 			_hooks->restoreSound(id, save.sounds[i + 1] != 0, save.sounds[i + 2]);

@@ -98,7 +98,7 @@ void Script::binocularsVideoSwap() {
 	// end. Measured order: 70706 starts and activates (71938), then 23486 stops normally, so its Deactivation 33950
 	// fires, then the close-up plays; its end runs 71942. Only a take swaps; a putback changes nothing
 	static const uint32 kFrom = 23486, kTo = 70706;
-	if (_videoQueue.empty() || _videoQueue[0] != kFrom)
+	if (_media.videoQueue.empty() || _media.videoQueue[0] != kFrom)
 		return;
 	VCAsset from, to;
 	if (!_data.getAsset(kFrom, from) || !_data.getAsset(kTo, to) || from.files.empty() || to.files.empty())
@@ -108,9 +108,9 @@ void Script::binocularsVideoSwap() {
 		start = to.files[0].start + (ms - from.files[0].start);
 	log(Common::String::format("  binoculars' video swap: #%u -> #%u", kFrom, kTo));
 	playAsset(kTo, kModePlayOnce, nullptr);
-	for (uint i = 0; i < _videoQueue.size(); i++) {
-		if (_videoQueue[i] == kTo)
-			_videoPlays[i].start = start;
+	for (uint i = 0; i < _media.videoQueue.size(); i++) {
+		if (_media.videoQueue[i] == kTo)
+			_media.videoPlays[i].start = start;
 	}
 	// The exe stops it through the normal path (sound.stop stopped=0), not a Stop action
 	// (the sim has no clock: its next wait step ends 23486 as the exe's log shows)
@@ -247,8 +247,8 @@ void Script::cameraClick(const Common::Point &pos) {
 	// whether or not a photo was made
 	if (!full) {
 		uint32 asset = 0;
-		if (!_videoQueue.empty()) {
-			asset = _videoQueue[0];
+		if (!_media.videoQueue.empty()) {
+			asset = _media.videoQueue[0];
 		} else {
 			Common::Array<uint32> assets;
 			uint32 background;
@@ -306,7 +306,7 @@ void Script::cameraClick(const Common::Point &pos) {
 		uint32 slots[kReactionSlots];
 		if (!isEnabled(charViews[i]) || !getReactionSlots(charViews[i], slots) || !slots[2])
 			continue;
-		if (_sounds.contains(slots[2]) && _sounds[slots[2]])
+		if (_media.sounds.contains(slots[2]) && _media.sounds[slots[2]])
 			continue;
 		playStock(slots[2]);
 		break;
@@ -433,7 +433,7 @@ void Script::addToolHooks() {
 		// as Inv_PutBack does (the variable to none, a tool's view change back,
 		// the timed text resumes) and the cursor clears
 		if (c.has(1) && c.args[0] == kInventoryPDA) {
-			if (!s._videoQueue.empty() || !s._clips.empty()) {
+			if (!s._media.videoQueue.empty() || !s._media.clips.empty()) {
 				s._variables[kDisablePDAVariable] = 1;
 				s.log(Common::String::format("      PDA refused: bDisablePDA = 1, alert #%u", kPDAAlertSound));
 				if (s._hooks)

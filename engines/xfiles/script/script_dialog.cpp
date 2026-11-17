@@ -441,7 +441,7 @@ void Script::idea(uint32 iconId, uint32 charView) {
 	playTopic(conversation, false);
 	// The box comes back when the clips end
 	_dlg.ideaTopic = conversation;
-	if (_videoQueue.empty() && _clips.empty()) {
+	if (_media.videoQueue.empty() && _media.clips.empty()) {
 		_dlg.boxShown = true;
 		activateIdeaIcons();
 	}

@@ -81,7 +81,7 @@ static uint32 getTriggerOffset(uint32 classId) {
 	}
 }
 
-Script::Script(const VCData &data) : _data(data), _hooks(nullptr), _phone(*this, data), _computer(*this), _pda(*this, data), _prefs(*this), _texts(nullptr), _timerSerial(0), _random(1), _soundEnds(false), _fixedSeeds(false), _seedBase(0), _restoreMode(-1), _disc(1), _photosOnCamera(0), _cameraEnabled(false), _evidenceRowShown(false), _hintList(0), _hintTrigger(0), _hintCursor(0), _hintGlow(0), _hintGlowOn(false), _aiSoundEndPending(false), _aiSuspended(false), _tint(0), _restored(false), _restorePending(false), _focus(0), _held(0), _currNodeVariable(0), _viewSpecialVariable(0), _heldVariable(0), _heldNone(0), _gunValue(0), _heldCursorItem(0), _binocularsMode(0), _binocularsHeld(false), _fireSerial(0), _inEvent(false), _viewSerial(0), _videoNextPending(false), _fireDepth(0), _nextId(0), _endGamePending(false), _endGameVar(0), _endGameValue(0), _prefArtificialIntuition(0), _cookEmailCount(0), _cookEmailFlag(0), _uberParanoia(0), _journalLeft(0), _bibleLeft(0) {
+Script::Script(const VCData &data) : _data(data), _hooks(nullptr), _phone(*this, data), _computer(*this), _pda(*this, data), _prefs(*this), _texts(nullptr), _timerSerial(0), _random(1), _fixedSeeds(false), _seedBase(0), _restoreMode(-1), _disc(1), _photosOnCamera(0), _cameraEnabled(false), _evidenceRowShown(false), _hintList(0), _hintTrigger(0), _hintCursor(0), _hintGlow(0), _hintGlowOn(false), _aiSoundEndPending(false), _aiSuspended(false), _tint(0), _restored(false), _restorePending(false), _focus(0), _held(0), _currNodeVariable(0), _viewSpecialVariable(0), _heldVariable(0), _heldNone(0), _gunValue(0), _heldCursorItem(0), _binocularsMode(0), _binocularsHeld(false), _fireSerial(0), _inEvent(false), _viewSerial(0), _fireDepth(0), _nextId(0), _endGamePending(false), _endGameVar(0), _endGameValue(0), _prefArtificialIntuition(0), _cookEmailCount(0), _cookEmailFlag(0), _uberParanoia(0), _journalLeft(0), _bibleLeft(0) {
 	memset(_prefVariables, 0, sizeof(_prefVariables));
 	memset(_shootVars, 0, sizeof(_shootVars));
 	memset(_shootIdx, 0, sizeof(_shootIdx));
@@ -270,7 +270,7 @@ void Script::fire(uint32 id, int event, const EventFields &fields) {
 	// is empty: after the action list and the triggers it set off
 	// The Object Deactivation of a sound a Stop action stopped comes on a later pass (0x4336e0, B-112)
 	// Not between a click's playlist and its triggers (one event, see _inEvent): ask() flushes after them
-	while (_fireDepth == 0 && (_travel.pending || (!_inEvent && !_pendingStops.empty()))) {
+	while (_fireDepth == 0 && (_travel.pending || (!_inEvent && !_media.pendingStops.empty()))) {
 		if (_travel.pending)
 			travel();
 		else
@@ -280,7 +280,7 @@ void Script::fire(uint32 id, int event, const EventFields &fields) {
 
 void Script::flushStops() {
 	Common::Array<uint32> ids;
-	ids.swap(_pendingStops);
+	ids.swap(_media.pendingStops);
 	for (uint i = 0; i < ids.size(); i++) {
 		endSound(ids[i], "stopped");
 		endClip(ids[i], "stopped");
@@ -926,8 +926,8 @@ void Script::expireTimer(uint n, bool stale) {
 		if (_data.getClassOf(_pos.objects[i]) == kClassAssetRef)
 			ids.push_back(_pos.objects[i]);
 	}
-	if (!_videoQueue.empty())
-		ids.push_back(_videoQueue[0]);
+	if (!_media.videoQueue.empty())
+		ids.push_back(_media.videoQueue[0]);
 
 	EventFields fields;
 	fields.push_back(n);

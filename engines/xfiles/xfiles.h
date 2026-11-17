@@ -45,7 +45,7 @@ class Font;
 #include "xfiles/ui/dialogbox.h"
 #include "xfiles/media/discfiles.h"
 #include "xfiles/features/headcredits.h"
-#include "xfiles/hot.h"
+#include "xfiles/media/hot.h"
 #include "xfiles/ui/interface.h"
 #include "xfiles/ui/prefs.h"
 #include "xfiles/script/script.h"

@@ -31,7 +31,7 @@
 #include "xfiles/media/pictures.h"
 #include "xfiles/script/script.h"
 #include "xfiles/script/vcdata.h"
-#include "xfiles/view_internal.h"
+#include "xfiles/ui/view_band.h"
 
 namespace XFiles {
 

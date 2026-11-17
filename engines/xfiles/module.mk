@@ -8,7 +8,7 @@ MODULE_OBJS = \
 	ui/dialogbox.o \
 	media/discfiles.o \
 	features/headcredits.o \
-	hot.o \
+	media/hot.o \
 	ui/interface.o \
 	ui/itemtext.o \
 	ui/menu.o \

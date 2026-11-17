@@ -24,7 +24,7 @@
 
 #include "xfiles/detection.h"
 #include "xfiles/media/discfiles.h"
-#include "xfiles/hot.h"
+#include "xfiles/media/hot.h"
 #include "xfiles/script/vcdata.h"
 
 namespace XFiles {

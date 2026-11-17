@@ -19,8 +19,8 @@
  *
  */
 
-#ifndef XFILES_VIEW_INTERNAL_H
-#define XFILES_VIEW_INTERNAL_H
+#ifndef XFILES_VIEW_BAND_H
+#define XFILES_VIEW_BAND_H
 
 #include "graphics/surface.h"
 

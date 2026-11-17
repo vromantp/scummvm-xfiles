@@ -534,11 +534,10 @@ void Script::addInterfaceHooks() {
 	});
 }
 
-void Script::addStateHooks() {
-	HookTable<Script> &t = _hookTable;
+struct Script::StateHooks {
 	// The hooks whose arguments a save keeps (GameState_Save 0x4d9450): the hint list and glow are handled by the AI icon,
 	// the flashlight and tint by the tool overlay and the band
-	t.add("SetAIList", [](Script &s, const HookCall &c) {
+	static bool hookSetAIList(Script &s, const HookCall &c) {
 		// SetAIList(trigger, list)
 		if (c.has(2)) {
 			s._ai.trigger = c.args[0];
@@ -547,22 +546,18 @@ void Script::addStateHooks() {
 			s.recheckAIIcon();
 		}
 		return false;
-	});
-	t.add("ClearAIList", [](Script &s, const HookCall &c) {
-		s._ai.trigger = s._ai.list = 0;
-		s._ai.cursor = 0;
-		s.recheckAIIcon();
-		return false;
-	});
-	t.add("SetAIGlow", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookSetAIGlow(Script &s, const HookCall &c) {
 		// AI_SetGlow (0x480670): 0 clears the flag and the level, 1 sets the flag with level 0, n > 1 flag and level n
 		if (c.has(1)) {
 			s._ai.glow = c.args[0] > 1 ? c.args[0] : 0;
 			s._ai.glowOn = c.args[0] != 0;
 		}
 		return false;
-	});
-	t.add("SetFLightProps", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookSetFLightProps(Script &s, const HookCall &c) {
 		// 0x44bda0 turns the arguments into the three values the save keeps:
 		// 2 -> 1 (else 0), 'O' -> 1 (else 0), 'B' -> 0, 'D' -> 2, else 1
 		if (c.has(3)) {
@@ -577,12 +572,9 @@ void Script::addStateHooks() {
 		// FLight_SetProps (0x4d7d20) also re-selects the held item when it is the flashlight, so the held light
 		// takes the new look. That belongs to the flashlight tool mode, which is not ported
 		return true;
-	});
-	t.add("FixJumpCut", [](Script &s, const HookCall &c) {
-		// 0x48aa20 reads both variables and calls 0x48aa10, a bare ret 0xc: no effect in this build
-		return true;
-	});
-	t.add("CharTeleport", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookCharTeleport(Script &s, const HookCall &c) {
 		// Hook_CharTeleport 0x4fb570 -> 0x4c56a0: Event::0/1 are the click. The character view under it (the current
 		// view's) gives the character; the target view must have an enabled character view of the same one, else
 		// nothing happens. Only within the same node, the player is cut to the target (0x4c5cd0)
@@ -613,12 +605,9 @@ void Script::addStateHooks() {
 		if (found && s._pos.node == (uint32)c.args[2])
 			s.enter(c.args[2], c.args[3], c.args[4], c.args[5]);
 		return true;
-	});
-	t.add("RegDayNight", [](Script &s, const HookCall &c) {
-		// 0x49b5b0 is a bare ret 0xc: the handle is not kept; the scripts read iDayNight themselves
-		return true;
-	});
-	t.add("RegCookEmail", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookRegCookEmail(Script &s, const HookCall &c) {
 		// 0x48e830 keeps the two handles. The only reader is the notepad's send-to-address code (0x4e6b90, called
 		// by AddrSelPDA, PdaHooks::notesPreview): sent to address 45290 it adds 1 to the count and, on notepad
 		// day 1, sets the flag
@@ -627,8 +616,9 @@ void Script::addStateHooks() {
 		s._cookEmailCount = c.variableArg(0);
 		s._cookEmailFlag = c.variableArg(1);
 		return true;
-	});
-	t.add("StopAllTimers", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookStopAllTimers(Script &s, const HookCall &c) {
 		// 0x49fde0 queues a Timer Stop (type 2, command 1) for every timer of the list, paused ones included;
 		// they run right after the hook
 		Common::Array<uint> ids;
@@ -640,8 +630,9 @@ void Script::addStateHooks() {
 			s.log(Common::String::format("      timer %u stopped (StopAllTimers)", ids[i]));
 		}
 		return true;
-	});
-	t.add("SetLBoxTint", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookSetLBoxTint(Script &s, const HookCall &c) {
 		if (c.has(3)) {
 			s._tint = 1;
 			s._tintColor[0] = c.args[2];
@@ -649,12 +640,9 @@ void Script::addStateHooks() {
 			s._tintColor[2] = c.args[0];
 		}
 		return true; // the band multiply, drawn by XFilesEngine::applyBandTint
-	});
-	t.add("ClearLBoxTint", [](Script &s, const HookCall &c) {
-		s._tint = 0;
-		return true;
-	});
-	t.add("DisplayDBox", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookDisplayDBox(Script &s, const HookCall &c) {
 		// 0x451d90 -> 0x481660: opens the box of a character view with topics or an enabled idea, replacing the
 		// open one; 0 closes it (0x4bdc30). The engine hook opens the widget
 		if (!c.has(1))
@@ -665,8 +653,9 @@ void Script::addStateHooks() {
 		else if (s._data.getCharView(c.args[0], charView) && s.hasTopicOrIdea(charView.id))
 			s.openBox(charView.id);
 		return false;
-	});
-	t.add("DispEvIcons", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookDispEvIcons(Script &s, const HookCall &c) {
 		// 0x4efb20: every group 0 icon is shown or hidden; the interface draws the row from the pairs
 		if (c.has(1)) {
 			s._evidenceRowShown = c.args[0] != 0;
@@ -674,7 +663,38 @@ void Script::addStateHooks() {
 				s._evidence[i + 1] = s._evidenceRowShown;
 		}
 		return false;
+	}
+};
+
+void Script::addStateHooks() {
+	HookTable<Script> &t = _hookTable;
+	t.add("SetAIList", StateHooks::hookSetAIList);
+	t.add("ClearAIList", [](Script &s, const HookCall &c) {
+		s._ai.trigger = s._ai.list = 0;
+		s._ai.cursor = 0;
+		s.recheckAIIcon();
+		return false;
 	});
+	t.add("SetAIGlow", StateHooks::hookSetAIGlow);
+	t.add("SetFLightProps", StateHooks::hookSetFLightProps);
+	t.add("FixJumpCut", [](Script &s, const HookCall &c) {
+		// 0x48aa20 reads both variables and calls 0x48aa10, a bare ret 0xc: no effect in this build
+		return true;
+	});
+	t.add("CharTeleport", StateHooks::hookCharTeleport);
+	t.add("RegDayNight", [](Script &s, const HookCall &c) {
+		// 0x49b5b0 is a bare ret 0xc: the handle is not kept; the scripts read iDayNight themselves
+		return true;
+	});
+	t.add("RegCookEmail", StateHooks::hookRegCookEmail);
+	t.add("StopAllTimers", StateHooks::hookStopAllTimers);
+	t.add("SetLBoxTint", StateHooks::hookSetLBoxTint);
+	t.add("ClearLBoxTint", [](Script &s, const HookCall &c) {
+		s._tint = 0;
+		return true;
+	});
+	t.add("DisplayDBox", StateHooks::hookDisplayDBox);
+	t.add("DispEvIcons", StateHooks::hookDispEvIcons);
 
 	// Hooks only logged on purpose: the menu's Save and Load (B-063)
 	static const char *const kLoggedMenuHooks[] = {"SaveKeyPress", "SaveLoadComit", "SaveLoadInit", "SaveSlotSelect"};

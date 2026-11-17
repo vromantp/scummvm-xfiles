@@ -766,6 +766,7 @@ private:
 	struct GameHooks;
 	struct InterfaceHooks;
 	struct StateHooks;
+	struct ToolHooks;
 	/** SetStartView of a restore: enter the saved position and rebuild the objects (Game_BuildObjects). */
 	void restoreView();
 	/** The saved hint list, glow, flashlight properties and letterbox tint (restore, then again after the objects). */

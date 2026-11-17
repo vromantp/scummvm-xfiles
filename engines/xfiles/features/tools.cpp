@@ -313,15 +313,8 @@ void Script::cameraClick(const Common::Point &pos) {
 	}
 }
 
-void Script::addToolHooks() {
-	HookTable<Script> &t = _hookTable;
-	t.add("RegViewSpecial", [](Script &s, const HookCall &c) {
-		if (!c.isVariable(0))
-			return false;
-		s._viewSpecialVariable = c.action.args[0].value; // 0x481140
-		return true;
-	});
-	t.add("OnBinocClick", [](Script &s, const HookCall &c) {
+struct Script::ToolHooks {
+	static bool hookOnBinocClick(Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
 		// 0x4e1b30: the item goes into the variable if it is not in hand; then, unless the view has a view change of the
@@ -336,8 +329,9 @@ void Script::addToolHooks() {
 				s.toolReaction(c.args[0]);
 		}
 		return true;
-	});
-	t.add("OnFLightClick", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookOnFLightClick(Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
 		// 0x4e1d80
@@ -347,8 +341,9 @@ void Script::addToolHooks() {
 			s.toolReaction(c.args[0]);
 		}
 		return true;
-	});
-	t.add("OnNVisionClick", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookOnNVisionClick(Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
 		// 0x4e1f80
@@ -358,8 +353,9 @@ void Script::addToolHooks() {
 			s.toolReaction(c.args[0]);
 		}
 		return true;
-	});
-	t.add("OnCameraClick", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookOnCameraClick(Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
 		// 0x4e1c50: no character reaction for the camera (it passes 3 to Tool_CharReaction). The camera object is
@@ -370,8 +366,9 @@ void Script::addToolHooks() {
 			s._tool.cameraEnabled = !s._viewSpecialVariable || s.getVariable(s._viewSpecialVariable) != 1;
 		}
 		return true;
-	});
-	t.add("OnGunClick", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookOnGunClick(Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
 		// 0x4e1e80: the gun is taken like the camera, without a character reaction (no Tool_CharReaction)
@@ -379,8 +376,9 @@ void Script::addToolHooks() {
 			s._variables[s._tool.variable] = c.args[0];
 		s._tool.gunValue = c.args[0];
 		return true;
-	});
-	t.add("RegCurrInvVar", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookRegCurrInvVar(Script &s, const HookCall &c) {
 		if (!c.has(2) || !c.isVariable(0))
 			return false;
 		// 0x458e60: the variable starts as "nothing in hand"
@@ -388,16 +386,18 @@ void Script::addToolHooks() {
 		s._tool.none = c.args[1];
 		s._variables[s._tool.variable] = s._tool.none;
 		return true;
-	});
-	t.add("OnInvClick", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookOnInvClick(Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
 		// Inv_Select 0x49b410: the item's value goes into the variable
 		if (s._tool.variable)
 			s._variables[s._tool.variable] = c.args[0];
 		return true;
-	});
-	t.add("SelectInv", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookSelectInv(Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
 		// 0x50a390: if the item has an icon, put back what is in hand and
@@ -408,23 +408,26 @@ void Script::addToolHooks() {
 			s.selectInventory(c.args[0]);
 		}
 		return true;
-	});
-	t.add("StopPlayAssets", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookStopPlayAssets(Script &s, const HookCall &c) {
 		// 0x4ccc40 -> 0x4b4170(queue, b): b = 1 drops the queued events first, then the shown videos stop
 		if (!c.has(1))
 			return false;
 		s.stopShownVideos(c.args[0] != 0);
 		return true;
-	});
-	t.add("DeselectInv", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookDeselectInv(Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
 		// 0x50a570: 0 puts back any item, else only that one
 		if (c.args[0] == 0 || s._tool.cursorItem == (uint32)c.args[0])
 			s.putBack();
 		return true;
-	});
-	t.add("OnIntInvClick", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookOnIntInvClick(Script &s, const HookCall &c) {
 		// 0x467fb0: the PDA and phone icons never set iCurrInventory. For the
 		// PDA, while a sound object plays an asset with a picture (a video, a
 		// clip), it sets bDisablePDA, which the icon's trigger tests before it
@@ -454,7 +457,28 @@ void Script::addToolHooks() {
 				s.hooks()->heldItemChanged(0);
 		}
 		return true;
+	}
+};
+
+void Script::addToolHooks() {
+	HookTable<Script> &t = _hookTable;
+	t.add("RegViewSpecial", [](Script &s, const HookCall &c) {
+		if (!c.isVariable(0))
+			return false;
+		s._viewSpecialVariable = c.action.args[0].value; // 0x481140
+		return true;
 	});
+	t.add("OnBinocClick", ToolHooks::hookOnBinocClick);
+	t.add("OnFLightClick", ToolHooks::hookOnFLightClick);
+	t.add("OnNVisionClick", ToolHooks::hookOnNVisionClick);
+	t.add("OnCameraClick", ToolHooks::hookOnCameraClick);
+	t.add("OnGunClick", ToolHooks::hookOnGunClick);
+	t.add("RegCurrInvVar", ToolHooks::hookRegCurrInvVar);
+	t.add("OnInvClick", ToolHooks::hookOnInvClick);
+	t.add("SelectInv", ToolHooks::hookSelectInv);
+	t.add("StopPlayAssets", ToolHooks::hookStopPlayAssets);
+	t.add("DeselectInv", ToolHooks::hookDeselectInv);
+	t.add("OnIntInvClick", ToolHooks::hookOnIntInvClick);
 }
 
 } // End of namespace XFiles

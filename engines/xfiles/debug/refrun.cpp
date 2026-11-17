@@ -75,6 +75,90 @@ void XFilesEngine::saveShot() {
 	debugC(1, kDebugScript, "-- shot %s", name.c_str());
 }
 
+void XFilesEngine::stepClickHot(const Common::String &step, const Common::Array<uint32> &queue) {
+	// Engine only (B-177): wait until a .HOT entry of the view's clip is live (hot) or its window has
+	// passed (hotlate), then click the middle of its rectangle
+	bool late = step == "xclick:hotlate";
+	if (_hotMovie && !_hotMovie->hasEnded() && (queue.empty() || _hotMovie == _video)) {
+		uint32 now = _hotMovie->getTime();
+		const Common::Array<HotEntry> &entries = _hot.getEntries();
+		for (uint i = 0; i < entries.size(); i++) {
+			const HotEntry &e = entries[i];
+			if (late ? now >= e.endMs : (now >= e.startMs && now < e.endMs)) {
+				Common::Point band = getBandPosition(*_hotMovie);
+				Common::Point pos(band.x + (e.rect.left + e.rect.right) / 2, band.y + (e.rect.top + e.rect.bottom) / 2);
+				debugC(1, kDebugScript, "-- xclick %s at %d,%d (clip time %u)", late ? "after the window" : "in the window", pos.x, pos.y, now);
+				_mouse = pos;
+				handleClick(pos);
+				return;
+			}
+		}
+	}
+	_nextStep--; // not yet: try again next frame
+}
+
+void XFilesEngine::stepAnswer(const Common::String &step) {
+	// Engine only (B-176): the answer to EndGame's "Try again?" (answer:yes, answer:no); waits for the question
+	if (!_script->isEndGamePending() || _stepAnswer >= 0) {
+		_nextStep--;
+		return;
+	}
+	_stepAnswer = step == "answer:yes" ? 1 : 0;
+}
+
+void XFilesEngine::stepMouse(const Common::String &step) {
+	// Engine only (B-228): move the mouse to a screen position, no click (the sim ignores it)
+	int x = 0, y = 0;
+	if (sscanf(step.c_str() + 6, "%d,%d", &x, &y) == 2) {
+		_mouse = Common::Point(x, y);
+		g_system->warpMouse(x, y);
+	}
+}
+
+void XFilesEngine::stepClickAt(const Common::String &step, const Common::Array<uint32> &queue) {
+	// Engine only: a click at a screen position (the menu's while it is up)
+	int x = 0, y = 0;
+	if (sscanf(step.c_str() + 7, "%d,%d", &x, &y) == 2) {
+		Common::Point pos(x, y);
+		_mouse = pos;
+		if (_menuOpen)
+			menuChoice(clickMenu(pos));
+		else if (queue.empty() && !_whiteHold) // the white takes no clicks (B-288)
+			handleClick(pos);
+	}
+}
+
+void XFilesEngine::stepState(const Common::String &step) {
+	// Engine only: write the state as `state json FILE` does
+	VCSave snapshot;
+	fillSnapshot(snapshot);
+	Common::String json = dumpState(*_data, *_script, &snapshot);
+	Common::DumpFile file;
+	if (!file.open(Common::Path(step.substr(6), '/'), true) || file.write(json.c_str(), json.size()) != json.size())
+		warning("Cannot write the state to %s", step.c_str() + 6);
+}
+
+void XFilesEngine::stepSaveLoad(const Common::String &step) {
+	// Engine only: save to or load from a ScummVM slot (the load runs at the start of the next frame)
+	int slot = atoi(step.c_str() + 9);
+	Common::Error error = step[0] == 's' ? saveGameState(slot, "step") : loadGameState(slot);
+	if (error.getCode() != Common::kNoError)
+		warning("%s failed: %s", step.c_str(), error.getDesc().c_str());
+}
+
+void XFilesEngine::stepAIClick() {
+	// Engine only: a click on the AI icon (a glowing one goes to its view, else the next hint)
+	debugC(1, kDebugScript, "-- click: AI icon (step)");
+	if (_script->isAISuspended()) {
+		debugC(1, kDebugScript, "   suspended: no hit");
+		return;
+	}
+	if (_script->isHintGlowing())
+		_script->clickAIIcon();
+	else
+		_script->clickAIHint();
+}
+
 void XFilesEngine::runSteps() {
 	// xfref.dll holds input commands while a shot is pending (not while
 	// it waits for a video)
@@ -123,87 +207,31 @@ void XFilesEngine::runSteps() {
 			return;
 		}
 		if (step == "xclick:hot" || step == "xclick:hotlate") {
-			// Engine only (B-177): wait until a .HOT entry of the view's clip is live (hot) or its window has
-			// passed (hotlate), then click the middle of its rectangle
-			bool late = step == "xclick:hotlate";
-			if (_hotMovie && !_hotMovie->hasEnded() && (queue.empty() || _hotMovie == _video)) {
-				uint32 now = _hotMovie->getTime();
-				const Common::Array<HotEntry> &entries = _hot.getEntries();
-				for (uint i = 0; i < entries.size(); i++) {
-					const HotEntry &e = entries[i];
-					if (late ? now >= e.endMs : (now >= e.startMs && now < e.endMs)) {
-						Common::Point band = getBandPosition(*_hotMovie);
-						Common::Point pos(band.x + (e.rect.left + e.rect.right) / 2, band.y + (e.rect.top + e.rect.bottom) / 2);
-						debugC(1, kDebugScript, "-- xclick %s at %d,%d (clip time %u)", late ? "after the window" : "in the window", pos.x, pos.y, now);
-						_mouse = pos;
-						handleClick(pos);
-						return;
-					}
-				}
-			}
-			_nextStep--; // not yet: try again next frame
+			stepClickHot(step, queue);
 			return;
 		}
 		if (step.hasPrefix("answer:")) {
-			// Engine only (B-176): the answer to EndGame's "Try again?" (answer:yes, answer:no); waits for the question
-			if (!_script->isEndGamePending() || _stepAnswer >= 0) {
-				_nextStep--;
-				return;
-			}
-			_stepAnswer = step == "answer:yes" ? 1 : 0;
+			stepAnswer(step);
 			return;
 		}
 		if (step.hasPrefix("mouse:")) {
-			// Engine only (B-228): move the mouse to a screen position, no click (the sim ignores it)
-			int x = 0, y = 0;
-			if (sscanf(step.c_str() + 6, "%d,%d", &x, &y) == 2) {
-				_mouse = Common::Point(x, y);
-				g_system->warpMouse(x, y);
-			}
+			stepMouse(step);
 			continue;
 		}
 		if (step.hasPrefix("xclick:")) {
-			// Engine only: a click at a screen position (the menu's while it is up)
-			int x = 0, y = 0;
-			if (sscanf(step.c_str() + 7, "%d,%d", &x, &y) == 2) {
-				Common::Point pos(x, y);
-				_mouse = pos;
-				if (_menuOpen)
-					menuChoice(clickMenu(pos));
-				else if (queue.empty() && !_whiteHold) // the white takes no clicks (B-288)
-					handleClick(pos);
-			}
+			stepClickAt(step, queue);
 			return;
 		}
 		if (step.hasPrefix("state:")) {
-			// Engine only: write the state as `state json FILE` does
-			VCSave snapshot;
-			fillSnapshot(snapshot);
-			Common::String json = dumpState(*_data, *_script, &snapshot);
-			Common::DumpFile file;
-			if (!file.open(Common::Path(step.substr(6), '/'), true) || file.write(json.c_str(), json.size()) != json.size())
-				warning("Cannot write the state to %s", step.c_str() + 6);
+			stepState(step);
 			continue;
 		}
 		if (step.hasPrefix("savegame:") || step.hasPrefix("loadgame:")) {
-			// Engine only: save to or load from a ScummVM slot (the load runs at the start of the next frame)
-			int slot = atoi(step.c_str() + 9);
-			Common::Error error = step[0] == 's' ? saveGameState(slot, "step") : loadGameState(slot);
-			if (error.getCode() != Common::kNoError)
-				warning("%s failed: %s", step.c_str(), error.getDesc().c_str());
+			stepSaveLoad(step);
 			return;
 		}
 		if (step == "aiclick") {
-			// Engine only: a click on the AI icon (a glowing one goes to its view, else the next hint)
-			debugC(1, kDebugScript, "-- click: AI icon (step)");
-			if (_script->isAISuspended()) {
-				debugC(1, kDebugScript, "   suspended: no hit");
-				return;
-			}
-			if (_script->isHintGlowing())
-				_script->clickAIIcon();
-			else
-				_script->clickAIHint();
+			stepAIClick();
 			return;
 		}
 		if (step == "escape") {

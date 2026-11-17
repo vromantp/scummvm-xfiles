@@ -485,6 +485,14 @@ private:
 	void updateShots();
 	void saveShot();
 	void runSteps();
+	// The engine-only steps of runSteps, one per method (each ends the frame's step run, or goes on to the next step)
+	void stepClickHot(const Common::String &step, const Common::Array<uint32> &queue);
+	void stepAnswer(const Common::String &step);
+	void stepMouse(const Common::String &step);
+	void stepClickAt(const Common::String &step, const Common::Array<uint32> &queue);
+	void stepState(const Common::String &step);
+	void stepSaveLoad(const Common::String &step);
+	void stepAIClick();
 	Common::Path _shotsDir;
 	uint _shots;
 	uint32 _shotDue;                      ///< getMillis() of the pending shot; 0: none

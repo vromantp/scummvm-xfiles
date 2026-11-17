@@ -762,6 +762,8 @@ private:
 	void addToolHooks();
 	void addInterfaceHooks();
 	void addStateHooks();
+	/** The hook functions of addGameHooks (script/script_hooks.cpp): a nested struct reaches Script's private members. */
+	struct GameHooks;
 	/** SetStartView of a restore: enter the saved position and rebuild the objects (Game_BuildObjects). */
 	void restoreView();
 	/** The saved hint list, glow, flashlight properties and letterbox tint (restore, then again after the objects). */

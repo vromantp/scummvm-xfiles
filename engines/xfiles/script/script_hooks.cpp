@@ -69,9 +69,8 @@ void Script::addCoreHooks() {
 	addStateHooks();
 }
 
-void Script::addGameHooks() {
-	HookTable<Script> &t = _hookTable;
-	t.add("SwapDisc", [](Script &s, const HookCall &c) {
+struct Script::GameHooks {
+	static bool hookSwapDisc(Script &s, const HookCall &c) {
 		if (!c.has(4))
 			return false;
 		// The last call in an event wins (0x4cfc70 replaces the pending travel)
@@ -79,14 +78,89 @@ void Script::addGameHooks() {
 			s._travel.to[i] = c.args[i];
 		s._travel.pending = true;
 		return true;
-	});
-	t.add("NukeAllIcons", [](Script &s, const HookCall &) {
+	}
+
+	static bool hookNukeAllIcons(Script &s, const HookCall &) {
 		// 0x49f3c0: deactivates the icons of kinds 14, 12, 15 (and others the engine does not model); the
 		// emotion and action ones lose their enable flags
 		s.spendIcons(kClassEmotionIcon);
 		s.spendIcons(kClassActionIcon);
 		return true;
-	});
+	}
+
+	static bool hookInitSmShootout(Script &s, const HookCall &c) {
+		if (!c.isVariable(0) || !c.isVariable(1) || !c.isVariable(2))
+			return false;
+		for (int i = 0; i < 3; i++)
+			s._shoot.vars[i] = c.action.args[i].value;
+		s.shootoutReset(); // its three rolls are the reset's (0x4f9630)
+		return true;
+	}
+
+	static bool hookGetPlayFBIShot(Script &s, const HookCall &c) {
+		if (!c.isVariable(0))
+			return false;
+		s.setVariable(c.action.args[0].value, s._once->fbiShot); // 0x4f9ef0
+		s._once->fbiShot = false;
+		return true;
+	}
+
+	static bool hookGetPlayBones(Script &s, const HookCall &c) {
+		if (!c.isVariable(0))
+			return false;
+		s.setVariable(c.action.args[0].value, s._once->playBones); // 0x4f9f20
+		s._once->playBones = false;
+		return true;
+	}
+
+	static bool hookGetPlayCancer(Script &s, const HookCall &c) {
+		if (!c.isVariable(0))
+			return false;
+		s.setVariable(c.action.args[0].value, s._once->playCancer); // 0x4f9f70
+		s._once->playCancer = false;
+		return true;
+	}
+
+	static bool hookPrepBombTime(Script &s, const HookCall &c) {
+		if (!c.has(2))
+			return false;
+		// 0x50c2d0: a running timer with that id; the asset plays from 180000 minus what is left to 180000
+		uint32 left;
+		if (!s._hooks || !s._hooks->getTimerLeft(c.args[0], left))
+			return true;
+		uint32 start = left < kBombTimerLength ? kBombTimerLength - left : 0;
+		s.log(Common::String::format("      PrepBombTime: timer %d has %u ms left, asset #%d plays from %u ms", c.args[0], left, c.args[1], start));
+		s._hooks->setAssetRange(c.args[1], start, kBombTimerLength);
+		return true;
+	}
+
+	static bool hookDrawGunRauch(Script &s, const HookCall &c) {
+		if (!c.isVariable(0) || !c.isVariable(1))
+			return false;
+		// 0x4f97b0: with the NSA outside, the view state becomes 'b' and the exe's own Set View goes to the shootout
+		if (s.getVariable(c.action.args[0].value) == 1) {
+			s.setVariable(c.action.args[1].value, 'b');
+			s.setViewByExe(kRauchShootoutView);
+		}
+		return true;
+	}
+
+	static bool hookEndGame(Script &s, const HookCall &c) {
+		if (!c.isVariable(0))
+			return false;
+		// 0x4cc870 closes the dialog box; the question and the restart are the engine's (answerEndGame)
+		s.closeBox();
+		s._endGameVar = c.action.args[0].value;
+		s._endGameValue = s.getVariable(s._endGameVar);
+		s._endGamePending = true;
+		return true;
+	}
+};
+
+void Script::addGameHooks() {
+	HookTable<Script> &t = _hookTable;
+	t.add("SwapDisc", GameHooks::hookSwapDisc);
+	t.add("NukeAllIcons", GameHooks::hookNukeAllIcons);
 	t.add("EnableKitIcon", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
@@ -99,14 +173,7 @@ void Script::addGameHooks() {
 		s.randGen(c.action.args[0].value, c.args[1]);
 		return true;
 	});
-	t.add("InitSmShootout", [](Script &s, const HookCall &c) {
-		if (!c.isVariable(0) || !c.isVariable(1) || !c.isVariable(2))
-			return false;
-		for (int i = 0; i < 3; i++)
-			s._shoot.vars[i] = c.action.args[i].value;
-		s.shootoutReset(); // its three rolls are the reset's (0x4f9630)
-		return true;
-	});
+	t.add("InitSmShootout", GameHooks::hookInitSmShootout);
 	t.add("DoSmolShootout", [](Script &s, const HookCall &c) {
 		s.doSmolShootout(c);
 		return true;
@@ -121,27 +188,9 @@ void Script::addGameHooks() {
 		s.smolGoonShot();
 		return true;
 	});
-	t.add("GetPlayFBIShot", [](Script &s, const HookCall &c) {
-		if (!c.isVariable(0))
-			return false;
-		s.setVariable(c.action.args[0].value, s._once->fbiShot); // 0x4f9ef0
-		s._once->fbiShot = false;
-		return true;
-	});
-	t.add("GetPlayBones", [](Script &s, const HookCall &c) {
-		if (!c.isVariable(0))
-			return false;
-		s.setVariable(c.action.args[0].value, s._once->playBones); // 0x4f9f20
-		s._once->playBones = false;
-		return true;
-	});
-	t.add("GetPlayCancer", [](Script &s, const HookCall &c) {
-		if (!c.isVariable(0))
-			return false;
-		s.setVariable(c.action.args[0].value, s._once->playCancer); // 0x4f9f70
-		s._once->playCancer = false;
-		return true;
-	});
+	t.add("GetPlayFBIShot", GameHooks::hookGetPlayFBIShot);
+	t.add("GetPlayBones", GameHooks::hookGetPlayBones);
+	t.add("GetPlayCancer", GameHooks::hookGetPlayCancer);
 	t.add("RandGenRange", [](Script &s, const HookCall &c) {
 		if (!c.has(3) || !c.isVariable(0))
 			return false;
@@ -154,38 +203,9 @@ void Script::addGameHooks() {
 		s.takePhoto(c.args[0]);
 		return true;
 	});
-	t.add("PrepBombTime", [](Script &s, const HookCall &c) {
-		if (!c.has(2))
-			return false;
-		// 0x50c2d0: a running timer with that id; the asset plays from 180000 minus what is left to 180000
-		uint32 left;
-		if (!s._hooks || !s._hooks->getTimerLeft(c.args[0], left))
-			return true;
-		uint32 start = left < kBombTimerLength ? kBombTimerLength - left : 0;
-		s.log(Common::String::format("      PrepBombTime: timer %d has %u ms left, asset #%d plays from %u ms", c.args[0], left, c.args[1], start));
-		s._hooks->setAssetRange(c.args[1], start, kBombTimerLength);
-		return true;
-	});
-	t.add("DrawGunRauch", [](Script &s, const HookCall &c) {
-		if (!c.isVariable(0) || !c.isVariable(1))
-			return false;
-		// 0x4f97b0: with the NSA outside, the view state becomes 'b' and the exe's own Set View goes to the shootout
-		if (s.getVariable(c.action.args[0].value) == 1) {
-			s.setVariable(c.action.args[1].value, 'b');
-			s.setViewByExe(kRauchShootoutView);
-		}
-		return true;
-	});
-	t.add("EndGame", [](Script &s, const HookCall &c) {
-		if (!c.isVariable(0))
-			return false;
-		// 0x4cc870 closes the dialog box; the question and the restart are the engine's (answerEndGame)
-		s.closeBox();
-		s._endGameVar = c.action.args[0].value;
-		s._endGameValue = s.getVariable(s._endGameVar);
-		s._endGamePending = true;
-		return true;
-	});
+	t.add("PrepBombTime", GameHooks::hookPrepBombTime);
+	t.add("DrawGunRauch", GameHooks::hookDrawGunRauch);
+	t.add("EndGame", GameHooks::hookEndGame);
 	t.add("IsIItemHeld", [](Script &s, const HookCall &c) {
 		if (!c.has(2) || !c.isVariable(1))
 			return false;

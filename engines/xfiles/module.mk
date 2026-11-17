@@ -29,6 +29,7 @@ MODULE_OBJS = \
 	script_view.o \
 	sound.o \
 	subliminal.o \
+	tools.o \
 	vcdata.o \
 	vcdump.o \
 	xfiles.o \

@@ -25,7 +25,6 @@
 
 #include "xfiles/detection.h"
 #include "xfiles/script/script.h"
-#include "xfiles/debug/vcdump.h"
 
 namespace XFiles {
 

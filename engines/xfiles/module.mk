@@ -26,6 +26,7 @@ MODULE_OBJS = \
 	script/script_hooks.o \
 	script/script_media.o \
 	script/script_save.o \
+	script/script_trace.o \
 	script/script_view.o \
 	features/shootout.o \
 	media/sound.o \

@@ -26,7 +26,7 @@
 #include "xfiles/detection.h"
 #include "xfiles/script/script.h"
 #include "xfiles/script/script_internal.h"
-#include "xfiles/debug/vcdump.h"
+#include "xfiles/script/script_trace.h"
 
 namespace XFiles {
 

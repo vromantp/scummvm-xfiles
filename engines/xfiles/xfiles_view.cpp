@@ -27,10 +27,10 @@
 #include "graphics/pixelformat.h"
 
 #include "xfiles/xfiles.h"
-#include "xfiles/movie.h"
-#include "xfiles/pictures.h"
-#include "xfiles/script.h"
-#include "xfiles/vcdata.h"
+#include "xfiles/media/movie.h"
+#include "xfiles/media/pictures.h"
+#include "xfiles/script/script.h"
+#include "xfiles/script/vcdata.h"
 #include "xfiles/view_internal.h"
 
 namespace XFiles {

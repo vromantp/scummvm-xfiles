@@ -39,18 +39,18 @@ namespace Graphics {
 class Font;
 }
 
-#include "xfiles/captions.h"
-#include "xfiles/cursors.h"
+#include "xfiles/ui/captions.h"
+#include "xfiles/ui/cursors.h"
 #include "xfiles/detection.h"
-#include "xfiles/dialogbox.h"
-#include "xfiles/discfiles.h"
-#include "xfiles/headcredits.h"
+#include "xfiles/ui/dialogbox.h"
+#include "xfiles/media/discfiles.h"
+#include "xfiles/features/headcredits.h"
 #include "xfiles/hot.h"
-#include "xfiles/interface.h"
-#include "xfiles/prefs.h"
-#include "xfiles/script.h"
-#include "xfiles/sound.h"
-#include "xfiles/subliminal.h"
+#include "xfiles/ui/interface.h"
+#include "xfiles/ui/prefs.h"
+#include "xfiles/script/script.h"
+#include "xfiles/media/sound.h"
+#include "xfiles/features/subliminal.h"
 
 namespace Common {
 class WinResources;

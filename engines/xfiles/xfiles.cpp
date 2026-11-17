@@ -32,11 +32,11 @@
 #include "gui/message.h"
 
 #include "xfiles/xfiles.h"
-#include "xfiles/console.h"
-#include "xfiles/movie.h"
-#include "xfiles/pictures.h"
-#include "xfiles/script.h"
-#include "xfiles/vcdata.h"
+#include "xfiles/debug/console.h"
+#include "xfiles/media/movie.h"
+#include "xfiles/media/pictures.h"
+#include "xfiles/script/script.h"
+#include "xfiles/script/vcdata.h"
 
 namespace XFiles {
 

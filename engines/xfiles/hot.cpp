@@ -23,9 +23,9 @@
 #include "common/stream.h"
 
 #include "xfiles/detection.h"
-#include "xfiles/discfiles.h"
+#include "xfiles/media/discfiles.h"
 #include "xfiles/hot.h"
-#include "xfiles/vcdata.h"
+#include "xfiles/script/vcdata.h"
 
 namespace XFiles {
 

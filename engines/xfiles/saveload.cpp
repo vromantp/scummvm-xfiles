@@ -28,8 +28,8 @@
 #include "common/translation.h"
 
 #include "xfiles/xfiles.h"
-#include "xfiles/movie.h"
-#include "xfiles/vcdata.h"
+#include "xfiles/media/movie.h"
+#include "xfiles/script/vcdata.h"
 
 namespace XFiles {
 

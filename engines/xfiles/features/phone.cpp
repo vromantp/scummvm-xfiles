@@ -1,0 +1,317 @@
+/* ScummVM - Graphic Adventure Engine
+ *
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+#include "common/formats/winexe.h"
+
+#include "xfiles/features/phone.h"
+#include "xfiles/script/script.h"
+
+namespace XFiles {
+
+// The phone of the inventory: layout "Phone (On)" with a keypad, a display
+// and a phone book. Its items call the Phone hooks (XFiles.exe 0x4c7f00 to
+// 0x4c8bd0), which keep the dialled number in a string variable, draw it on
+// the display and look it up when Send is pressed.
+
+/** The display (VCInterfaceItem). */
+static const uint32 kPhoneDisplay = 39513;
+/** The item whose asset list is the phone book; entries are enabled as they are learnt. */
+static const uint32 kPhoneBook = 45309;
+/** Key tones for 0-9 (0x6b1910); 9 has the tone of 0. */
+static const uint32 kPhoneTones[10] = { 58637, 58629, 58630, 58631, 58632, 58633, 58634, 58635, 58636, 58637 };
+/** The display's text: Courier New, 15 pixels, bold, dark green (0x4c7f00, 0x6ba560). */
+static const uint32 kPhoneTextColor = 0x1b300f;
+static const int kPhoneTextSize = 15;
+/** Digits the display takes (0x4c8870). */
+static const uint kPhoneMaxDigits = 13;
+
+/** A number that answers: its text asset, and the trigger whose actions play the call (0x656040). */
+struct PhoneCall {
+	uint32 number;
+	uint32 trigger;
+	uint32 actions;
+};
+
+static const PhoneCall kPhoneCalls[] = {
+	{ 67269, 67324, 67326 },
+	{ 67271, 67331, 67333 },
+	{ 67273, 67338, 67340 },
+	{ 67275, 67345, 67347 },
+	{ 67277, 67352, 67354 },
+	{ 67279, 67361, 67363 },
+	{ 67281, 67368, 67370 },
+	{ 67283, 67375, 67377 },
+	{ 67287, 67382, 67384 },
+	{ 67285, 67389, 67391 },
+	{ 67289, 67398, 67400 },
+	{ 67443, 74576, 74580 },   // The Lone Gunmen
+	{ 83868, 83863, 83865 }
+};
+
+/** Recordings for numbers that do not answer (trigger, actions; 0x6560e0). */
+static const uint32 kPhoneFailures[5][2] = {
+	{ 67405, 67407 },
+	{ 67410, 67412 },
+	{ 67415, 67422 },
+	{ 67451, 67453 },
+	{ 83303, 83305 }           // Ten digits outside area code 206
+};
+enum {
+	kFailureTooLong = 2,
+	kFailureLongDistance = 4
+};
+static const char *const kPhoneAreaCode = "206";
+
+/** The Lone Gunmen answer from node 2 on, until they have been called once. */
+static const uint32 kLoneGunmenNumber = 67443;
+static const uint32 kHasNotCalledLoneGunmen = 2623;
+/** The rings before a call is answered: the actions of trigger 78788 (0x133c4). */
+static const uint32 kPhoneRingActions = 78790;
+
+/** The keys PhoneKeyPress takes, as Windows virtual-key codes, and the button triggers they run (0x4c8340). */
+struct PhoneKey {
+	uint vk;
+	uint32 trigger;
+	uint32 actions;
+};
+
+static const PhoneKey kPhoneKeys[] = {
+	{ 0x0d, 57171, 57172 },    // Return: Send
+	{ '0', 43274, 43276 },
+	{ '1', 43238, 43240 },
+	{ '2', 43242, 43244 },
+	{ '3', 43246, 43248 },
+	{ '4', 43250, 43252 },
+	{ '5', 43254, 43256 },
+	{ '6', 43258, 43260 },
+	{ '7', 43262, 43264 },
+	{ '8', 43266, 43268 },
+	{ '9', 43270, 43272 }
+};
+
+PhoneHooks::PhoneHooks(Script &script, const VCData &data)
+	: _script(script), _data(data), _bookSize(0), _bookIndex(0), _showsName(false), _tone(0) {
+}
+
+void PhoneHooks::addHooks(HookTable<Script> &t) {
+	t.add("PhoneInit", [](Script &s, const HookCall &c) {
+		s._phone.init(c.variableArg(0));
+		return true;
+	});
+	t.add("PhoneButton", [](Script &s, const HookCall &c) {
+		if (!c.has(3))
+			return false;
+		s._phone.button((char)c.args[0], c.variableArg(1), c.args[2]);
+		return true;
+	});
+	t.add("PhoneClear", [](Script &s, const HookCall &c) {
+		s._phone.clear(c.variableArg(0));
+		return true;
+	});
+	t.add("PhoneMenuInit", [](Script &s, const HookCall &c) {
+		s._phone.menuInit(c.variableArg(0));
+		return true;
+	});
+	t.add("PhoneFlipName", [](Script &s, const HookCall &c) {
+		if (!c.has(2))
+			return false;
+		s._phone.flipName(c.args[0] != 0, c.variableArg(1));
+		return true;
+	});
+	t.add("PhoneSend", [](Script &s, const HookCall &c) {
+		s._phone.send(c.variableArg(0), c.variableArg(1), c.variableArg(2), c.event, c.fields);
+		return true;
+	});
+	t.add("PhoneKeyPress", [](Script &s, const HookCall &c) {
+		if (!c.has(1))
+			return false;
+		s._phone.keyPress(c.args[0], c.event, c.fields);
+		return true;
+	});
+	t.addLogged("PhoneDestroy"); // It only frees the display's font
+}
+
+void PhoneHooks::setDisplay(const Common::U32String &text) {
+	if (text.empty()) {
+		_script.clearItemText(kPhoneDisplay);
+		return;
+	}
+	// Not wrapped, bold, a line per newline; 17 px lines
+	_script.setItemText(kPhoneDisplay, text, kPhoneTextSize, true, kPhoneTextColor, Script::kAlignLeft, false, 0);
+}
+
+void PhoneHooks::init(uint32 numberVar) {
+	// 0x4c7f00: an empty display and number (the phone book and the entry
+	// shown are kept)
+	setDisplay(Common::U32String());
+	_script.setString(numberVar, Common::String());
+}
+
+void PhoneHooks::button(char key, uint32 numberVar, uint32 pressedItem) {
+	// 0x4c8870: a digit is added to the number, unless it has 13; one
+	// pressed while an entry of the phone book is shown starts a new number.
+	// It plays its tone, stopping the previous one.
+	if (key >= '0' && key <= '9') {
+		Common::String number = _script.getString(numberVar);
+		if (number.size() < kPhoneMaxDigits || _showsName) {
+			if (_showsName) {
+				_showsName = false;
+				number.clear();
+			}
+			number += key;
+			_script.setString(numberVar, number);
+			setDisplay(Common::U32String(number));
+			_script.log("      phone: " + number);
+			_tone = kPhoneTones[key - '0'];
+			_script.playPhoneTone(_tone);
+		}
+	}
+	// The button's pressed picture, enabled by the click, goes 100 ms later
+	if (pressedItem)
+		_script.pressItem(pressedItem);
+}
+
+void PhoneHooks::clear(uint32 numberVar) {
+	// 0x4c8b10: whether an entry was shown is kept
+	setDisplay(Common::U32String());
+	_script.setString(numberVar, Common::String());
+}
+
+void PhoneHooks::menuInit(uint32 numberVar) {
+	// 0x4c8550: the book is made again from its enabled entries; the entry
+	// shown last time is shown again
+	_script.setString(numberVar, Common::String());
+	VCInterfaceItem item;
+	Common::Array<uint32> entries;
+	_book.clear();
+	if (_data.getInterfaceItem(kPhoneBook, item))
+		_data.getMembers(item.assets, entries);
+	for (uint i = 0; i < entries.size(); i++) {
+		if (_script.isEnabled(entries[i]))
+			_book.push_back(entries[i]);
+	}
+	_bookSize = _book.size();
+	if (_bookIndex < _book.size()) {
+		_showsName = true;
+		showEntry(numberVar);
+	}
+}
+
+void PhoneHooks::flipName(bool back, uint32 numberVar) {
+	// 0x4c81c0: only while an entry is shown and the book has two or more
+	if (!_showsName || _bookSize < 2)
+		return;
+	if (back)
+		_bookIndex = (_bookIndex + _bookSize - 1) % _bookSize;
+	else
+		_bookIndex = (_bookIndex + 1) % _bookSize;
+	if (_bookIndex < _book.size())
+		showEntry(numberVar);
+}
+
+void PhoneHooks::showEntry(uint32 numberVar) {
+	// An entry is a text asset, or names a string of XFilesT.dll: name lines,
+	// then the number; the number is its last 10 characters
+	uint32 entry = _book[_bookIndex];
+	Common::U32String text;
+	_script.getTextAsset(entry, text);
+	Common::U32String lines;
+	for (uint i = 0; i < text.size(); i++) {
+		if (text[i] != '\r')
+			lines += text[i];
+	}
+	setDisplay(lines);
+	Common::String number = text.encode();
+	if (number.size() > 10)
+		number = Common::String(number.c_str() + number.size() - 10);
+	_script.setString(numberVar, number);
+	_script.log(Common::String::format("      phone: entry %u, ", entry) + number);
+}
+
+void PhoneHooks::send(uint32 numberVar, uint32 triggerVar, uint32 actionsVar, int event, const Common::Array<int32> &fields) {
+	// 0x4c8bd0: look the number up in the call table; a known number rings,
+	// then its trigger's actions play (iCallTriggerID, iCallActionID, run by
+	// the rings' end). Unknown numbers play a recording at once.
+	Common::String number = _script.getString(numberVar);
+	if (number.size() > 11) {
+		_script.runActionList(kPhoneFailures[kFailureTooLong][1], event, fields);
+		return;
+	}
+	if (number.size() == 10 && strncmp(number.c_str(), kPhoneAreaCode, 3) != 0) {
+		_script.runActionList(kPhoneFailures[kFailureLongDistance][1], event, fields);
+		return;
+	}
+	Common::U32String text;
+	if (_data.getText(kLoneGunmenNumber, text) && text.encode() == number) {
+		int32 node = _script.getCurrentNode();
+		if (node < 2 || !_script.getVariable(kHasNotCalledLoneGunmen)) {
+			_script.runActionList(kPhoneFailures[kFailureTooLong][1], event, fields);
+			return;
+		}
+	}
+	for (uint i = 0; i < ARRAYSIZE(kPhoneCalls); i++) {
+		if (!_data.getText(kPhoneCalls[i].number, text))
+			continue;
+		// Numbers in area code 206 also answer to their last 7 digits
+		Common::String known = text.encode();
+		bool local = known.hasPrefix(kPhoneAreaCode) && known.size() >= 7 &&
+			number == known.c_str() + known.size() - 7;
+		if (known != number && !local)
+			continue;
+		_script.log(Common::String::format("      phone: calls #%u", kPhoneCalls[i].number));
+		_script.setVariable(triggerVar, kPhoneCalls[i].trigger);
+		_script.setVariable(actionsVar, kPhoneCalls[i].actions);
+		_script.runActionList(kPhoneRingActions, event, fields);
+		return;
+	}
+	// Otherwise the last digit picks the recording, for 7, 10 and 11 digits
+	uint failure = 1;
+	if (number.size() == 7 || number.size() == 10 || number.size() == 11) {
+		static const byte kByLastDigit[10] = { 2, 1, 2, 0, 2, 2, 3, 2, 3, 3 };
+		char last = number.lastChar();
+		failure = last >= '0' && last <= '9' ? kByLastDigit[last - '0'] : 1;
+	}
+	_script.log(Common::String::format("      phone: no answer (%u)", failure));
+	_script.runActionList(kPhoneFailures[failure][1], event, fields);
+}
+
+void PhoneHooks::keyPress(uint vk, int event, const Common::Array<int32> &fields) {
+	// 0x4c8340: digits of the main keys or the keypad (VK_NUMPAD0-9) press
+	// their button, Return presses Send
+	if (vk >= 0x60 && vk <= 0x69)
+		vk = vk - 0x60 + '0';
+	for (uint i = 0; i < ARRAYSIZE(kPhoneKeys); i++) {
+		if (kPhoneKeys[i].vk == vk) {
+			_script.runActionList(kPhoneKeys[i].actions, event, fields);
+			return;
+		}
+	}
+}
+
+void PhoneHooks::closed() {
+	// 0x4c87c0 empties the phone book, 0x4c8150 stops the key tone
+	_book.clear();
+	if (_tone)
+		_script.playPhoneTone(0);
+	_tone = 0;
+}
+
+} // End of namespace XFiles

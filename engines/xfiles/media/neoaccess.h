@@ -56,6 +56,8 @@ struct NeoEntry {
  * The whole file is kept in memory. All values are big-endian, file space
  * is allocated in 8-byte units and every stored object starts with a 6-byte
  * header (u16 flags, u32 version 1), so class data starts at offset 6.
+ * Only flag bits 15 (leaf) and 14 (root) mean anything; bits 12-0 are
+ * uninitialised garbage.
  * Index nodes add a u16 count; leaves (flag 0x8000) then hold (u32 mark,
  * u32 key) entries, inodes hold u32 child marks.
  */

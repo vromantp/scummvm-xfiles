@@ -139,7 +139,7 @@ void Script::endSound(uint32 id, const char *how) {
 	_media.sounds.erase(id);
 	log(Common::String::format("  << sound #%u %s", id, how));
 	deactivateAsset(id);
-	_aiSoundEndPending = true;
+	_ai.soundEndPending = true;
 }
 
 bool Script::isPlaying(uint32 id) const {
@@ -173,7 +173,7 @@ void Script::endClip(uint32 id, const char *how) {
 	_media.clips.erase(id);
 	log(Common::String::format("  << clip #%u %s", id, how));
 	deactivateAsset(id);
-	_aiSoundEndPending = true;
+	_ai.soundEndPending = true;
 }
 
 void Script::stopEnvSounds() {
@@ -302,7 +302,7 @@ void Script::endVideo(const char *how) {
 	_media.videoNextPending = next;
 	if (!viewLoop) {
 		deactivateAsset(id);
-		_aiSoundEndPending = true;
+		_ai.soundEndPending = true;
 	}
 	_media.videoNextPending = false;
 	if (next)

@@ -246,8 +246,8 @@ void Script::setViewState(char letter) {
 }
 
 void Script::clickAIIcon() {
-	if (_hintGlow > 0)
-		setViewByExe(_hintGlow);
+	if (_ai.glow > 0)
+		setViewByExe(_ai.glow);
 }
 
 void Script::clickAIHint() {
@@ -255,12 +255,12 @@ void Script::clickAIHint() {
 	// clicks. An action whose condition holds (the hint trigger as context) runs; the cursor advances and wraps.
 	// The walk ends after the first run action that is not a Statement, or when the cursor is back at its start
 	Common::Array<uint32> actions;
-	if (!_hintList || !_data.getMembers(_hintList, actions) || actions.empty()) {
+	if (!_ai.list || !_data.getMembers(_ai.list, actions) || actions.empty()) {
 		debugC(1, kDebugScript, "-- click: AI icon, no hint list");
 		return;
 	}
 	uint n = actions.size();
-	uint start = _hintCursor < n ? _hintCursor : 0;
+	uint start = _ai.cursor < n ? _ai.cursor : 0;
 	uint i = start;
 	do {
 		VCAction a;
@@ -280,15 +280,15 @@ void Script::clickAIHint() {
 				break;
 		}
 	} while (i != start);
-	_hintCursor = i;
+	_ai.cursor = i;
 }
 
 bool Script::isHintAvailable() {
 	// 0x508c40: the glow flag, else the first hint-list action whose condition holds (the walk of clickAIHint, running nothing)
-	if (_hintGlowOn)
+	if (_ai.glowOn)
 		return true;
 	Common::Array<uint32> actions;
-	if (!_hintList || !_data.getMembers(_hintList, actions))
+	if (!_ai.list || !_data.getMembers(_ai.list, actions))
 		return false;
 	for (uint i = 0; i < actions.size(); i++) {
 		VCAction a;
@@ -923,9 +923,9 @@ void Script::step(const Common::String &s) {
 		// Engine only: a click on the AI icon (a glowing one goes to its view, else the next hint); the
 		// frame's sound-end check has run by then
 		aiSoundEndCheck();
-		if (_aiSuspended)
+		if (_ai.suspended)
 			log("   suspended: no hit");
-		else if (_hintGlowOn)
+		else if (_ai.glowOn)
 			clickAIIcon();
 		else
 			clickAIHint();
@@ -1101,7 +1101,7 @@ void Script::availableSteps(Common::Array<Common::String> &steps) {
 		}
 	}
 
-	if (!_aiSuspended && (_hintGlowOn || isHintAvailable()))
+	if (!_ai.suspended && (_ai.glowOn || isHintAvailable()))
 		add("aiclick");
 
 	if (_focus) {

@@ -499,24 +499,24 @@ void Script::addStateHooks() {
 	t.add("SetAIList", [](Script &s, const HookCall &c) {
 		// SetAIList(trigger, list)
 		if (c.has(2)) {
-			s._hintTrigger = c.args[0];
-			s._hintList = c.args[1];
-			s._hintCursor = 0;
+			s._ai.trigger = c.args[0];
+			s._ai.list = c.args[1];
+			s._ai.cursor = 0;
 			s.recheckAIIcon();
 		}
 		return false;
 	});
 	t.add("ClearAIList", [](Script &s, const HookCall &c) {
-		s._hintTrigger = s._hintList = 0;
-		s._hintCursor = 0;
+		s._ai.trigger = s._ai.list = 0;
+		s._ai.cursor = 0;
 		s.recheckAIIcon();
 		return false;
 	});
 	t.add("SetAIGlow", [](Script &s, const HookCall &c) {
 		// AI_SetGlow (0x480670): 0 clears the flag and the level, 1 sets the flag with level 0, n > 1 flag and level n
 		if (c.has(1)) {
-			s._hintGlow = c.args[0] > 1 ? c.args[0] : 0;
-			s._hintGlowOn = c.args[0] != 0;
+			s._ai.glow = c.args[0] > 1 ? c.args[0] : 0;
+			s._ai.glowOn = c.args[0] != 0;
 		}
 		return false;
 	});

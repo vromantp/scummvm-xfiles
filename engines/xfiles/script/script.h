@@ -548,11 +548,11 @@ public:
 	/** A sound that follows a movie of its own (the gun's remark): played as a Do Asset action would. */
 	void playFollowUp(uint32 id) { playAsset(id, kModePlayOnce, nullptr); }
 	/** The AI icon glows (flag 0x6b2aa8, apart from the level). */
-	bool isHintGlowing() const { return _hintGlowOn; }
+	bool isHintGlowing() const { return _ai.glowOn; }
 	/** AI_GlowLevel: the view a click on the glowing icon goes to, 0 for none. */
-	int32 getHintGlowLevel() const { return _hintGlow; }
+	int32 getHintGlowLevel() const { return _ai.glow; }
 	/** The AI icon's show handler (0x509280) applies the glow from the level alone: after SetAIGlow(1) a re-show clears it. */
-	void aiIconShown() { _hintGlowOn = _hintGlow != 0; }
+	void aiIconShown() { _ai.glowOn = _ai.glow != 0; }
 	/** The click on the glowing AI icon (0x509aa0): a Set View to the level's view; level 0 does nothing. */
 	void clickAIIcon();
 	/** The click on a not glowing AI icon (0x5097e0): the next applicable action of the hint list, the cursor cycling. */
@@ -560,24 +560,24 @@ public:
 	/** 0x508c40: a hint is available when the glow flag is set or an action of the hint list has a condition that holds. */
 	bool isHintAvailable();
 	/** The AI icon is suspended (slot +0x20 with 1, 0x4a04f0): grey, no hit. */
-	bool isAISuspended() const { return _aiSuspended; }
+	bool isAISuspended() const { return _ai.suspended; }
 	/** 0x508e40 (SetAIList, ClearAIList, the travel re-show, the icon's making): suspended without a hint, else resumed. */
-	void recheckAIIcon() { _aiSuspended = !isHintAvailable(); }
+	void recheckAIIcon() { _ai.suspended = !isHintAvailable(); }
 	/** 0x509520 (a modal layout closes): resumes the icon, only with a hint; never suspends. */
 	void resumeAIIcon() {
-		if (_aiSuspended && isHintAvailable())
-			_aiSuspended = false;
+		if (_ai.suspended && isHintAvailable())
+			_ai.suspended = false;
 	}
 	/**
 	 * The end or stop of a sound object (0x43a970) queues event 0x16 for the AI icon (slot +0x78, 0x509330): it
 	 * suspends the icon when no hint is available, never resumes it. Run after the frame's script work.
 	 */
 	void aiSoundEndCheck() {
-		if (!_aiSoundEndPending)
+		if (!_ai.soundEndPending)
 			return;
-		_aiSoundEndPending = false;
+		_ai.soundEndPending = false;
 		if (!isHintAvailable())
-			_aiSuspended = true;
+			_ai.suspended = true;
 	}
 	/** The click on an inventory icon (InvIcon_OnMouseClick 0x49c180): put back, take the item, run its Mouse Click triggers. */
 	void selectInventory(uint32 id);
@@ -940,12 +940,6 @@ private:
 	int _restoreMode;                          ///< Position mode while restore() runs, else -1: which Object Activation fires
 	int32 _disc;                               ///< Disc in use (VCGameState +42)
 	bool _evidenceRowShown;                    ///< EvIcons_SetRowShown, set by a shown evidence icon of a restore
-	uint32 _hintList, _hintTrigger;            ///< The last SetAIList, 0 after ClearAIList
-	uint _hintCursor;                          ///< Next member of _hintList a click tries (0x5097e0); not saved
-	int32 _hintGlow;                           ///< AI_GlowLevel: the last SetAIGlow above 1, else 0 (the save keeps this)
-	bool _aiSoundEndPending;                   ///< A sound object ended since the last aiSoundEndCheck; not saved
-	bool _aiSuspended;                         ///< The AI icon's suspension (0x4a04f0), set by recheckAIIcon; not saved
-	bool _hintGlowOn;                          ///< The glow flag (0x6b2aa8): SetAIGlow(1) sets it with level 0
 	byte _flashlight[3];                       ///< SetFLightProps as the save keeps it (FLight_SetProps 0x4d7d20 via 0x44bda0)
 	byte _tint;                                ///< SetLBoxTint (1) or ClearLBoxTint (0)
 	byte _tintColor[3];                        ///< The tint in the order the save stores it (blue, green, red)
@@ -1094,6 +1088,17 @@ private:
 		Common::Array<uint32> pendingStops;       ///< Stopped sounds and clips whose Object Deactivation waits for the event's end
 	};
 	Media _media;
+
+	/** The AI icon: the hint list, the glow and the suspension */
+	struct Hint {
+		uint32 list = 0, trigger = 0;                ///< The last SetAIList, 0 after ClearAIList
+		uint cursor = 0;                          ///< Next member of list a click tries (0x5097e0); not saved
+		int32 glow = 0;                           ///< AI_GlowLevel: the last SetAIGlow above 1, else 0 (the save keeps this)
+		bool soundEndPending = false;                ///< A sound object ended since the last aiSoundEndCheck; not saved
+		bool suspended = false;                     ///< The AI icon's suspension (0x4a04f0), set by recheckAIIcon; not saved
+		bool glowOn = false;                        ///< The glow flag (0x6b2aa8): SetAIGlow(1) sets it with level 0
+	};
+	Hint _ai;
 };
 
 } // End of namespace XFiles

@@ -77,11 +77,11 @@ void Script::restore(const VCSave &save) {
 void Script::applyStateValues(const VCSave &save) {
 	// The hint list (0x469160), the glow level (AI_RestoreGlow 0x508c00: the level is stored, and the rollover is on
 	// when it is above 0), the flashlight properties (FLight_SetProps) and the letterbox tint, which the screen draws
-	_hintList = save.hintList;
-	_hintTrigger = save.hintTrigger;
-	_hintCursor = 0;
-	_hintGlow = save.hintGlow;
-	_hintGlowOn = _hintGlow != 0;
+	_ai.list = save.hintList;
+	_ai.trigger = save.hintTrigger;
+	_ai.cursor = 0;
+	_ai.glow = save.hintGlow;
+	_ai.glowOn = _ai.glow != 0;
 	memcpy(_flashlight, save.flashlight, sizeof(_flashlight));
 	_tint = save.tint;
 	memcpy(_tintColor, save.tintColor, sizeof(_tintColor));
@@ -184,9 +184,9 @@ void Script::snapshot(VCSave &save) const {
 	save.disc = _disc;
 	save.photos = _photosOnCamera;
 	save.photoList = _photos;
-	save.hintList = _hintList;
-	save.hintTrigger = _hintTrigger;
-	save.hintGlow = _hintGlow;
+	save.hintList = _ai.list;
+	save.hintTrigger = _ai.trigger;
+	save.hintGlow = _ai.glow;
 	memcpy(save.flashlight, _flashlight, sizeof(_flashlight));
 	save.tint = _tint;
 	memcpy(save.tintColor, _tintColor, sizeof(_tintColor));

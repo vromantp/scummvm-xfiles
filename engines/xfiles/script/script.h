@@ -1016,97 +1016,97 @@ private:
 
 	/** The view change in progress: transition modes, the pending travel, the enter() and leave flags */
 	struct Travel {
-		int navTransition = kTransitionCut;       ///< The mode of the nav being followed, taken by enter()
-		int transition = kTransitionCut;          ///< The mode of the view entered last, until the engine plays it
+		int navTransition = kTransitionCut; ///< The mode of the nav being followed, taken by enter()
+		int transition = kTransitionCut;    ///< The mode of the view entered last, until the engine plays it
 		Common::Point navTransitionCentre;
 		Common::Point transitionCentre;
 		bool navTransitionEmpty = true;
 		bool transitionEmpty = true;
 		Common::Point clickPoint = Common::Point(320, 240); ///< The last click on a nav, the screen centre when none
-		bool navViewQueued = false;                ///< A nav click is running: its view change is queued (0x46f210)
-		bool pending = false;                       ///< SwapDisc was called in this event (0x6b19a8)
-		uint32 to[4] = {};                          ///< Node, location, viewpoint and view of the pending travel
-		bool enterDeactivating = false;          ///< enter() runs the old path's deactivations (AlienBlast drops the queued travel)
-		bool dropped = false;                       ///< AlienBlast ran in those deactivations: enter() activates nothing (B-204)
-		bool viewLeaving = false;                   ///< deactivateView() runs: a Set View in it is deferred (B-205)
-		bool leavePending = false;                  ///< A Set View ran while the view was left: its path waits in leavePath
-		uint32 leavePath[4] = {};                   ///< Node, location, viewpoint and view of that Set View
+		bool navViewQueued = false;                         ///< A nav click is running: its view change is queued (0x46f210)
+		bool pending = false;                               ///< SwapDisc was called in this event (0x6b19a8)
+		uint32 to[4] = {};                                  ///< Node, location, viewpoint and view of the pending travel
+		bool enterDeactivating = false;                     ///< enter() runs the old path's deactivations (AlienBlast drops the queued travel)
+		bool dropped = false;                               ///< AlienBlast ran in those deactivations: enter() activates nothing (B-204)
+		bool viewLeaving = false;                           ///< deactivateView() runs: a Set View in it is deferred (B-205)
+		bool leavePending = false;                          ///< A Set View ran while the view was left: its path waits in leavePath
+		uint32 leavePath[4] = {};                           ///< Node, location, viewpoint and view of that Set View
 	};
 	Travel _travel;
 
 	/** Where the player is and what the view has activated */
 	struct Position {
 		uint32 node = 0, location = 0, viewPoint = 0, view = 0;
-		Common::Array<uint32> objects;        ///< Activated with the view, in activation order
-		bool held = false;                       ///< The view is entered but not activated until the video ends
-		bool active = false;                     ///< The view's activation has run
-		bool gone = false;                       ///< A gun click already deactivated the view (hotClick): enter() skips it
-		bool assetHeld = false;                  ///< The view's new asset is activated when the video ends
-		uint32 stateVariable = 0;                ///< The variable RegViewState registered; hotAction writes letters into it
+		Common::Array<uint32> objects; ///< Activated with the view, in activation order
+		bool held = false;             ///< The view is entered but not activated until the video ends
+		bool active = false;           ///< The view's activation has run
+		bool gone = false;             ///< A gun click already deactivated the view (hotClick): enter() skips it
+		bool assetHeld = false;        ///< The view's new asset is activated when the video ends
+		uint32 stateVariable = 0;      ///< The variable RegViewState registered; hotAction writes letters into it
 	};
 	Position _pos;
 
 	/** The conversation box and the topic being played */
 	struct Dialog {
-		uint32 box = 0;                            ///< Character view whose conversation box is open, or 0
-		bool boxShown = false;                     ///< The open box is shown (hidden while one of its topics plays)
-		uint32 ideaTopic = 0;                       ///< The topic PlayItemTopic queued, deactivated when its clips end (0 for none)
-		bool clickOpensBox = false;                  ///< See opensBoxOnClick()
+		uint32 box = 0;             ///< Character view whose conversation box is open, or 0
+		bool boxShown = false;      ///< The open box is shown (hidden while one of its topics plays)
+		uint32 ideaTopic = 0;       ///< The topic PlayItemTopic queued, deactivated when its clips end (0 for none)
+		bool clickOpensBox = false; ///< See opensBoxOnClick()
 		Common::HashMap<uint32, JumpCut> jumpCuts;
-		JumpCut jumpCut = JumpCut();                 ///< Of the topic being played
-		bool planning = false;                     ///< playTopic collects its clips in topicClips
+		JumpCut jumpCut = JumpCut(); ///< Of the topic being played
+		bool planning = false;       ///< playTopic collects its clips in topicClips
 		Common::Array<TopicClip> topicClips;
-		uint32 nextVideoEnd = 0;                    ///< For queueVideo() while a merged clip is played
-		bool clipsActivated = false;                 ///< mergeTopicClips() fired the clips' Object Activation: queueing and playing skip it
-		bool clipQueued = false;                     ///< A clip after the question is queued (topic +0x150)
-		Common::HashMap<uint32, uint> asked;      ///< How often each conversation was asked
+		uint32 nextVideoEnd = 0;             ///< For queueVideo() while a merged clip is played
+		bool clipsActivated = false;         ///< mergeTopicClips() fired the clips' Object Activation: queueing and playing skip it
+		bool clipQueued = false;             ///< A clip after the question is queued (topic +0x150)
+		Common::HashMap<uint32, uint> asked; ///< How often each conversation was asked
 	};
 	Dialog _dlg;
 
 	/** Videos, sounds and clips: what plays, what is queued, what waits */
 	struct Media {
-		bool soundEnds = false;                    ///< Sound ends are known (`media` step, or an engine): see playAsset()
+		bool soundEnds = false; ///< Sound ends are known (`media` step, or an engine): see playAsset()
 		Common::Array<uint32> videoQueue;
-		Common::Array<VideoPlay> videoPlays;      ///< Per queued video
-		bool videoNextPending = false;               ///< The queue's first video has not started yet (a video just ended)
-		Common::Array<HeldSound> heldSounds;      ///< Sounds waiting for the videos to end
-		Common::HashMap<uint32, bool> sounds;     ///< Sounds playing (asset objects active)
-		Common::HashMap<uint32, bool> clips;      ///< Graphic clips placed by PlayAssetAt and playing
+		Common::Array<VideoPlay> videoPlays;       ///< Per queued video
+		bool videoNextPending = false;             ///< The queue's first video has not started yet (a video just ended)
+		Common::Array<HeldSound> heldSounds;       ///< Sounds waiting for the videos to end
+		Common::HashMap<uint32, bool> sounds;      ///< Sounds playing (asset objects active)
+		Common::HashMap<uint32, bool> clips;       ///< Graphic clips placed by PlayAssetAt and playing
 		Common::HashMap<uint32, uint> assetActive; ///< Asset ID -> users of its asset object, see activateAsset()
-		Common::Array<uint32> pendingStops;       ///< Stopped sounds and clips whose Object Deactivation waits for the event's end
+		Common::Array<uint32> pendingStops;        ///< Stopped sounds and clips whose Object Deactivation waits for the event's end
 	};
 	Media _media;
 
 	/** The AI icon: the hint list, the glow and the suspension */
 	struct Hint {
-		uint32 list = 0, trigger = 0;                ///< The last SetAIList, 0 after ClearAIList
-		uint cursor = 0;                          ///< Next member of list a click tries (0x5097e0); not saved
-		int32 glow = 0;                           ///< AI_GlowLevel: the last SetAIGlow above 1, else 0 (the save keeps this)
-		bool soundEndPending = false;                ///< A sound object ended since the last aiSoundEndCheck; not saved
-		bool suspended = false;                     ///< The AI icon's suspension (0x4a04f0), set by recheckAIIcon; not saved
-		bool glowOn = false;                        ///< The glow flag (0x6b2aa8): SetAIGlow(1) sets it with level 0
+		uint32 list = 0, trigger = 0; ///< The last SetAIList, 0 after ClearAIList
+		uint cursor = 0;              ///< Next member of list a click tries (0x5097e0); not saved
+		int32 glow = 0;               ///< AI_GlowLevel: the last SetAIGlow above 1, else 0 (the save keeps this)
+		bool soundEndPending = false; ///< A sound object ended since the last aiSoundEndCheck; not saved
+		bool suspended = false;       ///< The AI icon's suspension (0x4a04f0), set by recheckAIIcon; not saved
+		bool glowOn = false;          ///< The glow flag (0x6b2aa8): SetAIGlow(1) sets it with level 0
 	};
 	Hint _ai;
 
 	/** The item in hand and the tool objects */
 	struct HeldTool {
-		uint32 variable = 0;                      ///< RegCurrInvVar: iCurrInventory
-		int32 none = 0;                           ///< Its Inventory_None value
-		uint32 gunValue = 0;                      ///< The inventory value OnGunClick set (0 until the gun is taken)
-		uint32 cursorItem = 0;                    ///< Inv_Held() + 4 (0x6b8974): the VCInventory ID whose cursor is held
-		int binocularsMode = 0;                      ///< Mode out of the held binoculars object (+0x10C); the drawing is B-005
-		bool binocularsHeld = false;                 ///< The binoculars' held object (0x51baf0) exists: putBack() runs its view change back
-		bool cameraEnabled = false;                  ///< The camera in hand was taken outside a special view (Camera +0x1c0)
+		uint32 variable = 0;         ///< RegCurrInvVar: iCurrInventory
+		int32 none = 0;              ///< Its Inventory_None value
+		uint32 gunValue = 0;         ///< The inventory value OnGunClick set (0 until the gun is taken)
+		uint32 cursorItem = 0;       ///< Inv_Held() + 4 (0x6b8974): the VCInventory ID whose cursor is held
+		int binocularsMode = 0;      ///< Mode out of the held binoculars object (+0x10C); the drawing is B-005
+		bool binocularsHeld = false; ///< The binoculars' held object (0x51baf0) exists: putBack() runs its view change back
+		bool cameraEnabled = false;  ///< The camera in hand was taken outside a special view (Camera +0x1c0)
 	};
 	HeldTool _tool;
 
 	/** The Smolnikoff shootout: exe globals a save does not hold (0x6b1ef0..0x6b1f10, 0x6be8a4/7cc/834) */
 	struct Shootout {
-		uint32 vars[3] = {};                      ///< The variables InitSmShootout was given (left, center, right goon dead)
-		int idx[3] = {};                          ///< Next index into each goon's view table, at most 2
-		bool dead[3] = {};                        ///< Goon shot
-		int cur = 0;                              ///< Goon on screen, 0 for none
-		int perm[3][3] = {};                      ///< Permutations of 1, 2, 3 the reset fills (no reader known)
+		uint32 vars[3] = {}; ///< The variables InitSmShootout was given (left, center, right goon dead)
+		int idx[3] = {};     ///< Next index into each goon's view table, at most 2
+		bool dead[3] = {};   ///< Goon shot
+		int cur = 0;         ///< Goon on screen, 0 for none
+		int perm[3][3] = {}; ///< Permutations of 1, 2, 3 the reset fills (no reader known)
 	};
 	Shootout _shoot;
 };

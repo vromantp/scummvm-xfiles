@@ -254,45 +254,45 @@ void ComputerHooks::addHooks(HookTable<Script> &t) {
 	t.add("ForwardObject", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
-		s._computer.forwardObject((char)c.args[0]);
+		s.computer().forwardObject((char)c.args[0]);
 		return true;
 	});
 	t.add("EmailSend", [](Script &s, const HookCall &c) {
-		s._computer.emailSend(c.event, c.fields);
+		s.computer().emailSend(c.event, c.fields);
 		return true;
 	});
 	t.add("LoginInit", [](Script &s, const HookCall &c) {
 		if (!c.has(1) || ((char)c.args[0] != 'C' && (char)c.args[0] != 'P'))
 			return false;
-		s._computer.loginInit((char)c.args[0]);
+		s.computer().loginInit((char)c.args[0]);
 		return true;
 	});
 	t.add("LoginKeyPress", [](Script &s, const HookCall &c) {
 		if (!c.has(2) || c.args[0] < 1 || c.args[0] > 5)
 			return false;
-		s._computer.loginKeyPress(c.args[0], c.args[1], c.event, c.fields);
+		s.computer().loginKeyPress(c.args[0], c.args[1], c.event, c.fields);
 		return true;
 	});
 	t.add("LoginClick", [](Script &s, const HookCall &c) {
 		if (!c.has(1) || c.args[0] < 1 || c.args[0] > 4)
 			return false;
-		s._computer.loginClick(c.args[0]);
+		s.computer().loginClick(c.args[0]);
 		return true;
 	});
 	t.add("PswdConnect", [](Script &s, const HookCall &c) {
 		if (!c.isVariable(0))
 			return false;
-		s._computer.pswdConnect(c.action.args[0].value);
+		s.computer().pswdConnect(c.action.args[0].value);
 		return true;
 	});
 	t.add("INGInit", [](Script &s, const HookCall &c) {
-		s._computer.ingInit();
+		s.computer().ingInit();
 		return true;
 	});
 	t.add("INGKeyPressed", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
-		s._computer.ingKeyPress(c.args[0], c.event, c.fields);
+		s.computer().ingKeyPress(c.args[0], c.event, c.fields);
 		return true;
 	});
 	t.add("PlayAssetAt", [](Script &s, const HookCall &c) {
@@ -302,75 +302,75 @@ void ComputerHooks::addHooks(HookTable<Script> &t) {
 		return true;
 	});
 	t.add("MediaInit", [](Script &s, const HookCall &c) {
-		s._computer.mediaInit();
+		s.computer().mediaInit();
 		return true;
 	});
 	t.add("INGSearch", [](Script &s, const HookCall &c) {
 		if (!c.has(2))
 			return false;
-		s._computer.ingSearch((char)c.args[0], (char)c.args[1], c.event, c.fields);
+		s.computer().ingSearch((char)c.args[0], (char)c.args[1], c.event, c.fields);
 		return true;
 	});
 	t.add("INGClear", [](Script &s, const HookCall &c) {
-		s._computer.ingClear();
+		s.computer().ingClear();
 		return true;
 	});
 	t.add("INGDisplayCook", [](Script &s, const HookCall &c) {
-		s._computer.ingDisplayCook(c.event, c.fields);
+		s.computer().ingDisplayCook(c.event, c.fields);
 		return true;
 	});
 	t.add("MediaSearch", [](Script &s, const HookCall &c) {
-		s._computer.mediaSearch(c.event, c.fields);
+		s.computer().mediaSearch(c.event, c.fields);
 		return true;
 	});
 	t.add("MSKeyPressed", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
-		s._computer.mediaKeyPress(c.args[0], c.event, c.fields);
+		s.computer().mediaKeyPress(c.args[0], c.event, c.fields);
 		return true;
 	});
 	t.add("PwbkOK", [](Script &s, const HookCall &c) {
 		if (!c.isVariable(0))
 			return false;
-		s._computer.pwbkOK(c.action.args[0].value);
+		s.computer().pwbkOK(c.action.args[0].value);
 		return true;
 	});
 	t.add("SBaseInit", [](Script &s, const HookCall &c) {
-		s._computer.sbaseInit();
+		s.computer().sbaseInit();
 		return true;
 	});
 	t.add("SBaseKeyPress", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
-		s._computer.sbaseKeyPress(c.args[0]);
+		s.computer().sbaseKeyPress(c.args[0]);
 		return true;
 	});
 	t.add("PhotoInit", [](Script &s, const HookCall &c) {
-		s._computer.photoInit();
+		s.computer().photoInit();
 		return true;
 	});
 	t.add("PhotoDownload", [](Script &s, const HookCall &c) {
-		s._computer.photoDownload();
+		s.computer().photoDownload();
 		return true;
 	});
 	t.add("PhotoEnlarge", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
-		s._computer.photoEnlarge(c.args[0]);
+		s.computer().photoEnlarge(c.args[0]);
 		return true;
 	});
 	t.add("PhotoDelete", [](Script &s, const HookCall &c) {
-		s._computer.photoDelete();
+		s.computer().photoDelete();
 		return true;
 	});
 	t.add("PhotoScroll", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
-		s._computer.photoScroll(c.args[0] != 0);
+		s.computer().photoScroll(c.args[0] != 0);
 		return true;
 	});
 	t.add("PhotoClose", [](Script &s, const HookCall &c) {
-		s._computer.photoClose();
+		s.computer().photoClose();
 		return true;
 	});
 	// PhotoForward returns at once (0x4dfa10)
@@ -426,7 +426,7 @@ void ComputerHooks::forwardObject(char kind) {
 	// 0x42a120
 	static const char *const kCodes[9] = { "MKM1013", "DRC0919", "PJI0219", "JDV0823", "APS1210", "GXR1200", "JXK0223", "AXH0531", "FFF0919" };
 	_forwardKind = kind;
-	int size = _script._pda.mailFontSize();
+	int size = _script.pda().mailFontSize();
 	if (kind == 'I') {
 		Common::U32String subject;
 		if (_record != 0 && loadText(_record, subject) && !subject.empty())
@@ -442,7 +442,7 @@ void ComputerHooks::forwardObject(char kind) {
 		Common::U32String body;
 		if (_record != 0)
 			loadText(_record, body);
-		_script._pda.replaceScrollText(body);
+		_script.pda().replaceScrollText(body);
 		_script.setItemEnabled(40502, false);
 	}
 }
@@ -463,7 +463,7 @@ void ComputerHooks::emailSend(int event, const Common::Array<int32> &fields) {
 		{ 55588, 63716 }, { 55589, 63718 }, { 55591, 63720 }, { 55584, 63722 }, { 55583, 63724 }
 	};
 	Common::Array<uint32> recipients;
-	if (!_script._pda.mailRecipients(recipients))
+	if (!_script.pda().mailRecipients(recipients))
 		return;
 	if (_forwardKind == 'N') {
 		// 0x4e6ea0: the PDA notepad send; the record is the shown notepad day (0x4e71a0)
@@ -495,9 +495,9 @@ void ComputerHooks::emailSend(int event, const Common::Array<int32> &fields) {
 				if (cook)
 					_script.runActionList(44089, event, fields);
 				if (i < noteMembers.size() && noteMembers[i] != 0)
-					_script._pda.queueEmail(noteMembers[i]);
+					_script.pda().queueEmail(noteMembers[i]);
 				if (cook)
-					_script._pda.queueEmail(64526);
+					_script.pda().queueEmail(64526);
 				break;
 			}
 		}
@@ -527,7 +527,7 @@ void ComputerHooks::emailSend(int event, const Common::Array<int32> &fields) {
 		for (uint i = 0; i < ARRAYSIZE(kIndexIds); i++) {
 			if (kIndexIds[i] == recipients[r]) {
 				if (i < members.size() && members[i] != 0)
-					_script._pda.queueEmail(members[i]);
+					_script.pda().queueEmail(members[i]);
 				break;
 			}
 		}
@@ -543,8 +543,8 @@ void ComputerHooks::itemMembers(uint32 item, Common::Array<uint32> &members) {
 	// 0x4654a0: the asset list of the item (FindObject(79, item)), in order, with no enabled filter
 	VCInterfaceItem data;
 	members.clear();
-	if (_script._data.getInterfaceItem(item, data))
-		_script._data.getMembers(data.assets, members);
+	if (_script.data().getInterfaceItem(item, data))
+		_script.data().getMembers(data.assets, members);
 }
 
 const Common::String &ComputerHooks::loginBuffer(int field) const {
@@ -611,7 +611,7 @@ void ComputerHooks::loginInit(char mode) {
 	}
 	setFieldText(kLoginUserText, _user);
 	setFieldText(kLoginPasswordText, Common::String());
-	_script.log("      login: " + Common::String::format("focus #%u", _script.getFocus()));
+	_script.logLine("      login: " + Common::String::format("focus #%u", _script.getFocus()));
 }
 
 void ComputerHooks::loginClick(int field) {
@@ -689,8 +689,8 @@ bool ComputerHooks::countersInVariables() {
 	// Only database build 9 (the newer FR/DE/ES/IT exe) has the variables; IDs are per database, so the names count
 	if (_countersInVariables < 0) {
 		Common::U32String pwbk, fbi;
-		_countersInVariables = _script._data.getVariableName(kPwbkCounterVariable, pwbk) && pwbk.encode() == "iScullyPasswordCount" &&
-		                       _script._data.getVariableName(kFbiCounterVariable, fbi) && fbi.encode() == "iFBIPasswordCount";
+		_countersInVariables = _script.data().getVariableName(kPwbkCounterVariable, pwbk) && pwbk.encode() == "iScullyPasswordCount" &&
+		                       _script.data().getVariableName(kFbiCounterVariable, fbi) && fbi.encode() == "iFBIPasswordCount";
 	}
 	return _countersInVariables > 0;
 }
@@ -717,7 +717,7 @@ void ComputerHooks::photoRebuild() {
 	// so only the photos they stand for are kept
 	_photoThumbs.clear();
 	uint skip = _photoOffset;
-	const Common::Array<VCPhoto> &photos = _script._photos;
+	const Common::Array<VCPhoto> &photos = _script.photos();
 	for (uint i = 0; i < photos.size() && _photoThumbs.size() < kPhotoThumbs; i++) {
 		if (!photos[i].downloaded)
 			continue;
@@ -737,8 +737,8 @@ void ComputerHooks::photoInit() {
 	_photoEnlarged = -1;
 	_photosDownloaded = 0;
 	uint notDownloaded = 0;
-	for (uint i = 0; i < _script._photos.size(); i++) {
-		if (_script._photos[i].downloaded)
+	for (uint i = 0; i < _script.photos().size(); i++) {
+		if (_script.photos()[i].downloaded)
 			_photosDownloaded++;
 		else
 			notDownloaded++;
@@ -752,7 +752,7 @@ void ComputerHooks::photoInit() {
 
 void ComputerHooks::photoDownload() {
 	// 0x4e3130: nothing unless a photo is not downloaded; at 60 downloaded the popup and stop
-	Common::Array<VCPhoto> &photos = _script._photos;
+	Common::Array<VCPhoto> &photos = _script.photos();
 	uint notDownloaded = 0;
 	for (uint i = 0; i < photos.size(); i++) {
 		if (!photos[i].downloaded)
@@ -777,7 +777,7 @@ void ComputerHooks::photoDownload() {
 		_script.setItemEnabled(kPhotoDownloadItem, false);
 	}
 	// GameState_SetPhotosOnCamera(n): the photos left (those not downloaded)
-	_script._photosOnCamera = notDownloaded;
+	_script.setPhotosOnCamera(notDownloaded);
 	_photoOffset = 0;
 	photoRebuild();
 }
@@ -795,7 +795,7 @@ void ComputerHooks::photoDelete() {
 	// 0x4e3630: only with an enlarged picture; its photo leaves the database, the later thumbnails move back
 	if (_photoEnlarged < 0)
 		return;
-	_script._photos.remove_at(_photoEnlarged);
+	_script.photos().remove_at(_photoEnlarged);
 	_photoEnlarged = -1;
 	_photosDownloaded--;
 	photoRebuild();
@@ -848,7 +848,7 @@ void ComputerHooks::pswdConnect(uint32 variableId) {
 			_connectedBefore = true;
 			_script.setVariable(kConnectedBefore, 1);
 		}
-		_script.log("      login: accepted");
+		_script.logLine("      login: accepted");
 		return;
 	}
 	_script.setVariable(variableId, 0);
@@ -876,7 +876,7 @@ void ComputerHooks::pswdConnect(uint32 variableId) {
 	// exe runs without an action.run line), then the item
 	_script.showLayout(kPopupLayout);
 	_script.setItemEnabled(message, true);
-	_script.log(Common::String::format("      login: refused (message #%u)", message));
+	_script.logLine(Common::String::format("      login: refused (message #%u)", message));
 	// Then the fields are reset as LoginInit('C') does
 	loginInit('C');
 }
@@ -933,7 +933,7 @@ void ComputerHooks::clearResults() {
 	}
 	for (uint i = 0; i < ARRAYSIZE(kIngFields); i++)
 		_script.clearItemText(kIngFields[i]);
-	_script._pda.replaceScrollText(Common::U32String());
+	_script.pda().replaceScrollText(Common::U32String());
 	for (uint i = 0; i < ARRAYSIZE(kIngLabels); i++)
 		_script.setItemEnabled(kIngLabels[i], false);
 }
@@ -957,7 +957,7 @@ void ComputerHooks::showRecord(uint index) {
 	_script.setItemEnabled(entry.showB, true);
 	Common::U32String text;
 	loadText(entry.text ? entry.text : kIngDefaultRecord, text);
-	_script._pda.replaceScrollText(text);
+	_script.pda().replaceScrollText(text);
 	Common::Array<uint32> members;
 	itemMembers(entry.field, members);
 	for (uint i = 0; i < ARRAYSIZE(kIngFields); i++) {
@@ -1004,7 +1004,7 @@ bool ComputerHooks::searchPlate(const Common::String &query, char database) {
 	if (plate == plateG.encode() && database == 'G') {
 		clearResults();
 		setFieldAsset(kIngResultText, kIngPlateGText, kIngPlateSize, kColorBlue);
-		_script._pda.enablePDANote(kIngPlateNote);
+		_script.pda().enablePDANote(kIngPlateNote);
 		if (_script.getVariable(kIngPlateSeen) == 0) {
 			_script.addUberParanoia(2);
 			_script.setVariable(kIngPlateSeen, 1);
@@ -1129,7 +1129,7 @@ void ComputerHooks::mediaSearch(int event, const Common::Array<int32> &fields) {
 			found = true;
 			Common::U32String article;
 			loadText(members[0], article);
-			_script._pda.replaceScrollText(article);
+			_script.pda().replaceScrollText(article);
 			_record = members[0];
 			_script.setItemEnabled(kMediaHiddenItem, true);
 			_script.runActionList(kIngFoundActions, event, fields);
@@ -1141,7 +1141,7 @@ void ComputerHooks::mediaSearch(int event, const Common::Array<int32> &fields) {
 		_script.runActionList(kIngNotFoundActions, event, fields);
 		Common::U32String text;
 		loadText(kIngNotFound, text);
-		_script._pda.replaceScrollText(text);
+		_script.pda().replaceScrollText(text);
 		_record = 0;
 		_script.setItemEnabled(kMediaHiddenItem, false);
 	}

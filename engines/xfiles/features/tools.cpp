@@ -403,8 +403,8 @@ void Script::addToolHooks() {
 		// 0x50a390: if the item has an icon, put back what is in hand and
 		// take the item, as a click on its icon would
 		if (s.hasInventoryIcon(c.args[0])) {
-			if (s._hooks)
-				s._hooks->showInventoryBar();
+			if (s.hooks())
+				s.hooks()->showInventoryBar();
 			s.selectInventory(c.args[0]);
 		}
 		return true;
@@ -435,23 +435,23 @@ void Script::addToolHooks() {
 		if (c.has(1) && c.args[0] == kInventoryPDA) {
 			if (!s._media.videoQueue.empty() || !s._media.clips.empty()) {
 				s._variables[kDisablePDAVariable] = 1;
-				s.log(Common::String::format("      PDA refused: bDisablePDA = 1, alert #%u", kPDAAlertSound));
-				if (s._hooks)
-					s._hooks->playAsset(kPDAAlertSound, kModePlayOnce, false, 0, 0);
+				s.logLine(Common::String::format("      PDA refused: bDisablePDA = 1, alert #%u", kPDAAlertSound));
+				if (s.hooks())
+					s.hooks()->playAsset(kPDAAlertSound, kModePlayOnce, false, 0, 0);
 				s._tool.cursorItem = 0;
-				if (s._hooks)
-					s._hooks->heldItemChanged(0);
+				if (s.hooks())
+					s.hooks()->heldItemChanged(0);
 				return true;
 			}
-			if (s._hooks)
-				s._hooks->pauseTimers();
+			if (s.hooks())
+				s.hooks()->pauseTimers();
 		}
 		if (s.isHolding()) {
 			s.putBack();
 		} else {
 			s._tool.cursorItem = 0;
-			if (s._hooks)
-				s._hooks->heldItemChanged(0);
+			if (s.hooks())
+				s.hooks()->heldItemChanged(0);
 		}
 		return true;
 	});

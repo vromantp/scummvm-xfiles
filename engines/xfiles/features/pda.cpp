@@ -135,24 +135,24 @@ void PdaHooks::addHooks(HookTable<Script> &t) {
 	t.add("ScrollTextList", [](Script &s, const HookCall &c) {
 		if (!c.has(5))
 			return false;
-		s._pda.scrollTextList(c.args[0], c.args[1], c.args[2], c.args[3], c.args[4]);
+		s.pda().scrollTextList(c.args[0], c.args[1], c.args[2], c.args[3], c.args[4]);
 		return true;
 	});
 	t.add("ScrollTextInit", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
-		s._pda.scrollTextList(c.args[0], 0, 'b', 'c', kPDAFontSize);
+		s.pda().scrollTextList(c.args[0], 0, 'b', 'c', kPDAFontSize);
 		return true;
 	});
 	t.add("SendEmail", [](Script &s, const HookCall &c) {
-		PdaHooks &p = s._pda;
+		PdaHooks &p = s.pda();
 		if (!c.has(1))
 			return false;
 		p._emailPending.push_back(c.args[0]);
 		return true;
 	});
 	t.add("EmailFlushMess", [](Script &s, const HookCall &c) {
-		PdaHooks &p = s._pda;
+		PdaHooks &p = s.pda();
 		for (uint i = 0; i < p._emailPending.size(); i++) {
 			if (!listHas(p._emails, p._emailPending[i]))
 				p._emails.push_back(p._emailPending[i]);
@@ -161,7 +161,7 @@ void PdaHooks::addHooks(HookTable<Script> &t) {
 		return true;
 	});
 	t.add("EmailDelete", [](Script &s, const HookCall &c) {
-		PdaHooks &p = s._pda;
+		PdaHooks &p = s.pda();
 		if (!c.has(1))
 			return false;
 		listRemove(p._emails, c.args[0]);
@@ -169,7 +169,7 @@ void PdaHooks::addHooks(HookTable<Script> &t) {
 		return true;
 	});
 	t.add("EmailInit", [](Script &s, const HookCall &c) {
-		PdaHooks &p = s._pda;
+		PdaHooks &p = s.pda();
 		if (!c.has(1))
 			return false;
 		if (c.args[0] == 'a' || c.args[0] == 'b') {
@@ -189,7 +189,7 @@ void PdaHooks::addHooks(HookTable<Script> &t) {
 			p._addrDest = nullptr;
 			VCInterfaceItem book;
 			Common::Array<uint32> members;
-			if (s._data.getInterfaceItem(kAddressBookItem, book) && s._data.getMembers(book.assets, members)) {
+			if (s.data().getInterfaceItem(kAddressBookItem, book) && s.data().getMembers(book.assets, members)) {
 				for (uint i = 0; i < members.size(); i++) {
 					AddrEntry e;
 					e.id = members[i];
@@ -203,41 +203,41 @@ void PdaHooks::addHooks(HookTable<Script> &t) {
 	t.add("DisplayAddrs", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
-		s._pda.displayAddrs((char)c.args[0]);
+		s.pda().displayAddrs((char)c.args[0]);
 		return true;
 	});
 	t.add("AddrSelected", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
-		s._pda.addrSelected(c.args[0]);
+		s.pda().addrSelected(c.args[0]);
 		return true;
 	});
 	t.add("ScrollAddrs", [](Script &s, const HookCall &c) {
 		if (!c.has(2))
 			return false;
-		s._pda.scrollAddrs((char)c.args[0], c.args[1]);
+		s.pda().scrollAddrs((char)c.args[0], c.args[1]);
 		return true;
 	});
 	t.add("CreateAddrList", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
-		s._pda.createAddrList((char)c.args[0]);
+		s.pda().createAddrList((char)c.args[0]);
 		return true;
 	});
 	t.add("AddrSelPDA", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
-		s._pda.addrSelPDA(c.args[0]);
+		s.pda().addrSelPDA(c.args[0]);
 		return true;
 	});
 	t.add("DisplayInBox", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
-		s._pda.displayInBox(c.args[0]);
+		s.pda().displayInBox(c.args[0]);
 		return true;
 	});
 	t.add("GetCurrEmail", [](Script &s, const HookCall &c) {
-		PdaHooks &p = s._pda;
+		PdaHooks &p = s.pda();
 		if (!c.has(2) || !c.isVariable(1))
 			return false;
 		uint i = p._inboxTop + c.args[0];
@@ -245,7 +245,7 @@ void PdaHooks::addHooks(HookTable<Script> &t) {
 		return true;
 	});
 	t.add("MarkEmailRead", [](Script &s, const HookCall &c) {
-		PdaHooks &p = s._pda;
+		PdaHooks &p = s.pda();
 		if (!c.has(1))
 			return false;
 		uint i = p._inboxTop + c.args[0];
@@ -258,58 +258,58 @@ void PdaHooks::addHooks(HookTable<Script> &t) {
 	t.add("InitEmailRead", [](Script &s, const HookCall &c) {
 		if (!c.has(2))
 			return false;
-		s._pda.initEmailRead(c.args[0], c.args[1]);
+		s.pda().initEmailRead(c.args[0], c.args[1]);
 		return true;
 	});
 	t.add("MainScroll", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
-		s._pda.mainScroll(c.args[0]);
+		s.pda().mainScroll(c.args[0]);
 		return true;
 	});
 	t.add("ScrollHeaders", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
-		s._pda.scrollHeaders(c.args[0]);
+		s.pda().scrollHeaders(c.args[0]);
 		return true;
 	});
 	t.add("InitAddrList", [](Script &, const HookCall &) {
 		return true; // 0x4dfa00 is empty
 	});
 	t.add("ScrollTextKill", [](Script &s, const HookCall &c) {
-		PdaHooks &p = s._pda;
+		PdaHooks &p = s.pda();
 		s.clearItemText(p._scrollItem);
 		p._scrollItem = 0;
 		return true;
 	});
 	t.add("PDAInitAddr", [](Script &s, const HookCall &c) {
-		s._pda.pdaInitAddr();
+		s.pda().pdaInitAddr();
 		return true;
 	});
 	t.add("PDAFlipAddr", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
-		s._pda.pdaFlipAddr(c.args[0]);
+		s.pda().pdaFlipAddr(c.args[0]);
 		return true;
 	});
 	t.add("EnablePDANote", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
-		s._pda.enablePDANote(c.args[0]);
+		s.pda().enablePDANote(c.args[0]);
 		return true;
 	});
 	t.add("EnableAllNotes", [](Script &s, const HookCall &c) {
-		s._pda.enableAllNotes();
+		s.pda().enableAllNotes();
 		return true;
 	});
 	t.add("NotePadInit", [](Script &s, const HookCall &c) {
-		s._pda.notePadInit();
+		s.pda().notePadInit();
 		return true;
 	});
 	t.add("NoteFlipDay", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
-		s._pda.noteFlipDay(c.args[0]);
+		s.pda().noteFlipDay(c.args[0]);
 		return true;
 	});
 }
@@ -815,7 +815,7 @@ Common::U32String PdaHooks::noteDayText() const {
 void PdaHooks::showNoteDayText() {
 	setScrollText(kNoteTextItem, noteDayText(), kNoteFontSize);
 	// 0x4e71a0 also sets the record shown (0x6b9b94) to the day's item, which EmailSend 'N' reads
-	_script._computer.setRecord(_noteDay < kNoteDayCount ? kNoteDayItems[noteDay(_noteDay)] : 0);
+	_script.computer().setRecord(_noteDay < kNoteDayCount ? kNoteDayItems[noteDay(_noteDay)] : 0);
 }
 
 void PdaHooks::notesPreview(uint32 address) {
@@ -863,14 +863,14 @@ void PdaHooks::notesPreview(uint32 address) {
 	} else {
 		_script.setPDAText(kHeaderItem, Common::U32String("Field Notes"), kNoteFontSize, true);
 		replaceScrollText(noteDayText());
-		_script._computer.setRecord(_noteDay < kNoteDayCount ? kNoteDayItems[noteDay(_noteDay)] : 0);
+		_script.computer().setRecord(_noteDay < kNoteDayCount ? kNoteDayItems[noteDay(_noteDay)] : 0);
 	}
 	// 0x5ceaa0: mail to Mark Cook counts for iNumWillmoreEMailsToCook; on page 1 it also sets the NSA flag
 	if (address == kAddressCook) {
-		if (_noteDay == 1 && _script._cookEmailFlag)
-			_script._variables[_script._cookEmailFlag] = 1;
-		if (_script._cookEmailCount)
-			_script._variables[_script._cookEmailCount] = _script.getVariable(_script._cookEmailCount) + 1;
+		if (_noteDay == 1 && _script.getCookEmailFlag())
+			_script.setVariable(_script.getCookEmailFlag(), 1);
+		if (_script.getCookEmailCount())
+			_script.setVariable(_script.getCookEmailCount(), _script.getVariable(_script.getCookEmailCount()) + 1);
 	}
 }
 
@@ -937,7 +937,7 @@ void PdaHooks::applyNoteOrder() {
 		order += Common::String::format(" %u", _noteOrder[i]);
 	}
 	if (!identity)
-		_script.log("      notepad: order" + order);
+		_script.logLine("      notepad: order" + order);
 }
 
 void PdaHooks::notePadInit() {

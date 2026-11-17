@@ -234,12 +234,6 @@ public:
  * than SetStartView and DoActionList are only logged.
  */
 class Script {
-	// The areas with their own class use the Script services listed in docs/subsystems/interpreter.md
-	friend class ComputerHooks;
-	friend class PdaHooks;
-	friend class PhoneHooks;
-	friend class PrefHooks;
-
 public:
 	/** A character's stock replies: the atoms of its topic without a label. */
 	enum {
@@ -669,6 +663,71 @@ public:
 	 */
 	void getViewAssets(Common::Array<uint32> &assets, uint32 &background) const;
 
+	typedef Common::Array<int32> EventFields;
+
+	// Services for the area classes (PhoneHooks, ComputerHooks, PdaHooks, PrefHooks), see docs/subsystems/interpreter.md
+	/** Set an interface item's enabled flag; an item of a shown layout comes or goes with it. */
+	void setItemEnabled(uint32 item, bool enabled);
+	/** DoActionList(trigger, actionList): another trigger's actions. */
+	void runActionList(uint32 actionList, int event, const EventFields &fields);
+	void clearItemText(uint32 item) { _itemTexts.erase(item); }
+	/** The text of a text asset (or a string of XFilesT.dll), false if it has none. */
+	bool getTextAsset(uint32 entry, Common::U32String &text);
+	void setFocus(uint32 item) { _focus = item; }
+	/** Where an item's text or picture is drawn from (getItemOrigin), e.g. a caret behind a field's text. */
+	void setItemOrigin(uint32 item, const Common::Point &origin) { _itemOrigins[item] = origin; }
+	/** Lay out and set the text of an item (0x4be2c0); wrapWidth 0: a line per newline only. */
+	void setItemText(uint32 item, const Common::U32String &text, int size, bool bold, uint32 color, TextAlign align,
+		bool shadow, int wrapWidth, int face = kFaceMono);
+	void showLayout(uint32 layoutId);
+	/** iUberParanoia += n (0x4bf500). */
+	void addUberParanoia(int32 n);
+	/** What an Enable action does to its target (an asset, item, icon...), for code that enables one itself (0x4083d0). */
+	void enableTarget(uint32 target, bool value);
+	/** The preference Pref_bArtificialIntuition is on (its variable from RegPreferences). */
+	bool isArtificialIntuitionOn() const { return _prefArtificialIntuition && getVariable(_prefArtificialIntuition); }
+	/** PlayAssetAt (0x491de0): start the asset unless it already plays; an XG clip is drawn at (x, y). */
+	void playAssetAt(uint32 asset, int x, int y);
+	/** The text of a file asset: Windows-1252, carriage returns dropped. */
+	bool readTextFile(uint32 asset, Common::U32String &text);
+	/** PDA text: Courier New, regular, black, left, no shadow, wrapped at width (0x4be2c0); ScrollTextList's colour and Arial are optional. */
+	void setPDAText(uint32 item, const Common::U32String &text, int size, bool doubleWidth, uint32 color = 0,
+		bool bold = false, bool sans = false);
+	/** Hide or show an item's object without touching its enabled flag or firing triggers (Queue_Show). */
+	void queueShowItem(uint32 itemId, bool shown);
+	/** The text of an item to change in place (a scroll), or nullptr. */
+	ItemText *findItemText(uint32 item) { return _itemTexts.contains(item) ? &_itemTexts[item] : nullptr; }
+	/** The node RegCurrNode's variable holds, 0 before RegCurrNode. */
+	int32 getCurrentNode() const { return _currNodeVariable ? getVariable(_currNodeVariable) : 0; }
+	/** A phone key tone (0 = stop): logged, and played by the engine's hooks. */
+	void playPhoneTone(uint32 id);
+	/** Show an interface item pressed: its picture, enabled by the click, goes 100 ms later (takePressedItems). */
+	void pressItem(uint32 item) { _pressed.push_back(item); }
+	/** One line of the log, as the area classes write it. */
+	void logLine(const Common::String &line) { log(line); }
+	const VCData &data() const { return _data; }
+	/** The owner's hooks, nullptr when there are none. */
+	ScriptHooks *hooks() const { return _hooks; }
+	PhoneHooks &phone() { return _phone; }
+	ComputerHooks &computer() { return _computer; }
+	PdaHooks &pda() { return _pda; }
+	PrefHooks &prefs() { return _prefs; }
+	/** The photos, which the computers' photo screens download and delete. */
+	Common::Array<VCPhoto> &photos() { return _photos; }
+	void setPhotosOnCamera(int32 count) { _photosOnCamera = count; }
+	/** The variable RegPreferences gave a preference, or 0. */
+	uint32 getPrefVariable(uint index) const { return _prefVariables[index]; }
+	/** A value a Preferences screen hook or setPreference() stored; false when there is none. */
+	bool getStoredPreference(uint index, int32 &value) const {
+		if (!_preferences.contains(index))
+			return false;
+		value = _preferences[index];
+		return true;
+	}
+	/** The variables RegCookEmail gave iNumWillmoreEMailsToCook and IFL_bPDAEmailedCookAboutNSA, or 0. */
+	uint32 getCookEmailCount() const { return _cookEmailCount; }
+	uint32 getCookEmailFlag() const { return _cookEmailFlag; }
+
 protected:
 	/** One line of the log; the default writes it to the Script debug channel. */
 	virtual void log(const Common::String &line);
@@ -680,7 +739,6 @@ protected:
 	virtual void cover(char kind, uint32 id) {}
 
 private:
-	typedef Common::Array<int32> EventFields;
 	typedef Common::HashMap<uint32, int32> LocalVariables;
 
 	uint32 getTriggers(uint32 id) const;
@@ -776,12 +834,9 @@ private:
 	void getBoxTopics(uint32 charViewId, Common::Array<uint32> &topics) const;
 	bool isBoxTopic(uint32 charViewId, uint32 conversationId) const;
 	bool findIdeaTopic(uint32 charViewId, uint32 iconId, uint32 &conversation) const;
-	void showLayout(uint32 layoutId);
 	void hideLayout(uint32 layoutId);
 	void insertLayoutItem(Common::Array<uint32> &items, uint32 itemId);
 	void updateLayoutItem(uint32 itemId, bool enabled);
-	/** Hide or show an item's object without touching its enabled flag or firing triggers (Queue_Show). */
-	void queueShowItem(uint32 itemId, bool shown);
 	void enableKitIcon(uint32 id);
 	/** RandGen(var, n): a number from 0 to n (0x49f6d0). */
 	void randGen(uint32 variableId, int32 n);
@@ -816,48 +871,13 @@ private:
 	void activateIdeaIcons();
 	bool isIdeaIconOfBox(uint32 iconId) const;
 
-	/** Set an interface item's enabled flag; an item of a shown layout comes or goes with it. */
-	void setItemEnabled(uint32 item, bool enabled);
-	/** What an Enable action does to its target (an asset, item, icon...), for code that enables one itself (0x4083d0). */
-	void enableTarget(uint32 target, bool value);
-	/** iUberParanoia += n (0x4bf500). */
-	void addUberParanoia(int32 n);
 	/** Willmore's journal: page[left] on item 46370, page[left + 1] or nothing on 46371 (0x4bfb20, 0x4bff40). */
 	void showJournalPages();
 	/** Scully's Bible: page[left] on item 80868, page[left + 1] on 80869 (0x4f8970, 0x4f8d40). */
 	void showBiblePages(bool init);
 
 	// Item texts (itemtext.cpp)
-	/** Lay out and set the text of an item (0x4be2c0); wrapWidth 0: a line per newline only. */
-	void setItemText(uint32 item, const Common::U32String &text, int size, bool bold, uint32 color, TextAlign align,
-		bool shadow, int wrapWidth, int face = kFaceMono);
-	/** PDA text: Courier New, regular, black, left, no shadow, wrapped at width (0x4be2c0); ScrollTextList's colour and Arial are optional. */
-	void setPDAText(uint32 item, const Common::U32String &text, int size, bool doubleWidth, uint32 color = 0,
-		bool bold = false, bool sans = false);
-	/** The text of a text asset (or a string of XFilesT.dll), false if it has none. */
-	bool getTextAsset(uint32 entry, Common::U32String &text);
-	/** The text of a file asset: Windows-1252, carriage returns dropped. */
-	bool readTextFile(uint32 asset, Common::U32String &text);
 
-	// Services for the area classes (PhoneHooks, ComputerHooks, PdaHooks) besides the public ones
-	void clearItemText(uint32 item) { _itemTexts.erase(item); }
-	/** The text of an item to change in place (a scroll), or nullptr. */
-	ItemText *findItemText(uint32 item) { return _itemTexts.contains(item) ? &_itemTexts[item] : nullptr; }
-	/** Show an interface item pressed: its picture, enabled by the click, goes 100 ms later (takePressedItems). */
-	void pressItem(uint32 item) { _pressed.push_back(item); }
-	/** The node RegCurrNode's variable holds, 0 before RegCurrNode. */
-	int32 getCurrentNode() const { return _currNodeVariable ? getVariable(_currNodeVariable) : 0; }
-	void setFocus(uint32 item) { _focus = item; }
-	/** Where an item's text or picture is drawn from (getItemOrigin), e.g. a caret behind a field's text. */
-	void setItemOrigin(uint32 item, const Common::Point &origin) { _itemOrigins[item] = origin; }
-	/** The preference Pref_bArtificialIntuition is on (its variable from RegPreferences). */
-	bool isArtificialIntuitionOn() const { return _prefArtificialIntuition && getVariable(_prefArtificialIntuition); }
-	/** PlayAssetAt (0x491de0): start the asset unless it already plays; an XG clip is drawn at (x, y). */
-	void playAssetAt(uint32 asset, int x, int y);
-	/** A phone key tone (0 = stop): logged, and played by the engine's hooks. */
-	void playPhoneTone(uint32 id);
-	/** DoActionList(trigger, actionList): another trigger's actions. */
-	void runActionList(uint32 actionList, int event, const EventFields &fields);
 	void endSound(uint32 id, const char *how);
 	/** The Object Deactivation of the sounds and clips a Stop action stopped, once the event is over (B-112). */
 	void flushStops();

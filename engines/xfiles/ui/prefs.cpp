@@ -291,31 +291,31 @@ void PrefHooks::addHooks(HookTable<Script> &t) {
 		return true;
 	});
 	t.add("AudioInit", [](Script &s, const HookCall &c) {
-		s._prefs.audioInit();
+		s.prefs().audioInit();
 		return true;
 	});
 	t.add("PrefDialogVol", [](Script &s, const HookCall &c) {
 		if (!c.has(2) || !c.isVariable(0))
 			return false;
-		s._prefs.slider(0, c.variableArg(0), c.args[1]);
+		s.prefs().slider(0, c.variableArg(0), c.args[1]);
 		return true;
 	});
 	t.add("PrefMusicVol", [](Script &s, const HookCall &c) {
 		if (!c.has(2) || !c.isVariable(0))
 			return false;
-		s._prefs.slider(1, c.variableArg(0), c.args[1]);
+		s.prefs().slider(1, c.variableArg(0), c.args[1]);
 		return true;
 	});
 	t.add("PrefEffectVol", [](Script &s, const HookCall &c) {
 		if (!c.has(2) || !c.isVariable(0))
 			return false;
-		s._prefs.slider(2, c.variableArg(0), c.args[1]);
+		s.prefs().slider(2, c.variableArg(0), c.args[1]);
 		return true;
 	});
 	t.add("PrefVolume", [](Script &s, const HookCall &c) {
 		if (!c.has(2) || !c.isVariable(0))
 			return false;
-		s._prefs.slider(3, c.variableArg(0), c.args[1]);
+		s.prefs().slider(3, c.variableArg(0), c.args[1]);
 		return true;
 	});
 
@@ -323,7 +323,7 @@ void PrefHooks::addHooks(HookTable<Script> &t) {
 	t.add(name, [](Script &s, const HookCall &c) { \
 		if (!c.isVariable(0)) \
 			return false; \
-		s._prefs.cycle(index, c.variableArg(0), chars); \
+		s.prefs().cycle(index, c.variableArg(0), chars); \
 		return true; \
 	})
 	XF_CYCLE("PrefAutoRes", kPrefAutoSetResolution, kAskYesNo);
@@ -339,7 +339,7 @@ void PrefHooks::addHooks(HookTable<Script> &t) {
 	t.add(name, [](Script &s, const HookCall &c) { \
 		if (!c.isVariable(0)) \
 			return false; \
-		s._prefs.toggle(index, c.variableArg(0)); \
+		s.prefs().toggle(index, c.variableArg(0)); \
 		return true; \
 	})
 	XF_TOGGLE("Pref3DSound", kPref3DSound);
@@ -360,13 +360,14 @@ void PrefHooks::addHooks(HookTable<Script> &t) {
 	t.add("PrefDefaults", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
-		s._prefs.defaults(c.args[0]);
+		s.prefs().defaults(c.args[0]);
 		return true;
 	});
 }
 
 int32 PrefHooks::getValue(uint index, uint32 variable) const {
-	return _script._preferences.contains(index) ? _script._preferences[index] : _script.getVariable(variable);
+	int32 stored;
+	return _script.getStoredPreference(index, stored) ? stored : _script.getVariable(variable);
 }
 
 void PrefHooks::setValue(uint index, uint32 variable, int32 value) {
@@ -375,8 +376,8 @@ void PrefHooks::setValue(uint index, uint32 variable, int32 value) {
 }
 
 void PrefHooks::click() {
-	if (_script._hooks)
-		_script._hooks->playAsset(kClickSound, kModePlayOnce, false, 0, 0);
+	if (_script.hooks())
+		_script.hooks()->playAsset(kClickSound, kModePlayOnce, false, 0, 0);
 }
 
 void PrefHooks::showTick(int row, int level, bool show) {
@@ -387,7 +388,7 @@ void PrefHooks::audioInit() {
 	// 0x4c6e50: the levels from the four volumes, each level's tick shown
 	for (int row = 0; row < kSliderCount; row++) {
 		uint index = kVolumePrefs[row];
-		int32 volume = _script._prefVariables[index] ? getValue(index, _script._prefVariables[index]) : 0;
+		int32 volume = _script.getPrefVariable(index) ? getValue(index, _script.getPrefVariable(index)) : 0;
 		_levels[row] = CLIP<int32>(volume / kVolumeStep, 0, kMaxLevel);
 		showTick(row, _levels[row], true);
 	}
@@ -441,8 +442,8 @@ void PrefHooks::defaults(int32 set) {
 		_script.setPreference(values[i].index, values[i].value);
 	// RegPreferences mode 5 (0x4310f0) writes all 24 preferences into their variables
 	for (uint index = 0; index < kPrefCount; index++) {
-		if (_script._prefVariables[index])
-			_script.setVariable(_script._prefVariables[index], _script.getPreferenceValue(index));
+		if (_script.getPrefVariable(index))
+			_script.setVariable(_script.getPrefVariable(index), _script.getPreferenceValue(index));
 	}
 }
 

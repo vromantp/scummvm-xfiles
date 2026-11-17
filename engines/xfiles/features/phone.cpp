@@ -113,37 +113,37 @@ PhoneHooks::PhoneHooks(Script &script, const VCData &data)
 
 void PhoneHooks::addHooks(HookTable<Script> &t) {
 	t.add("PhoneInit", [](Script &s, const HookCall &c) {
-		s._phone.init(c.variableArg(0));
+		s.phone().init(c.variableArg(0));
 		return true;
 	});
 	t.add("PhoneButton", [](Script &s, const HookCall &c) {
 		if (!c.has(3))
 			return false;
-		s._phone.button((char)c.args[0], c.variableArg(1), c.args[2]);
+		s.phone().button((char)c.args[0], c.variableArg(1), c.args[2]);
 		return true;
 	});
 	t.add("PhoneClear", [](Script &s, const HookCall &c) {
-		s._phone.clear(c.variableArg(0));
+		s.phone().clear(c.variableArg(0));
 		return true;
 	});
 	t.add("PhoneMenuInit", [](Script &s, const HookCall &c) {
-		s._phone.menuInit(c.variableArg(0));
+		s.phone().menuInit(c.variableArg(0));
 		return true;
 	});
 	t.add("PhoneFlipName", [](Script &s, const HookCall &c) {
 		if (!c.has(2))
 			return false;
-		s._phone.flipName(c.args[0] != 0, c.variableArg(1));
+		s.phone().flipName(c.args[0] != 0, c.variableArg(1));
 		return true;
 	});
 	t.add("PhoneSend", [](Script &s, const HookCall &c) {
-		s._phone.send(c.variableArg(0), c.variableArg(1), c.variableArg(2), c.event, c.fields);
+		s.phone().send(c.variableArg(0), c.variableArg(1), c.variableArg(2), c.event, c.fields);
 		return true;
 	});
 	t.add("PhoneKeyPress", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
-		s._phone.keyPress(c.args[0], c.event, c.fields);
+		s.phone().keyPress(c.args[0], c.event, c.fields);
 		return true;
 	});
 	t.addLogged("PhoneDestroy"); // It only frees the display's font
@@ -179,7 +179,7 @@ void PhoneHooks::button(char key, uint32 numberVar, uint32 pressedItem) {
 			number += key;
 			_script.setString(numberVar, number);
 			setDisplay(Common::U32String(number));
-			_script.log("      phone: " + number);
+			_script.logLine("      phone: " + number);
 			_tone = kPhoneTones[key - '0'];
 			_script.playPhoneTone(_tone);
 		}
@@ -243,7 +243,7 @@ void PhoneHooks::showEntry(uint32 numberVar) {
 	if (number.size() > 10)
 		number = Common::String(number.c_str() + number.size() - 10);
 	_script.setString(numberVar, number);
-	_script.log(Common::String::format("      phone: entry %u, ", entry) + number);
+	_script.logLine(Common::String::format("      phone: entry %u, ", entry) + number);
 }
 
 void PhoneHooks::send(uint32 numberVar, uint32 triggerVar, uint32 actionsVar, int event, const Common::Array<int32> &fields) {
@@ -276,7 +276,7 @@ void PhoneHooks::send(uint32 numberVar, uint32 triggerVar, uint32 actionsVar, in
 			number == known.c_str() + known.size() - 7;
 		if (known != number && !local)
 			continue;
-		_script.log(Common::String::format("      phone: calls #%u", kPhoneCalls[i].number));
+		_script.logLine(Common::String::format("      phone: calls #%u", kPhoneCalls[i].number));
 		_script.setVariable(triggerVar, kPhoneCalls[i].trigger);
 		_script.setVariable(actionsVar, kPhoneCalls[i].actions);
 		_script.runActionList(kPhoneRingActions, event, fields);
@@ -289,7 +289,7 @@ void PhoneHooks::send(uint32 numberVar, uint32 triggerVar, uint32 actionsVar, in
 		char last = number.lastChar();
 		failure = last >= '0' && last <= '9' ? kByLastDigit[last - '0'] : 1;
 	}
-	_script.log(Common::String::format("      phone: no answer (%u)", failure));
+	_script.logLine(Common::String::format("      phone: no answer (%u)", failure));
 	_script.runActionList(kPhoneFailures[failure][1], event, fields);
 }
 

@@ -471,12 +471,12 @@ public:
 	/** A number from min to max (min >= 0), as XFiles.exe draws them (0x468df0). */
 	int roll(Dice &dice, int min, int max);
 
-	uint32 getNode() const { return _node; }
-	uint32 getLocation() const { return _location; }
-	uint32 getViewPoint() const { return _viewPoint; }
-	uint32 getView() const { return _view; }
+	uint32 getNode() const { return _pos.node; }
+	uint32 getLocation() const { return _pos.location; }
+	uint32 getViewPoint() const { return _pos.viewPoint; }
+	uint32 getView() const { return _pos.view; }
 	/** The current view has been activated (not just entered, or held while a video plays). */
-	bool isViewActive() const { return _viewActive; }
+	bool isViewActive() const { return _pos.active; }
 	/// An event is half-run (inside fire(), a fade loop or a pending travel): a snapshot now would lose its rest
 	bool isBusy() const { return _fireDepth || _inEvent || _travel.pending; }
 	/** Queued videos; the first one is on screen. */
@@ -1039,8 +1039,6 @@ private:
 	uint32 _nextVideoEnd;                      ///< For queueVideo() while a merged clip is played
 	bool _clipsActivated;                      ///< mergeTopicClips() fired the clips' Object Activation: queueing and playing skip it
 	bool _clipQueued;                          ///< A clip after the question is queued (topic +0x150)
-	uint32 _node, _location, _viewPoint, _view;
-	Common::Array<uint32> _viewObjects;        ///< Activated with the view, in activation order
 	Common::HashMap<uint32, uint> _assetActive; ///< Asset ID -> users of its asset object, see activateAsset()
 	uint _fireSerial;                          ///< Counts the events fired from outside (see _viewSerial)
 	bool _inEvent;                             ///< An event spans several fire() calls: they share a _fireSerial
@@ -1054,11 +1052,6 @@ private:
 	};
 	Common::Array<ActionFrame> _actionFrames;  ///< The running action lists, outermost first (isViewChangeQueued)
 	uint32 _nextId;                            ///< The database's next free object ID (new VCStrings take it)
-	bool _viewHeld;                            ///< The view is entered but not activated until the video ends
-	bool _viewActive;                          ///< The view's activation has run
-	bool _viewGone;                            ///< A gun click already deactivated the view (hotClick): enter() skips it
-	uint32 _viewStateVariable;                 ///< The variable RegViewState registered; hotAction writes letters into it
-	bool _viewAssetHeld;                       ///< The view's new asset is activated when the video ends
 
 	/** The view change in progress: transition modes, the pending travel, the enter() and leave flags */
 	struct Travel {
@@ -1079,6 +1072,18 @@ private:
 		uint32 leavePath[4] = {};                   ///< Node, location, viewpoint and view of that Set View
 	};
 	Travel _travel;
+
+	/** Where the player is and what the view has activated */
+	struct Position {
+		uint32 node = 0, location = 0, viewPoint = 0, view = 0;
+		Common::Array<uint32> objects;        ///< Activated with the view, in activation order
+		bool held = false;                       ///< The view is entered but not activated until the video ends
+		bool active = false;                     ///< The view's activation has run
+		bool gone = false;                       ///< A gun click already deactivated the view (hotClick): enter() skips it
+		bool assetHeld = false;                  ///< The view's new asset is activated when the video ends
+		uint32 stateVariable = 0;                ///< The variable RegViewState registered; hotAction writes letters into it
+	};
+	Position _pos;
 };
 
 } // End of namespace XFiles

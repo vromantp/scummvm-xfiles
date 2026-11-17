@@ -174,10 +174,10 @@ void Script::removeEvidence(uint32 id) {
 void Script::snapshot(VCSave &save) const {
 	// GameState_Save (0x4d9450). The position is always the current view
 	// (mode 1); modes 0 and 2 only come from the original's saves.
-	save.position[0] = _node;
-	save.position[1] = _location;
-	save.position[2] = _viewPoint;
-	save.position[3] = _view;
+	save.position[0] = _pos.node;
+	save.position[1] = _pos.location;
+	save.position[2] = _pos.viewPoint;
+	save.position[3] = _pos.view;
 	save.positionMode = 1;
 	save.history = _history;
 	_pda.snapshot(save);

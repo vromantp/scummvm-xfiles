@@ -53,10 +53,10 @@ bool Script::findViewPath(uint32 view, uint32 (&path)[4]) const {
 	// The exe finds the view's owners in the database; the current viewpoint is the likely one
 	path[0] = view;
 	VCViewPoint viewPoint;
-	if (_data.getViewPoint(_viewPoint, viewPoint) && Common::find(viewPoint.views.begin(), viewPoint.views.end(), view) != viewPoint.views.end()) {
-		path[1] = _node;
-		path[2] = _location;
-		path[3] = _viewPoint;
+	if (_data.getViewPoint(_pos.viewPoint, viewPoint) && Common::find(viewPoint.views.begin(), viewPoint.views.end(), view) != viewPoint.views.end()) {
+		path[1] = _pos.node;
+		path[2] = _pos.location;
+		path[3] = _pos.viewPoint;
 		return true;
 	}
 	Common::Array<NeoEntry> nodes;

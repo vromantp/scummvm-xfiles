@@ -295,9 +295,9 @@ void Script::endVideo(const char *how) {
 	// if the queue was empty, otherwise after the one already queued. A video queued before the view was entered
 	// that has not started yet comes first (its show event is older than the view's activation; box-click-kinds:
 	// 33401 and 20361 of a topic, then a view entered when the clip before them ended)
-	if (_viewHeld && !nextWait && (!nextVideo || !viewVideo))
+	if (_pos.held && !nextWait && (!nextVideo || !viewVideo))
 		activateView();
-	else if (_viewAssetHeld)
+	else if (_pos.assetHeld)
 		activateViewAsset();
 	_videoNextPending = next;
 	if (!viewLoop) {

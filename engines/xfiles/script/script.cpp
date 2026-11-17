@@ -81,7 +81,7 @@ static uint32 getTriggerOffset(uint32 classId) {
 	}
 }
 
-Script::Script(const VCData &data) : _data(data), _hooks(nullptr), _phone(*this, data), _computer(*this), _pda(*this, data), _prefs(*this), _texts(nullptr), _timerSerial(0), _random(1), _soundEnds(false), _fixedSeeds(false), _seedBase(0), _box(0), _restoreMode(-1), _disc(1), _photosOnCamera(0), _cameraEnabled(false), _evidenceRowShown(false), _hintList(0), _hintTrigger(0), _hintCursor(0), _hintGlow(0), _hintGlowOn(false), _aiSoundEndPending(false), _aiSuspended(false), _tint(0), _restored(false), _restorePending(false), _focus(0), _held(0), _currNodeVariable(0), _boxShown(false), _ideaTopic(0), _viewSpecialVariable(0), _clickOpensBox(false), _heldVariable(0), _heldNone(0), _gunValue(0), _heldCursorItem(0), _binocularsMode(0), _binocularsHeld(false), _planning(false), _nextVideoEnd(0), _clipsActivated(false), _clipQueued(false), _fireSerial(0), _inEvent(false), _viewSerial(0), _videoNextPending(false), _fireDepth(0), _nextId(0), _viewHeld(false), _viewActive(false), _viewGone(false), _viewStateVariable(0), _viewAssetHeld(false), _endGamePending(false), _endGameVar(0), _endGameValue(0), _prefArtificialIntuition(0), _cookEmailCount(0), _cookEmailFlag(0), _uberParanoia(0), _journalLeft(0), _bibleLeft(0), _node(0), _location(0), _viewPoint(0), _view(0) {
+Script::Script(const VCData &data) : _data(data), _hooks(nullptr), _phone(*this, data), _computer(*this), _pda(*this, data), _prefs(*this), _texts(nullptr), _timerSerial(0), _random(1), _soundEnds(false), _fixedSeeds(false), _seedBase(0), _box(0), _restoreMode(-1), _disc(1), _photosOnCamera(0), _cameraEnabled(false), _evidenceRowShown(false), _hintList(0), _hintTrigger(0), _hintCursor(0), _hintGlow(0), _hintGlowOn(false), _aiSoundEndPending(false), _aiSuspended(false), _tint(0), _restored(false), _restorePending(false), _focus(0), _held(0), _currNodeVariable(0), _boxShown(false), _ideaTopic(0), _viewSpecialVariable(0), _clickOpensBox(false), _heldVariable(0), _heldNone(0), _gunValue(0), _heldCursorItem(0), _binocularsMode(0), _binocularsHeld(false), _planning(false), _nextVideoEnd(0), _clipsActivated(false), _clipQueued(false), _fireSerial(0), _inEvent(false), _viewSerial(0), _videoNextPending(false), _fireDepth(0), _nextId(0), _endGamePending(false), _endGameVar(0), _endGameValue(0), _prefArtificialIntuition(0), _cookEmailCount(0), _cookEmailFlag(0), _uberParanoia(0), _journalLeft(0), _bibleLeft(0) {
 	memset(_prefVariables, 0, sizeof(_prefVariables));
 	memset(_shootVars, 0, sizeof(_shootVars));
 	memset(_shootIdx, 0, sizeof(_shootIdx));
@@ -131,7 +131,7 @@ void Script::gunClick() {
 	// need iCurrNode 12, or 11 with cViewState 'd'
 	const uint32 kGunShot = 34743;
 	uint32 remark = 0;
-	switch (_location) {
+	switch (_pos.location) {
 	case 303:
 	case 4535:
 	case 6523:
@@ -148,14 +148,14 @@ void Script::gunClick() {
 	case 2735:
 	case 3059: {
 		int32 node = getCurrentNode();
-		if (node == 12 || (node == 11 && _viewStateVariable && getVariable(_viewStateVariable) == 'd'))
+		if (node == 12 || (node == 11 && _pos.stateVariable && getVariable(_pos.stateVariable) == 'd'))
 			remark = 43070;
 		break;
 	}
 	default:
 		break;
 	}
-	log(Common::String::format("      gun: miss #%u, shot #%u, remark #%u", _location, kGunShot, remark));
+	log(Common::String::format("      gun: miss #%u, shot #%u, remark #%u", _pos.location, kGunShot, remark));
 	if (_hooks)
 		_hooks->playGunShot(kGunShot, remark);
 }
@@ -511,7 +511,7 @@ void Script::execute(const VCAction &a, int event, const EventFields &fields, Lo
 			_travel.leavePending = true;
 			for (int i = 0; i < 4; i++)
 				_travel.leavePath[i] = a.path[i];
-		} else if (a.path[1] != _node || a.path[2] != _location || a.path[3] != _viewPoint || a.path[0] != _view)
+		} else if (a.path[1] != _pos.node || a.path[2] != _pos.location || a.path[3] != _pos.viewPoint || a.path[0] != _pos.view)
 			enter(a.path[1], a.path[2], a.path[3], a.path[0]);
 		break;
 	case kActionInterface:
@@ -900,13 +900,13 @@ void Script::expireTimer(uint n, bool stale) {
 	}
 	VCTitle title;
 	_data.getTitle(title);
-	const uint32 path[5] = { title.id, _node, _location, _viewPoint, _view };
+	const uint32 path[5] = { title.id, _pos.node, _pos.location, _pos.viewPoint, _pos.view };
 	Common::Array<uint32> ids(path, 5);
 	const uint32 kinds[3] = { kClassNav, kClassCharView, kClassExplorable };
 	for (int i = 0; i < 3; i++) {
-		for (uint j = 0; j < _viewObjects.size(); j++) {
-			if (_data.getClassOf(_viewObjects[j]) == kinds[i])
-				ids.push_back(_viewObjects[j]);
+		for (uint j = 0; j < _pos.objects.size(); j++) {
+			if (_data.getClassOf(_pos.objects[j]) == kinds[i])
+				ids.push_back(_pos.objects[j]);
 		}
 		if (kinds[i] == kClassCharView) {
 			// Then the icons on screen: action icons (kind 14), emotion icons (15)
@@ -923,9 +923,9 @@ void Script::expireTimer(uint n, bool stale) {
 	}
 	for (uint i = 0; i < _layouts.size(); i++)
 		ids.push_back(_layouts[i].items);
-	for (uint i = 0; i < _viewObjects.size(); i++) {
-		if (_data.getClassOf(_viewObjects[i]) == kClassAssetRef)
-			ids.push_back(_viewObjects[i]);
+	for (uint i = 0; i < _pos.objects.size(); i++) {
+		if (_data.getClassOf(_pos.objects[i]) == kClassAssetRef)
+			ids.push_back(_pos.objects[i]);
 	}
 	if (!_videoQueue.empty())
 		ids.push_back(_videoQueue[0]);

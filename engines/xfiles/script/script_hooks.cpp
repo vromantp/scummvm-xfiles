@@ -477,7 +477,7 @@ void Script::addInterfaceHooks() {
 		if (!c.isVariable(0))
 			return false;
 		s._variables[c.action.args[0].value] = 0; // 0x47e9d0 clears the variable it registers
-		s._viewStateVariable = c.action.args[0].value; // and keeps it as the view-state variable (0x6c1450)
+		s._pos.stateVariable = c.action.args[0].value; // and keeps it as the view-state variable (0x6c1450)
 		return true;
 	});
 	t.add("PDAEscape", [](Script &s, const HookCall &c) {
@@ -547,7 +547,7 @@ void Script::addStateHooks() {
 		if (!c.has(6))
 			return false;
 		VCView view, target;
-		if (!s._data.getView(s._view, view) || !s._data.getView(c.args[5], target))
+		if (!s._data.getView(s._pos.view, view) || !s._data.getView(c.args[5], target))
 			return true;
 		const Common::Point click = s._travel.clickPoint;
 		uint32 character = 0;
@@ -568,7 +568,7 @@ void Script::addStateHooks() {
 			VCCharView cv;
 			found = s._data.getCharView(ids[i], cv) && s.isEnabled(ids[i]) && cv.character == character;
 		}
-		if (found && s._node == (uint32)c.args[2])
+		if (found && s._pos.node == (uint32)c.args[2])
 			s.enter(c.args[2], c.args[3], c.args[4], c.args[5]);
 		return true;
 	});

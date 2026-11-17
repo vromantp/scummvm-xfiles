@@ -126,12 +126,12 @@ void Script::deactivateView() {
 	// The shown asset's deactivation runs before the view's own triggers (0x458e10, B-112)
 	// The view is being left: an asset enabled by the deactivations (the shown asset's included) is not started
 	// (0x46f210)
-	_viewActive = false;
+	_pos.active = false;
 	const bool wasLeaving = _travel.viewLeaving;
 	_travel.viewLeaving = true;
 	deactivateViewAsset();
-	if (_view && !_viewHeld)
-		fire(_view, kEventObjectDeactivation);
+	if (_pos.view && !_pos.held)
+		fire(_pos.view, kEventObjectDeactivation);
 	deactivateViewObjects();
 	_travel.viewLeaving = wasLeaving;
 }
@@ -241,8 +241,8 @@ void Script::hotClick(uint32 kind) {
 
 void Script::setViewState(char letter) {
 	// ViewState_Set (0x51ce80): the variable RegViewState registered
-	if (_viewStateVariable)
-		_variables[_viewStateVariable] = (unsigned char)letter;
+	if (_pos.stateVariable)
+		_variables[_pos.stateVariable] = (unsigned char)letter;
 }
 
 void Script::clickAIIcon() {
@@ -370,7 +370,7 @@ void Script::hotAction(int n) {
 	if (n == 1 || n == 2 || n == 4 || n == 5) {
 		VCView v;
 		Common::Array<uint32> assets;
-		if (_data.getView(_view, v))
+		if (_data.getView(_pos.view, v))
 			_data.getMembers(v.assets, assets);
 		uint count = assets.size();
 		uint chosen = count;
@@ -390,7 +390,7 @@ void Script::hotAction(int n) {
 		setViewState('a');
 	// The current view's deactivation is queued
 	deactivateView();
-	_viewGone = true;
+	_pos.gone = true;
 	// A Set View in the view's Deactivation (45822 sets 45857): entered below unless the action has its own
 	const bool leaveSet = _travel.leavePending;
 	uint32 leavePath[4] = {_travel.leavePath[0], _travel.leavePath[1], _travel.leavePath[2], _travel.leavePath[3]};
@@ -421,7 +421,7 @@ void Script::hotAction(int n) {
 		if (_hooks)
 			_hooks->showCursorAnimation(73520);
 		showLayout(layout);
-		_viewGone = false;
+		_pos.gone = false;
 		activateOrHoldView();
 		return;
 	}
@@ -433,7 +433,7 @@ void Script::hotAction(int n) {
 		playAsset(38448, kModePlayOnce, nullptr);
 	if (act.reshow && !success) {
 		// 0x46a370: a new view object for the same view data
-		_viewGone = false;
+		_pos.gone = false;
 		activateOrHoldView();
 	}
 	if (success && (n == 1 || n == 2))
@@ -446,7 +446,7 @@ void Script::hotAction(int n) {
 
 void Script::enter(uint32 node, uint32 location, uint32 viewPoint, uint32 view, bool deactivateAll) {
 	const uint32 newPath[4] = { node, location, viewPoint, view };
-	const uint32 oldPath[4] = { _node, _location, _viewPoint, _view };
+	const uint32 oldPath[4] = { _pos.node, _pos.location, _pos.viewPoint, _pos.view };
 	// Only a nav click passes a view mode (0x46ae70); every other way into a view cuts
 	_travel.transition = _travel.navTransition;
 	_travel.transitionCentre = _travel.navTransitionCentre;
@@ -463,22 +463,22 @@ void Script::enter(uint32 node, uint32 location, uint32 viewPoint, uint32 view, 
 		// The shown asset's deactivation runs before the view's own triggers (0x458e10, B-112)
 		if (i == 3) {
 			// After a gun click the scene has no view left to drop (hotClick)
-			if (!_viewGone)
+			if (!_pos.gone)
 				deactivateView();
-			_viewGone = false;
+			_pos.gone = false;
 		} else if (oldPath[i])
 			fire(oldPath[i], kEventObjectDeactivation);
 	}
 	_travel.enterDeactivating = wasDeactivating;
 	if (first < 4) {
-		_viewHeld = false;
-		_viewActive = false;
-		_viewAssetHeld = false;
+		_pos.held = false;
+		_pos.active = false;
+		_pos.assetHeld = false;
 	}
-	_node = node;
-	_location = location;
-	_viewPoint = viewPoint;
-	_view = view;
+	_pos.node = node;
+	_pos.location = location;
+	_pos.viewPoint = viewPoint;
+	_pos.view = view;
 	_box = 0;
 	log("  == enter " + getObjectLabel(_data, node) + " / " + getObjectLabel(_data, location) + " / " +
 		getObjectLabel(_data, viewPoint) + " / " + getObjectLabel(_data, view));
@@ -489,10 +489,10 @@ void Script::enter(uint32 node, uint32 location, uint32 viewPoint, uint32 view, 
 		// The path goes back to the old one, else syncView plays the dropped view (with its nav transition) under
 		// the white fade (B-289)
 		_travel.dropped = false;
-		_node = oldPath[0];
-		_location = oldPath[1];
-		_viewPoint = oldPath[2];
-		_view = oldPath[3];
+		_pos.node = oldPath[0];
+		_pos.location = oldPath[1];
+		_pos.viewPoint = oldPath[2];
+		_pos.view = oldPath[3];
 		_travel.transition = kTransitionCut;
 		return;
 	}
@@ -512,7 +512,7 @@ void Script::activateOrHoldView() {
 	if (_videoQueue.empty()) {
 		activateView();
 	} else {
-		_viewHeld = true;
+		_pos.held = true;
 		// It waits for the videos queued in this event, those queued
 		// after it too (comityinn-to-warehouse: 20061 and 19937), but
 		// not for one a later event queues (newgame-to-comityinn: 19802
@@ -527,14 +527,14 @@ void Script::activateOrHoldView() {
 
 void Script::activateView() {
 	// The mark of the view's own activation: the exe logs it after the Activations of its node, location and viewpoint
-	log("  == view activated " + getObjectLabel(_data, _view));
-	_viewHeld = false;
-	_viewActive = true;
+	log("  == view activated " + getObjectLabel(_data, _pos.view));
+	_pos.held = false;
+	_pos.active = true;
 	// The exe activates the view's asset before the view's own actions run (B-151),
 	// its character views after them (tarakan-to-evidence2: view 11705's
 	// Activation actions run before character view 24182 is activated, B-167)
 	activateViewAsset();
-	fire(_view, kEventObjectActivation);
+	fire(_pos.view, kEventObjectActivation);
 	activateViewObjects(true);
 	activateViewObjects(false);
 }
@@ -546,7 +546,7 @@ void Script::activateViewObjects(bool before) {
 	// explorables (reference run, 2026-10-12); the view's activation
 	// creates them (0x4402e0). B-151
 	VCView v;
-	if (!_data.getView(_view, v))
+	if (!_data.getView(_pos.view, v))
 		return;
 	Common::Array<uint32> ids;
 	const uint32 lists[3] = { v.characters, v.navs, v.explorables };
@@ -564,21 +564,21 @@ void Script::deactivateViewAsset() {
 	// Leaving a view queues the shown asset's Object Deactivation (0x458e10, from the view's removal event) after
 	// the view's own Deactivation trigger is queued but before its actions run: the asset's comes first (reference
 	// run manual1, 2026-10-13: view 1214's background 38994 disables the explorables its activation enabled)
-	Common::Array<uint32> ids = _viewObjects;
+	Common::Array<uint32> ids = _pos.objects;
 	for (uint j = 0; j < ids.size(); j++) {
 		if (_data.getClassOf(ids[j]) != kClassAssetRef)
 			continue;
-		Common::Array<uint32>::iterator it = Common::find(_viewObjects.begin(), _viewObjects.end(), ids[j]);
-		if (it != _viewObjects.end())
-			_viewObjects.erase(it);
+		Common::Array<uint32>::iterator it = Common::find(_pos.objects.begin(), _pos.objects.end(), ids[j]);
+		if (it != _pos.objects.end())
+			_pos.objects.erase(it);
 		deactivateAsset(ids[j]);
 	}
 }
 
 void Script::deactivateViewObjects() {
 	// Then the view deactivates its navs, character views and explorables (0x438770)
-	Common::Array<uint32> ids = _viewObjects;
-	_viewObjects.clear();
+	Common::Array<uint32> ids = _pos.objects;
+	_pos.objects.clear();
 	const uint32 kinds[3] = { kClassNav, kClassCharView, kClassExplorable };
 	for (int i = 0; i < 3; i++) {
 		for (uint j = 0; j < ids.size(); j++) {
@@ -590,7 +590,7 @@ void Script::deactivateViewObjects() {
 
 bool Script::isInView(uint32 id) const {
 	VCView v;
-	if (!_data.getView(_view, v))
+	if (!_data.getView(_pos.view, v))
 		return false;
 	uint32 list;
 	switch (_data.getClassOf(id)) {
@@ -612,9 +612,9 @@ bool Script::isInView(uint32 id) const {
 }
 
 void Script::activateViewObject(uint32 id) {
-	if (!isInView(id) || Common::find(_viewObjects.begin(), _viewObjects.end(), id) != _viewObjects.end())
+	if (!isInView(id) || Common::find(_pos.objects.begin(), _pos.objects.end(), id) != _pos.objects.end())
 		return;
-	_viewObjects.push_back(id);
+	_pos.objects.push_back(id);
 	fire(id, kEventObjectActivation);
 	// A character view, once its Object Activation has run, plays the first
 	// enabled asset of its asset list as a Do Asset action would (sound
@@ -640,10 +640,10 @@ void Script::activateViewObject(uint32 id) {
 }
 
 void Script::deactivateViewObject(uint32 id) {
-	Common::Array<uint32>::iterator it = Common::find(_viewObjects.begin(), _viewObjects.end(), id);
-	if (it == _viewObjects.end() || !isInView(id))
+	Common::Array<uint32>::iterator it = Common::find(_pos.objects.begin(), _pos.objects.end(), id);
+	if (it == _pos.objects.end() || !isInView(id))
 		return;
-	_viewObjects.erase(it);
+	_pos.objects.erase(it);
 	fire(id, kEventObjectDeactivation);
 }
 
@@ -656,7 +656,7 @@ void Script::updateViewAsset(uint32 id) {
 	// disables the clip 33974, whose Deactivation stops timer 0 (B-052).
 	// Only a change of the shown asset is modelled
 	VCView v;
-	if (!_viewActive || _viewHeld || _travel.pending || isViewChangeQueued() || !_data.getView(_view, v))
+	if (!_pos.active || _pos.held || _travel.pending || isViewChangeQueued() || !_data.getView(_pos.view, v))
 		return;
 	Common::Array<uint32> ids;
 	_data.getMembers(v.assets, ids);
@@ -665,29 +665,29 @@ void Script::updateViewAsset(uint32 id) {
 	uint32 background;
 	getViewAssets(ids, background);
 	uint32 shown = ids.empty() ? 0 : ids[0];
-	for (uint i = 0; i < _viewObjects.size(); i++) {
-		if (_data.getClassOf(_viewObjects[i]) != kClassAssetRef)
+	for (uint i = 0; i < _pos.objects.size(); i++) {
+		if (_data.getClassOf(_pos.objects[i]) != kClassAssetRef)
 			continue;
-		uint32 old = _viewObjects[i];
+		uint32 old = _pos.objects[i];
 		if (old == shown)
 			return;
-		_viewObjects.remove_at(i);
+		_pos.objects.remove_at(i);
 		deactivateAsset(old);
 		break;
 	}
-	_viewAssetHeld = !_videoQueue.empty();
-	if (!_viewAssetHeld)
+	_pos.assetHeld = !_videoQueue.empty();
+	if (!_pos.assetHeld)
 		activateViewAsset();
 }
 
 void Script::activateViewAsset() {
-	_viewAssetHeld = false;
+	_pos.assetHeld = false;
 	Common::Array<uint32> ids;
 	uint32 background;
 	getViewAssets(ids, background);
-	if (ids.empty() || Common::find(_viewObjects.begin(), _viewObjects.end(), ids[0]) != _viewObjects.end())
+	if (ids.empty() || Common::find(_pos.objects.begin(), _pos.objects.end(), ids[0]) != _pos.objects.end())
 		return;
-	_viewObjects.push_back(ids[0]);
+	_pos.objects.push_back(ids[0]);
 	logViewAsset(ids[0], background);
 	activateAsset(ids[0]);
 }
@@ -716,7 +716,7 @@ void Script::getViewAssets(Common::Array<uint32> &assets, uint32 &background) co
 	background = 0;
 	VCView v;
 	Common::Array<uint32> ids;
-	if (!_data.getView(_view, v))
+	if (!_data.getView(_pos.view, v))
 		return;
 	_data.getMembers(v.assets, ids);
 	// The view's player (view object +0x148) holds one asset: the first
@@ -751,7 +751,7 @@ void Script::logViewAsset(uint32 id, uint32 background) {
 
 void Script::showView() {
 	VCView v;
-	if (!_data.getView(_view, v))
+	if (!_data.getView(_pos.view, v))
 		return;
 
 	logViewAssets();
@@ -827,11 +827,11 @@ void Script::followNav(uint32 navId) {
 		return;
 	}
 	// The nav's view change is queued after its Mouse Click runners (0x46ae70), so the click's triggers see it
-	_travel.navViewQueued = nav.target != _view;
+	_travel.navViewQueued = nav.target != _pos.view;
 	fire(navId, kEventMouseClick);
 	_travel.navViewQueued = false;
 	VCLocation location;
-	if (!_data.getLocation(_location, location))
+	if (!_data.getLocation(_pos.location, location))
 		return;
 	setNavTransition(nav);
 	for (uint i = 0; i < location.viewPoints.size(); i++) {
@@ -840,7 +840,7 @@ void Script::followNav(uint32 navId) {
 			continue;
 		for (uint j = 0; j < vp.views.size(); j++) {
 			if (vp.views[j] == nav.target) {
-				enter(_node, _location, vp.id, nav.target);
+				enter(_pos.node, _pos.location, vp.id, nav.target);
 				return;
 			}
 		}
@@ -873,8 +873,8 @@ void Script::goTo(uint32 target) {
 	Common::HashMap<uint32, Step> prev;
 	Common::Array<uint32> todo;
 	Step root = { 0, 0 };
-	prev[_view] = root;
-	todo.push_back(_view);
+	prev[_pos.view] = root;
+	todo.push_back(_pos.view);
 	for (uint next = 0; next < todo.size() && !prev.contains(target); next++) {
 		VCView v;
 		Common::Array<uint32> navs;
@@ -1055,7 +1055,7 @@ void Script::availableSteps(Common::Array<Common::String> &steps) {
 	}
 
 	// Mouse steps on one object; `always` is the click that needs no trigger
-	Common::Array<uint32> objects = _viewObjects;
+	Common::Array<uint32> objects = _pos.objects;
 	for (uint i = 0; i < _layouts.size(); i++) {
 		for (uint j = 0; j < _layouts[i].items.size(); j++)
 			objects.push_back(_layouts[i].items[j]);
@@ -1065,7 +1065,7 @@ void Script::availableSteps(Common::Array<Common::String> &steps) {
 		if (!isEnabled(id))
 			continue;
 		uint32 classId = _data.getClassOf(id);
-		bool isLayoutItem = i >= _viewObjects.size();
+		bool isLayoutItem = i >= _pos.objects.size();
 		if (!isLayoutItem && classId == kClassNav)
 			add(Common::String::format("nav:%u", id));
 		else if (!isLayoutItem && classId == kClassCharView)

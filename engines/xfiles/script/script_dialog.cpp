@@ -334,7 +334,7 @@ void Script::ask(uint32 conversationId) {
 	if (!_box || !isBoxTopic(_box, conversationId)) {
 		VCView view;
 		Common::Array<uint32> charViews;
-		if (_data.getView(_view, view))
+		if (_data.getView(_pos.view, view))
 			_data.getMembers(view.characters, charViews);
 		for (uint i = 0; i < charViews.size(); i++) {
 			if (isBoxTopic(charViews[i], conversationId)) {
@@ -739,7 +739,7 @@ bool Script::findTopicCharView(uint32 conversationId, bool inBox, VCCharView &ch
 	// and in its idea maps (any icon, enabled or not) for a dropped item
 	VCView view;
 	Common::Array<uint32> charViews;
-	if (!_data.getView(_view, view) || !_data.getMembers(view.characters, charViews))
+	if (!_data.getView(_pos.view, view) || !_data.getMembers(view.characters, charViews))
 		return false;
 	for (uint i = 0; i < charViews.size(); i++) {
 		if (!_data.getCharView(charViews[i], charView))

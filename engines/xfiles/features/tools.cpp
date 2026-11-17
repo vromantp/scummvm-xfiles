@@ -68,9 +68,9 @@ bool Script::binocularsView(bool on) {
 			continue;
 		// 0x51cf10: disable the shown asset, then enable the new one; the asset list then swaps them
 		uint32 from = 0;
-		for (uint j = 0; j < _viewObjects.size() && !from; j++) {
-			if (_data.getClassOf(_viewObjects[j]) == kClassAssetRef)
-				from = _viewObjects[j];
+		for (uint j = 0; j < _pos.objects.size() && !from; j++) {
+			if (_data.getClassOf(_pos.objects[j]) == kClassAssetRef)
+				from = _pos.objects[j];
 		}
 		uint32 to = on ? kChanges[i].take : kChanges[i].putBack;
 		if (!from)
@@ -171,7 +171,7 @@ void Script::toolReaction(int32 item) {
 		slot = 3;
 	VCView view;
 	Common::Array<uint32> charViews;
-	if (!slot || !_data.getView(_view, view) || !_data.getMembers(view.characters, charViews))
+	if (!slot || !_data.getView(_pos.view, view) || !_data.getMembers(view.characters, charViews))
 		return;
 	for (uint i = 0; i < charViews.size(); i++) {
 		uint32 slots[kReactionSlots];
@@ -272,7 +272,7 @@ void Script::cameraClick(const Common::Point &pos) {
 	int vLeft = MAX<int>(pos.x - kCameraWidth / 2, kBandLeft);
 	int vRight = MIN<int>(pos.x + kCameraWidth / 2, kBandLeft + kBandWidth);
 	VCView view;
-	if (!_data.getView(_view, view))
+	if (!_data.getView(_pos.view, view))
 		return;
 	for (int kind = 0; kind < 2; kind++) {
 		Common::Array<uint32> ids;

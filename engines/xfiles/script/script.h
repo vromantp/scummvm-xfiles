@@ -986,11 +986,6 @@ private:
 	uint _bibleLeft;                           ///< The Bible's left page index (0x6b1eec)
 
 	// The Smolnikoff shootout: exe globals a save does not hold (0x6b1ef0..0x6b1f10, 0x6be8a4/7cc/834)
-	uint32 _shootVars[3];                      ///< The variables InitSmShootout was given (left, center, right goon dead)
-	int _shootIdx[3];                          ///< Next index into each goon's view table, at most 2
-	bool _shootDead[3];                        ///< Goon shot
-	int _shootCur;                             ///< Goon on screen, 0 for none
-	int _shootPerm[3][3];                      ///< Permutations of 1, 2, 3 the reset fills (no reader known)
 	OncePerProcess _ownOnce;                   ///< Used when the engine hands no flags (vcdump: one game per process)
 	OncePerProcess *_once;
 	bool _endGamePending;                      ///< EndGame ran and waits for the engine's answer
@@ -1104,6 +1099,16 @@ private:
 		bool cameraEnabled = false;                  ///< The camera in hand was taken outside a special view (Camera +0x1c0)
 	};
 	HeldTool _tool;
+
+	/** The Smolnikoff shootout: exe globals a save does not hold (0x6b1ef0..0x6b1f10, 0x6be8a4/7cc/834) */
+	struct Shootout {
+		uint32 vars[3] = {};                      ///< The variables InitSmShootout was given (left, center, right goon dead)
+		int idx[3] = {};                          ///< Next index into each goon's view table, at most 2
+		bool dead[3] = {};                        ///< Goon shot
+		int cur = 0;                              ///< Goon on screen, 0 for none
+		int perm[3][3] = {};                      ///< Permutations of 1, 2, 3 the reset fills (no reader known)
+	};
+	Shootout _shoot;
 };
 
 } // End of namespace XFiles

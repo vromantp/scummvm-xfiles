@@ -83,11 +83,6 @@ static uint32 getTriggerOffset(uint32 classId) {
 
 Script::Script(const VCData &data) : _data(data), _hooks(nullptr), _phone(*this, data), _computer(*this), _pda(*this, data), _prefs(*this), _texts(nullptr), _timerSerial(0), _random(1), _fixedSeeds(false), _seedBase(0), _restoreMode(-1), _disc(1), _photosOnCamera(0), _evidenceRowShown(false), _tint(0), _restored(false), _restorePending(false), _focus(0), _held(0), _currNodeVariable(0), _viewSpecialVariable(0), _fireSerial(0), _inEvent(false), _viewSerial(0), _fireDepth(0), _nextId(0), _endGamePending(false), _endGameVar(0), _endGameValue(0), _prefArtificialIntuition(0), _cookEmailCount(0), _cookEmailFlag(0), _uberParanoia(0), _journalLeft(0), _bibleLeft(0) {
 	memset(_prefVariables, 0, sizeof(_prefVariables));
-	memset(_shootVars, 0, sizeof(_shootVars));
-	memset(_shootIdx, 0, sizeof(_shootIdx));
-	memset(_shootDead, 0, sizeof(_shootDead));
-	memset(_shootPerm, 0, sizeof(_shootPerm));
-	_shootCur = 0;
 	_once = &_ownOnce;
 	memset(_flashlight, 0, sizeof(_flashlight));
 	memset(_tintColor, 0, sizeof(_tintColor));

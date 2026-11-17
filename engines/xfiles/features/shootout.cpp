@@ -31,12 +31,12 @@ namespace XFiles {
 void Script::shootoutReset() {
 	// 0x48ccd0 (Game_Start) and InitSmShootout 0x4f9630: forget the shots, clear the variables, roll three permutations
 	for (int i = 0; i < 3; i++) {
-		_shootIdx[i] = 0;
-		_shootDead[i] = false;
-		if (_shootVars[i])
-			setVariable(_shootVars[i], 0);
+		_shoot.idx[i] = 0;
+		_shoot.dead[i] = false;
+		if (_shoot.vars[i])
+			setVariable(_shoot.vars[i], 0);
 	}
-	_shootCur = 0;
+	_shoot.cur = 0;
 	static const int perms[6][3] = {{1, 2, 3}, {1, 3, 2}, {2, 1, 3}, {2, 3, 1}, {3, 1, 2}, {3, 2, 1}};
 	for (int i = 0; i < 3; i++) {
 		// Nothing reads the permutations; without fixed seeds the dice would draw from (and shift) the shared sequence
@@ -45,7 +45,7 @@ void Script::shootoutReset() {
 		Dice dice = newDice(0x4f9658);
 		const int *perm = perms[roll(dice, 1, 6) - 1];
 		for (int k = 0; k < 3; k++)
-			_shootPerm[i][k] = perm[k];
+			_shoot.perm[i][k] = perm[k];
 	}
 }
 
@@ -86,22 +86,22 @@ bool Script::findViewPath(uint32 view, uint32 (&path)[4]) const {
 void Script::doSmolShootout(const HookCall &call) {
 	// 0x4f9a40: the next goon to appear, then a Set View the exe makes (0x4b3bc0, no VCAction in the data)
 	static const uint32 views[3][3] = {{62256, 62258, 62260}, {62262, 62264, 62266}, {62268, 62270, 62272}};
-	if (_shootDead[0] && _shootDead[1] && _shootDead[2]) {
-		_shootCur = 0;
+	if (_shoot.dead[0] && _shoot.dead[1] && _shoot.dead[2]) {
+		_shoot.cur = 0;
 	} else {
 		Dice dice = newDice(0x4f9a59);
 		int r = roll(dice, 1, 3);
 		int goon = r - 1;
-		if (_shootDead[goon])
+		if (_shoot.dead[goon])
 			goon = (goon + 1) % 3;
-		if (_shootDead[goon])
+		if (_shoot.dead[goon])
 			goon = (goon + 1) % 3;
-		_shootCur = goon + 1;
+		_shoot.cur = goon + 1;
 	}
 	uint32 view = 5208;
-	if (_shootCur) {
-		int &idx = _shootIdx[_shootCur - 1];
-		view = views[_shootCur - 1][idx];
+	if (_shoot.cur) {
+		int &idx = _shoot.idx[_shoot.cur - 1];
+		view = views[_shoot.cur - 1][idx];
 		if (idx < 2)
 			idx++;
 	}
@@ -119,9 +119,9 @@ void Script::doSmolShootout(const HookCall &call) {
 
 void Script::smIsWillShot(uint32 timer) {
 	// 0x4f9bf0
-	if (!_shootCur)
+	if (!_shoot.cur)
 		return;
-	int n = _shootIdx[_shootCur - 1];
+	int n = _shoot.idx[_shoot.cur - 1];
 	Dice dice = newDice(0x4f9c07);
 	int r = roll(dice, 0, 100);
 	int32 difficulty = getPreferenceValue(kPrefActionSceneDifficulty);
@@ -138,11 +138,11 @@ void Script::smIsWillShot(uint32 timer) {
 
 void Script::smolGoonShot() {
 	// 0x4f9d20: the goon on screen is dead; every variable is written, changed or not
-	if (_shootCur >= 1 && _shootCur <= 3)
-		_shootDead[_shootCur - 1] = true;
+	if (_shoot.cur >= 1 && _shoot.cur <= 3)
+		_shoot.dead[_shoot.cur - 1] = true;
 	for (int i = 0; i < 3; i++) {
-		if (_shootVars[i])
-			setVariable(_shootVars[i], _shootDead[i]);
+		if (_shoot.vars[i])
+			setVariable(_shoot.vars[i], _shoot.dead[i]);
 	}
 }
 

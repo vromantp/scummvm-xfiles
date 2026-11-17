@@ -103,7 +103,7 @@ void Script::addGameHooks() {
 		if (!c.isVariable(0) || !c.isVariable(1) || !c.isVariable(2))
 			return false;
 		for (int i = 0; i < 3; i++)
-			s._shootVars[i] = c.action.args[i].value;
+			s._shoot.vars[i] = c.action.args[i].value;
 		s.shootoutReset(); // its three rolls are the reset's (0x4f9630)
 		return true;
 	});

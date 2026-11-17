@@ -131,27 +131,16 @@ PdaHooks::PdaHooks(Script &script, const VCData &data)
 		_noteOrder[i] = i;
 }
 
-void PdaHooks::addHooks(HookTable<Script> &t) {
-	t.add("ScrollTextList", [](Script &s, const HookCall &c) {
-		if (!c.has(5))
-			return false;
-		s.pda().scrollTextList(c.args[0], c.args[1], c.args[2], c.args[3], c.args[4]);
-		return true;
-	});
-	t.add("ScrollTextInit", [](Script &s, const HookCall &c) {
-		if (!c.has(1))
-			return false;
-		s.pda().scrollTextList(c.args[0], 0, 'b', 'c', kPDAFontSize);
-		return true;
-	});
-	t.add("SendEmail", [](Script &s, const HookCall &c) {
+struct PdaHooks::Handlers {
+	static bool hookSendEmail(Script &s, const HookCall &c) {
 		PdaHooks &p = s.pda();
 		if (!c.has(1))
 			return false;
 		p._emailPending.push_back(c.args[0]);
 		return true;
-	});
-	t.add("EmailFlushMess", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookEmailFlushMess(Script &s, const HookCall &c) {
 		PdaHooks &p = s.pda();
 		for (uint i = 0; i < p._emailPending.size(); i++) {
 			if (!listHas(p._emails, p._emailPending[i]))
@@ -159,16 +148,18 @@ void PdaHooks::addHooks(HookTable<Script> &t) {
 		}
 		p._emailPending.clear();
 		return true;
-	});
-	t.add("EmailDelete", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookEmailDelete(Script &s, const HookCall &c) {
 		PdaHooks &p = s.pda();
 		if (!c.has(1))
 			return false;
 		listRemove(p._emails, c.args[0]);
 		listRemove(p._emailsRead, c.args[0]);
 		return true;
-	});
-	t.add("EmailInit", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookEmailInit(Script &s, const HookCall &c) {
 		PdaHooks &p = s.pda();
 		if (!c.has(1))
 			return false;
@@ -199,7 +190,47 @@ void PdaHooks::addHooks(HookTable<Script> &t) {
 			}
 		}
 		return true;
+	}
+
+	static bool hookGetCurrEmail(Script &s, const HookCall &c) {
+		PdaHooks &p = s.pda();
+		if (!c.has(2) || !c.isVariable(1))
+			return false;
+		uint i = p._inboxTop + c.args[0];
+		s.setVariable(c.action.args[1].value, i < p._inboxRows.size() ? (int32)p._inboxRows[i].id : 0);
+		return true;
+	}
+
+	static bool hookMarkEmailRead(Script &s, const HookCall &c) {
+		PdaHooks &p = s.pda();
+		if (!c.has(1))
+			return false;
+		uint i = p._inboxTop + c.args[0];
+		if (i < p._inboxRows.size() && !p._inboxRows[i].read) {
+			p._emailsRead.push_back(p._inboxRows[i].id);
+			p._inboxRows[i].read = true;
+		}
+		return true;
+	}
+};
+
+void PdaHooks::addHooks(HookTable<Script> &t) {
+	t.add("ScrollTextList", [](Script &s, const HookCall &c) {
+		if (!c.has(5))
+			return false;
+		s.pda().scrollTextList(c.args[0], c.args[1], c.args[2], c.args[3], c.args[4]);
+		return true;
 	});
+	t.add("ScrollTextInit", [](Script &s, const HookCall &c) {
+		if (!c.has(1))
+			return false;
+		s.pda().scrollTextList(c.args[0], 0, 'b', 'c', kPDAFontSize);
+		return true;
+	});
+	t.add("SendEmail", Handlers::hookSendEmail);
+	t.add("EmailFlushMess", Handlers::hookEmailFlushMess);
+	t.add("EmailDelete", Handlers::hookEmailDelete);
+	t.add("EmailInit", Handlers::hookEmailInit);
 	t.add("DisplayAddrs", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
@@ -236,25 +267,8 @@ void PdaHooks::addHooks(HookTable<Script> &t) {
 		s.pda().displayInBox(c.args[0]);
 		return true;
 	});
-	t.add("GetCurrEmail", [](Script &s, const HookCall &c) {
-		PdaHooks &p = s.pda();
-		if (!c.has(2) || !c.isVariable(1))
-			return false;
-		uint i = p._inboxTop + c.args[0];
-		s.setVariable(c.action.args[1].value, i < p._inboxRows.size() ? (int32)p._inboxRows[i].id : 0);
-		return true;
-	});
-	t.add("MarkEmailRead", [](Script &s, const HookCall &c) {
-		PdaHooks &p = s.pda();
-		if (!c.has(1))
-			return false;
-		uint i = p._inboxTop + c.args[0];
-		if (i < p._inboxRows.size() && !p._inboxRows[i].read) {
-			p._emailsRead.push_back(p._inboxRows[i].id);
-			p._inboxRows[i].read = true;
-		}
-		return true;
-	});
+	t.add("GetCurrEmail", Handlers::hookGetCurrEmail);
+	t.add("MarkEmailRead", Handlers::hookMarkEmailRead);
 	t.add("InitEmailRead", [](Script &s, const HookCall &c) {
 		if (!c.has(2))
 			return false;

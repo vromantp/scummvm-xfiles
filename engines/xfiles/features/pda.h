@@ -70,6 +70,8 @@ public:
 	void snapshot(VCSave &save) const;
 
 private:
+	/** The hook functions of addHooks (features/pda.cpp): a nested struct reaches the private members. */
+	struct Handlers;
 	void displayInBox(int32 value);
 	void initEmailRead(int32 item, int32 email);
 	/** Lines of an e-mail's file (To, From, Subject, body), empty if it has none; cached. */

@@ -287,9 +287,8 @@ void Script::addNodeHooks() {
 	});
 }
 
-void Script::addInterfaceHooks() {
-	HookTable<Script> &t = _hookTable;
-	t.add("AlienBlast", [](Script &s, const HookCall &) {
+struct Script::InterfaceHooks {
+	static bool hookAlienBlast(Script &s, const HookCall &) {
 		// 0x4b6220: drops the queued activations of nodes, locations, viewpoints and views (0x41a770), then flashes
 		// the screen (B-199). Only a travel queued behind the deactivation that ran it exists (B-204)
 		if (s._travel.enterDeactivating) {
@@ -299,8 +298,9 @@ void Script::addInterfaceHooks() {
 		if (s._hooks)
 			s._hooks->fadeToWhite();
 		return true;
-	});
-	t.add("IsoChamberStat", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookIsoChamberStat(Script &s, const HookCall &c) {
 		// 0x4fc970 -> 0x4b6120 (docs/data/addresses.tsv): the 11 arguments are variables, 4-11 are outputs
 		if (c.action.args.size() < 11)
 			return false;
@@ -335,16 +335,9 @@ void Script::addInterfaceHooks() {
 				s.setVariable(var, out[i]);
 		}
 		return true;
-	});
-	t.add("StopEnvSounds", [](Script &s, const HookCall &c) {
-		s.stopEnvSounds();
-		return true;
-	});
-	t.add("RegPreferences", [](Script &s, const HookCall &c) {
-		s.regPreferences(c.action);
-		return true;
-	});
-	t.add("SetLanguage", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookSetLanguage(Script &s, const HookCall &c) {
 		// (text, var): 0x48b680 reads the text asset (0x45f690: a file asset's file first) and writes it
 		// into the string variable only if it differs (0x41bcb0)
 		if (!c.has(2))
@@ -357,8 +350,9 @@ void Script::addInterfaceHooks() {
 		if (s.getString(variable) != value)
 			s.setString(variable, value);
 		return true;
-	});
-	t.add("SetIItemText", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookSetIItemText(Script &s, const HookCall &c) {
 		// (item, text, colour, font, size, shadow, align): 0x47de90 -> 0x4be1e0, laid out at twice
 		// the item's width (+0x194 is 0), as the PDA texts
 		if (!c.has(7))
@@ -382,8 +376,9 @@ void Script::addInterfaceHooks() {
 			width = (item.rect.right - item.rect.left) * 2;
 		s.setItemText(c.args[0], text, c.args[4], false, color, align, c.args[5] == 'y', width, c.args[3] == 'H');
 		return true;
-	});
-	t.add("SuicideNote", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookSuicideNote(Script &s, const HookCall &c) {
 		// (Event::1) 0x4f9fc0: one of three note texts (table 0x659a00) on the activated item. The face is
 		// ZonkersHand 14 (Jrn.ttr), black, left, wrapped at the item's own width (+0x194 is 1), 22 px lines
 		if (!c.has(1) || !c.args[0])
@@ -400,8 +395,9 @@ void Script::addInterfaceHooks() {
 			width = item.rect.right - item.rect.left;
 		s.setItemText(c.args[0], text, 14, false, 0x000000, Script::kAlignLeft, false, width, Script::kFaceHand);
 		return true;
-	});
-	t.add("JournalInit", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookJournalInit(Script &s, const HookCall &c) {
 		// 0x4bfb20: the enabled pages; the front if the value is not 0, else the last spread. Never writes the variable
 		if (!c.has(1))
 			return false;
@@ -421,8 +417,9 @@ void Script::addInterfaceHooks() {
 			s._journalLeft = (count & 1) ? count - 1 : count - 2;
 		s.showJournalPages();
 		return true;
-	});
-	t.add("JournalFlip", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookJournalFlip(Script &s, const HookCall &c) {
 		// 0x4bff40: nothing with two pages or fewer
 		if (!c.has(3) || !c.isVariable(1) || !c.isVariable(2))
 			return false;
@@ -443,11 +440,9 @@ void Script::addInterfaceHooks() {
 			s.setVariable(c.variableArg(2), last);
 		s.showJournalPages();
 		return true;
-	});
-	t.add("JournalDestroy", [](Script &, const HookCall &) {
-		return true; // 0x4bfb00 only frees the font
-	});
-	t.add("BibleInit", [](Script &s, const HookCall &) {
+	}
+
+	static bool hookBibleInit(Script &s, const HookCall &) {
 		// 0x4f8970: the enabled pages of item 80907; the first spread, the back button off, the forward button on
 		s._biblePages.clear();
 		VCInterfaceItem item;
@@ -464,8 +459,9 @@ void Script::addInterfaceHooks() {
 		// No count check on the right page in the exe; an empty list gives both pages an empty text
 		s.showBiblePages(true);
 		return true;
-	});
-	t.add("BibleFlip", [](Script &s, const HookCall &c) {
+	}
+
+	static bool hookBibleFlip(Script &s, const HookCall &c) {
 		// 0x4f8d40: dir 1 goes back, any other value forward; the last spread is left index 8 (untested, not in any run)
 		if (!c.has(1))
 			return false;
@@ -486,20 +482,46 @@ void Script::addInterfaceHooks() {
 		}
 		s.showBiblePages(false);
 		return true;
+	}
+
+	static bool hookRegViewState(Script &s, const HookCall &c) {
+		if (!c.isVariable(0))
+			return false;
+		s._variables[c.action.args[0].value] = 0; // 0x47e9d0 clears the variable it registers
+		s._pos.stateVariable = c.action.args[0].value; // and keeps it as the view-state variable (0x6c1450)
+		return true;
+	}
+};
+
+void Script::addInterfaceHooks() {
+	HookTable<Script> &t = _hookTable;
+	t.add("AlienBlast", InterfaceHooks::hookAlienBlast);
+	t.add("IsoChamberStat", InterfaceHooks::hookIsoChamberStat);
+	t.add("StopEnvSounds", [](Script &s, const HookCall &c) {
+		s.stopEnvSounds();
+		return true;
 	});
+	t.add("RegPreferences", [](Script &s, const HookCall &c) {
+		s.regPreferences(c.action);
+		return true;
+	});
+	t.add("SetLanguage", InterfaceHooks::hookSetLanguage);
+	t.add("SetIItemText", InterfaceHooks::hookSetIItemText);
+	t.add("SuicideNote", InterfaceHooks::hookSuicideNote);
+	t.add("JournalInit", InterfaceHooks::hookJournalInit);
+	t.add("JournalFlip", InterfaceHooks::hookJournalFlip);
+	t.add("JournalDestroy", [](Script &, const HookCall &) {
+		return true; // 0x4bfb00 only frees the font
+	});
+	t.add("BibleInit", InterfaceHooks::hookBibleInit);
+	t.add("BibleFlip", InterfaceHooks::hookBibleFlip);
 	t.add("SetIItemFocus", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
 		s._focus = c.args[0];
 		return true;
 	});
-	t.add("RegViewState", [](Script &s, const HookCall &c) {
-		if (!c.isVariable(0))
-			return false;
-		s._variables[c.action.args[0].value] = 0; // 0x47e9d0 clears the variable it registers
-		s._pos.stateVariable = c.action.args[0].value; // and keeps it as the view-state variable (0x6c1450)
-		return true;
-	});
+	t.add("RegViewState", InterfaceHooks::hookRegViewState);
 	t.add("PDAEscape", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;

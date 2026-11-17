@@ -31,7 +31,10 @@ MODULE_OBJS = \
 	subliminal.o \
 	vcdata.o \
 	vcdump.o \
-	xfiles.o
+	xfiles.o \
+	xfiles_input.o \
+	xfiles_media.o \
+	xfiles_view.o
 
 # This module can be built as a plugin
 ifeq ($(ENABLE_XFILES), DYNAMIC_PLUGIN)

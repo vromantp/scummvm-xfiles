@@ -499,7 +499,7 @@ void XFilesEngine::runGame() {
 			bool canKeep = _script->getVideoQueue().empty() && !_dialogBox.isOpen() && !_interface->pausesView();
 			_headCredits.update(gameMillis(), canKeep && !_interface->showsLayoutOtherThan(57082), canKeep);
 		}
-		// Screen +0x950 (B-010, 0x433e20): sticky. A queued clip's start recomputes it (0x510c30); a view, the
+		// Screen +0x950 (B-010, 0x433e20): sticky. A queued clip's start recomputes it (0x510c30; a still gives 1); a view, the
 		// location card, a head credit, interface items, a tool or the open kit set it (show events)
 		{
 			const Common::Array<uint32> &queue = _script->getVideoQueue();
@@ -510,7 +510,9 @@ void XFilesEngine::runGame() {
 			if (!clip)
 				_compose = true; // the view is shown or resumed
 			else if (clip != _composeClip) {
-				_compose = shown; // 0x488240 -> 0x433e20(screen, 0) at the clip's start
+				// 0x488240 -> 0x433e20(screen, 0) at the clip's start; a still sets no sound +0x50 and the view stays
+				// unsuspended, so 0x510c30 gives 1 (B-333)
+				_compose = shown || isStillVideo(clip);
 				debugC(1, kDebugScript, "-- compose %d at %u (clip %u)", _compose, gameMillis(), clip);
 			} else if (shown)
 				_compose = true; // a show event during the clip

@@ -49,7 +49,7 @@ void Script::travel() {
 	// flags, idea icons keep theirs), then all four old objects, whatever the new path shares, then the new
 	// four are activated. The exe also hides the inventory icon and clears the letterbox tint; the engine does
 	// not model those yet
-	_travelPending = false;
+	_travel.pending = false;
 	spendIcons(kClassEmotionIcon);
 	spendIcons(kClassActionIcon);
 	// The AI icon is hidden at 0x5068b0 and shown again here (0x493090) before the new node: its show handler
@@ -58,7 +58,7 @@ void Script::travel() {
 		_hooks->reshowAIIcon();
 	// A SwapDisc in the triggers of the travel waits for it to finish
 	_fireDepth++;
-	enter(_travelTo[0], _travelTo[1], _travelTo[2], _travelTo[3], true);
+	enter(_travel.to[0], _travel.to[1], _travel.to[2], _travel.to[3], true);
 	_fireDepth--;
 }
 
@@ -127,20 +127,20 @@ void Script::deactivateView() {
 	// The view is being left: an asset enabled by the deactivations (the shown asset's included) is not started
 	// (0x46f210)
 	_viewActive = false;
-	const bool wasLeaving = _viewLeaving;
-	_viewLeaving = true;
+	const bool wasLeaving = _travel.viewLeaving;
+	_travel.viewLeaving = true;
 	deactivateViewAsset();
 	if (_view && !_viewHeld)
 		fire(_view, kEventObjectDeactivation);
 	deactivateViewObjects();
-	_viewLeaving = wasLeaving;
+	_travel.viewLeaving = wasLeaving;
 }
 
 void Script::enterLeavePath() {
-	if (!_leavePending)
+	if (!_travel.leavePending)
 		return;
-	_leavePending = false;
-	enter(_leavePath[1], _leavePath[2], _leavePath[3], _leavePath[0]);
+	_travel.leavePending = false;
+	enter(_travel.leavePath[1], _travel.leavePath[2], _travel.leavePath[3], _travel.leavePath[0]);
 }
 
 int Script::hotActionFor(uint32 kind, bool &gunAnimation) const {
@@ -392,9 +392,9 @@ void Script::hotAction(int n) {
 	deactivateView();
 	_viewGone = true;
 	// A Set View in the view's Deactivation (45822 sets 45857): entered below unless the action has its own
-	const bool leaveSet = _leavePending;
-	uint32 leavePath[4] = {_leavePath[0], _leavePath[1], _leavePath[2], _leavePath[3]};
-	_leavePending = false;
+	const bool leaveSet = _travel.leavePending;
+	uint32 leavePath[4] = {_travel.leavePath[0], _travel.leavePath[1], _travel.leavePath[2], _travel.leavePath[3]};
+	_travel.leavePending = false;
 
 	if (act.stopSounds)
 		stopAllForTravel(); // 0x44d850(scene, 27): approximated by the travel sweep of the sounds
@@ -448,15 +448,15 @@ void Script::enter(uint32 node, uint32 location, uint32 viewPoint, uint32 view, 
 	const uint32 newPath[4] = { node, location, viewPoint, view };
 	const uint32 oldPath[4] = { _node, _location, _viewPoint, _view };
 	// Only a nav click passes a view mode (0x46ae70); every other way into a view cuts
-	_transition = _navTransition;
-	_transitionCentre = _navTransitionCentre;
-	_transitionEmpty = _navTransitionEmpty;
-	_navTransition = kTransitionCut;
+	_travel.transition = _travel.navTransition;
+	_travel.transitionCentre = _travel.navTransitionCentre;
+	_travel.transitionEmpty = _travel.navTransitionEmpty;
+	_travel.navTransition = kTransitionCut;
 	int first = 0;
 	while (!deactivateAll && first < 4 && oldPath[first] == newPath[first])
 		first++;
-	const bool wasDeactivating = _enterDeactivating;
-	_enterDeactivating = true;
+	const bool wasDeactivating = _travel.enterDeactivating;
+	_travel.enterDeactivating = true;
 	for (int i = 3; i >= first; i--) {
 		// A view still held (below) was never activated: entering another
 		// one drops it, as Action_DoSetView (0x46a950) cancels its activation
@@ -469,7 +469,7 @@ void Script::enter(uint32 node, uint32 location, uint32 viewPoint, uint32 view, 
 		} else if (oldPath[i])
 			fire(oldPath[i], kEventObjectDeactivation);
 	}
-	_enterDeactivating = wasDeactivating;
+	_travel.enterDeactivating = wasDeactivating;
 	if (first < 4) {
 		_viewHeld = false;
 		_viewActive = false;
@@ -484,16 +484,16 @@ void Script::enter(uint32 node, uint32 location, uint32 viewPoint, uint32 view, 
 		getObjectLabel(_data, viewPoint) + " / " + getObjectLabel(_data, view));
 	if (deactivateAll)
 		stopAllForTravel();
-	if (_travelDropped) {
+	if (_travel.dropped) {
 		// AlienBlast ran in the deactivations: the queued activations are dropped (0x41a770), the old picture stays.
 		// The path goes back to the old one, else syncView plays the dropped view (with its nav transition) under
 		// the white fade (B-289)
-		_travelDropped = false;
+		_travel.dropped = false;
 		_node = oldPath[0];
 		_location = oldPath[1];
 		_viewPoint = oldPath[2];
 		_view = oldPath[3];
-		_transition = kTransitionCut;
+		_travel.transition = kTransitionCut;
 		return;
 	}
 	for (int i = first; i < 3; i++)
@@ -656,7 +656,7 @@ void Script::updateViewAsset(uint32 id) {
 	// disables the clip 33974, whose Deactivation stops timer 0 (B-052).
 	// Only a change of the shown asset is modelled
 	VCView v;
-	if (!_viewActive || _viewHeld || _travelPending || isViewChangeQueued() || !_data.getView(_view, v))
+	if (!_viewActive || _viewHeld || _travel.pending || isViewChangeQueued() || !_data.getView(_view, v))
 		return;
 	Common::Array<uint32> ids;
 	_data.getMembers(v.assets, ids);
@@ -827,9 +827,9 @@ void Script::followNav(uint32 navId) {
 		return;
 	}
 	// The nav's view change is queued after its Mouse Click runners (0x46ae70), so the click's triggers see it
-	_navViewQueued = nav.target != _view;
+	_travel.navViewQueued = nav.target != _view;
 	fire(navId, kEventMouseClick);
-	_navViewQueued = false;
+	_travel.navViewQueued = false;
 	VCLocation location;
 	if (!_data.getLocation(_location, location))
 		return;
@@ -852,17 +852,17 @@ void Script::setNavTransition(const VCNav &nav) {
 	// 0x46ae70: the view mode comes from the cursor of the nav's hotspot, 284 Left, 285 Right, 286 Forward (the
 	// literals at 0x6b2aac); any other cursor cuts. The wipe opens from the middle of the hotspot's rectangle, from
 	// the click point when the rectangle is empty
-	_navTransition = kTransitionCut;
-	_navTransitionEmpty = true;
-	_navTransitionCentre = _clickPoint;
+	_travel.navTransition = kTransitionCut;
+	_travel.navTransitionEmpty = true;
+	_travel.navTransitionCentre = _travel.clickPoint;
 	VCHotSpot hotSpot;
 	if (!_data.getHotSpot(nav.hotSpot, hotSpot))
 		return;
 	if (hotSpot.cursor >= 284 && hotSpot.cursor <= 286)
-		_navTransition = kTransitionLeft + (hotSpot.cursor - 284);
-	_navTransitionEmpty = hotSpot.rect.left >= hotSpot.rect.right || hotSpot.rect.top >= hotSpot.rect.bottom;
-	if (!_navTransitionEmpty)
-		_navTransitionCentre = Common::Point((hotSpot.rect.left + hotSpot.rect.right) / 2, (hotSpot.rect.top + hotSpot.rect.bottom) / 2);
+		_travel.navTransition = kTransitionLeft + (hotSpot.cursor - 284);
+	_travel.navTransitionEmpty = hotSpot.rect.left >= hotSpot.rect.right || hotSpot.rect.top >= hotSpot.rect.bottom;
+	if (!_travel.navTransitionEmpty)
+		_travel.navTransitionCentre = Common::Point((hotSpot.rect.left + hotSpot.rect.right) / 2, (hotSpot.rect.top + hotSpot.rect.bottom) / 2);
 }
 
 void Script::goTo(uint32 target) {

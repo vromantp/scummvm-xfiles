@@ -76,8 +76,8 @@ void Script::addGameHooks() {
 			return false;
 		// The last call in an event wins (0x4cfc70 replaces the pending travel)
 		for (int i = 0; i < 4; i++)
-			s._travelTo[i] = c.args[i];
-		s._travelPending = true;
+			s._travel.to[i] = c.args[i];
+		s._travel.pending = true;
 		return true;
 	});
 	t.add("NukeAllIcons", [](Script &s, const HookCall &) {
@@ -272,8 +272,8 @@ void Script::addInterfaceHooks() {
 	t.add("AlienBlast", [](Script &s, const HookCall &) {
 		// 0x4b6220: drops the queued activations of nodes, locations, viewpoints and views (0x41a770), then flashes
 		// the screen (B-199). Only a travel queued behind the deactivation that ran it exists (B-204)
-		if (s._enterDeactivating) {
-			s._travelDropped = true;
+		if (s._travel.enterDeactivating) {
+			s._travel.dropped = true;
 			s.log("      -- AlienBlast: queued travel dropped");
 		}
 		if (s._hooks)
@@ -549,7 +549,7 @@ void Script::addStateHooks() {
 		VCView view, target;
 		if (!s._data.getView(s._view, view) || !s._data.getView(c.args[5], target))
 			return true;
-		const Common::Point click = s._clickPoint;
+		const Common::Point click = s._travel.clickPoint;
 		uint32 character = 0;
 		Common::Array<uint32> ids;
 		s._data.getMembers(view.characters, ids);

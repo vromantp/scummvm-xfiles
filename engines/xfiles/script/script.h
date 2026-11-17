@@ -306,15 +306,15 @@ public:
 		kTransitionRight,  ///< slide, the other way
 		kTransitionForward ///< wipe opening out from the hotspot
 	};
-	int getTransition() const { return _transition; }
+	int getTransition() const { return _travel.transition; }
 	/** The wipe's centre in screen coordinates: the hotspot's centre, the click point when its rectangle is empty. */
 	bool getTransitionCentre(Common::Point &centre) const {
-		centre = _transitionCentre;
+		centre = _travel.transitionCentre;
 		return true;
 	}
 	/** The point of the click that follows a nav, for a wipe from an empty hotspot rectangle. */
-	void setClickPoint(const Common::Point &p) { _clickPoint = p; }
-	void clearTransition() { _transition = kTransitionCut; }
+	void setClickPoint(const Common::Point &p) { _travel.clickPoint = p; }
+	void clearTransition() { _travel.transition = kTransitionCut; }
 	bool isCameraEnabled() const { return _cameraEnabled && isHolding() && getVariable(_heldVariable) == 3; }
 	/**
 	 * Camera_OnMouseClick (0x4f26a0) at a click in the band, for the camera in hand: the shutter, the photo and the
@@ -478,7 +478,7 @@ public:
 	/** The current view has been activated (not just entered, or held while a video plays). */
 	bool isViewActive() const { return _viewActive; }
 	/// An event is half-run (inside fire(), a fade loop or a pending travel): a snapshot now would lose its rest
-	bool isBusy() const { return _fireDepth || _inEvent || _travelPending; }
+	bool isBusy() const { return _fireDepth || _inEvent || _travel.pending; }
 	/** Queued videos; the first one is on screen. */
 	const Common::Array<uint32> &getVideoQueue() const { return _videoQueue; }
 	/** How long the first video plays, in ms; 0 for all of it. */
@@ -938,11 +938,6 @@ private:
 	Common::Array<uint32> _inventory, _evidence, _history;
 	Common::Array<VCPhoto> _photos;            ///< The VCPhotos in database order
 	int32 _photosOnCamera;                     ///< VCGameState +46: taken, not yet downloaded
-	int _navTransition = kTransitionCut;       ///< The mode of the nav being followed, taken by enter()
-	int _transition = kTransitionCut;          ///< The mode of the view entered last, until the engine plays it
-	Common::Point _navTransitionCentre, _transitionCentre;
-	bool _navTransitionEmpty = true, _transitionEmpty = true;
-	Common::Point _clickPoint = Common::Point(320, 240); ///< The last click on a nav, the screen centre when none
 	bool _cameraEnabled;                       ///< The camera in hand was taken outside a special view (Camera +0x1c0)
 	bool firesOnRestore(uint32 id) const;
 	int _restoreMode;                          ///< Position mode while restore() runs, else -1: which Object Activation fires
@@ -1059,19 +1054,31 @@ private:
 	};
 	Common::Array<ActionFrame> _actionFrames;  ///< The running action lists, outermost first (isViewChangeQueued)
 	uint32 _nextId;                            ///< The database's next free object ID (new VCStrings take it)
-	bool _navViewQueued;                       ///< A nav click is running: its view change is queued (0x46f210)
-	bool _travelPending;                       ///< SwapDisc was called in this event (0x6b19a8)
-	uint32 _travelTo[4];                       ///< Node, location, viewpoint and view of the pending travel
 	bool _viewHeld;                            ///< The view is entered but not activated until the video ends
 	bool _viewActive;                          ///< The view's activation has run
 	bool _viewGone;                            ///< A gun click already deactivated the view (hotClick): enter() skips it
-	bool _enterDeactivating;                   ///< enter() runs the old path's deactivations (AlienBlast drops the queued travel)
-	bool _travelDropped;                       ///< AlienBlast ran in those deactivations: enter() activates nothing (B-204)
-	bool _viewLeaving;                         ///< deactivateView() runs: a Set View in it is deferred (B-205)
-	bool _leavePending;                        ///< A Set View ran while the view was left: its path waits in _leavePath
-	uint32 _leavePath[4];                      ///< Node, location, viewpoint and view of that Set View
 	uint32 _viewStateVariable;                 ///< The variable RegViewState registered; hotAction writes letters into it
 	bool _viewAssetHeld;                       ///< The view's new asset is activated when the video ends
+
+	/** The view change in progress: transition modes, the pending travel, the enter() and leave flags */
+	struct Travel {
+		int navTransition = kTransitionCut;       ///< The mode of the nav being followed, taken by enter()
+		int transition = kTransitionCut;          ///< The mode of the view entered last, until the engine plays it
+		Common::Point navTransitionCentre;
+		Common::Point transitionCentre;
+		bool navTransitionEmpty = true;
+		bool transitionEmpty = true;
+		Common::Point clickPoint = Common::Point(320, 240); ///< The last click on a nav, the screen centre when none
+		bool navViewQueued = false;                ///< A nav click is running: its view change is queued (0x46f210)
+		bool pending = false;                       ///< SwapDisc was called in this event (0x6b19a8)
+		uint32 to[4] = {};                          ///< Node, location, viewpoint and view of the pending travel
+		bool enterDeactivating = false;          ///< enter() runs the old path's deactivations (AlienBlast drops the queued travel)
+		bool dropped = false;                       ///< AlienBlast ran in those deactivations: enter() activates nothing (B-204)
+		bool viewLeaving = false;                   ///< deactivateView() runs: a Set View in it is deferred (B-205)
+		bool leavePending = false;                  ///< A Set View ran while the view was left: its path waits in leavePath
+		uint32 leavePath[4] = {};                   ///< Node, location, viewpoint and view of that Set View
+	};
+	Travel _travel;
 };
 
 } // End of namespace XFiles

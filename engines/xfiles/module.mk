@@ -31,6 +31,7 @@ MODULE_OBJS = \
 	media/sound.o \
 	features/subliminal.o \
 	features/tools.o \
+	features/tools_view.o \
 	script/vcdata.o \
 	debug/vcdump.o \
 	xfiles.o \

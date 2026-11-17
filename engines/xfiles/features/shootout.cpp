@@ -18,13 +18,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
 #include "common/algorithm.h"
 #include "common/debug.h"
 #include "common/textconsole.h"
 
+#include "xfiles/debug/vcdump.h"
 #include "xfiles/detection.h"
 #include "xfiles/script/script.h"
-#include "xfiles/debug/vcdump.h"
 
 namespace XFiles {
 

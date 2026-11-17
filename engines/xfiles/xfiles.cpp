@@ -487,18 +487,7 @@ void XFilesEngine::runGame() {
 		else if (input.escape && !_menuOpen && _script->getVideoQueue().empty())
 			openGameMenu();
 		if (_menuOpen) {
-			updateMenu();
-			hoverMenu(_mouse);
-			if (input.click)
-				menuChoice(clickMenu(input.pos));
-			if (_menuOpen) {
-				_cursors->show(0);
-				_cursors->update(getPreference(kPrefTranslucency));
-				drawMenu();
-			}
-			present();
-			updateShots();
-			runSteps();
+			runMenuFrame(input);
 			continue;
 		}
 		updateTimers();
@@ -519,67 +508,87 @@ void XFilesEngine::runGame() {
 		_movieCursor = movie;
 		if (movie)
 			_whiteHold = false;
-		if (movie) {
-			// B-290: a movie does not block the main loop. Inside the video's rect a click goes only to a live .HOT
-			// entry (B-031), else it is dropped; outside it the bar's icons and items take it. The X corner stays
-			// off during a video (user decision 2026-10-14; the exe opens the menu there)
-			if (input.click) {
-				Common::Rect rect = movieRect();
-				if (rect.isEmpty() || rect.contains(input.pos)) {
-					if (_hotMovie == _video && hotKindAt(input.pos))
-						handleClick(input.pos);
-				} else if (_interface->hitTest(input.pos).kind != Interface::kHitNone) {
-					handleClick(input.pos);
-				}
-			}
-			if (!_script->getVideoQueue().empty())
-				playQueuedVideo(input);
-			// The bar, icon rolls and rollover text run under a movie; the rolls freeze inside the video's rect
-			updateInterface(true);
-			// The exe never hides the cursor for a movie: the refresh finds the playing video (B-285)
-			updateCursor();
-		} else {
-			// A queued still is shown over the view, which stays live (asset-play.md)
-			if (still)
-				updateQueuedStill();
-			else if (_video->isOpen()) {
-				releaseVideoHot();
-				_video->close(); // Stopped by the script
-			}
-			syncView();
-			updateInterface();
-			updateViewPause();
-			updateDialogBox();
-			if (_whiteHold) {
-				// 59824 plays with the script and the input held in the exe (movie.start wait=1): nothing answers
-				// a click until its end starts the death clip (B-288)
-				input.click = false;
-				input.rightClick = false;
-				input.release = false;
-			}
-			if (input.click)
-				handleClick(input.pos);
-			if (input.rightClick)
-				handleRightClick(input.rightPos);
-			if (input.release)
-				handleRelease(input.releasePos);
-			updateCursor();
-			drawView();
-			if (_whiteHold)
-				_screen.fillRect(Common::Rect(_screen.w, _screen.h), _screen.format.RGBToColor(255, 255, 255));
-		}
-		if (movie) {
-			// A playing movie: drawView does not run; the bar (open by the mouse, seen in the original 2026-11-09)
-			// and the text layers still go over it
-			_interface->drawBar(_screen);
-			_captions.drawCard(_screen);
-			_headCredits.draw(_screen);
-			_subliminal.draw(_screen);
-		}
+		if (movie)
+			runMovieFrame(input);
+		else
+			runViewFrame(input, still);
 		present();
 		updateShots();
 		runSteps();
 	}
+}
+
+void XFilesEngine::runMenuFrame(const Input &input) {
+	updateMenu();
+	hoverMenu(_mouse);
+	if (input.click)
+		menuChoice(clickMenu(input.pos));
+	if (_menuOpen) {
+		_cursors->show(0);
+		_cursors->update(getPreference(kPrefTranslucency));
+		drawMenu();
+	}
+	present();
+	updateShots();
+	runSteps();
+}
+
+void XFilesEngine::runMovieFrame(const Input &input) {
+	// B-290: a movie does not block the main loop. Inside the video's rect a click goes only to a live .HOT
+	// entry (B-031), else it is dropped; outside it the bar's icons and items take it. The X corner stays
+	// off during a video (user decision 2026-10-14; the exe opens the menu there)
+	if (input.click) {
+		Common::Rect rect = movieRect();
+		if (rect.isEmpty() || rect.contains(input.pos)) {
+			if (_hotMovie == _video && hotKindAt(input.pos))
+				handleClick(input.pos);
+		} else if (_interface->hitTest(input.pos).kind != Interface::kHitNone) {
+			handleClick(input.pos);
+		}
+	}
+	if (!_script->getVideoQueue().empty())
+		playQueuedVideo(input);
+	// The bar, icon rolls and rollover text run under a movie; the rolls freeze inside the video's rect
+	updateInterface(true);
+	// The exe never hides the cursor for a movie: the refresh finds the playing video (B-285)
+	updateCursor();
+	// A playing movie: drawView does not run; the bar (open by the mouse, seen in the original 2026-11-09)
+	// and the text layers still go over it
+	_interface->drawBar(_screen);
+	_captions.drawCard(_screen);
+	_headCredits.draw(_screen);
+	_subliminal.draw(_screen);
+}
+
+void XFilesEngine::runViewFrame(Input input, bool still) {
+	// A queued still is shown over the view, which stays live (asset-play.md)
+	if (still)
+		updateQueuedStill();
+	else if (_video->isOpen()) {
+		releaseVideoHot();
+		_video->close(); // Stopped by the script
+	}
+	syncView();
+	updateInterface();
+	updateViewPause();
+	updateDialogBox();
+	if (_whiteHold) {
+		// 59824 plays with the script and the input held in the exe (movie.start wait=1): nothing answers
+		// a click until its end starts the death clip (B-288)
+		input.click = false;
+		input.rightClick = false;
+		input.release = false;
+	}
+	if (input.click)
+		handleClick(input.pos);
+	if (input.rightClick)
+		handleRightClick(input.rightPos);
+	if (input.release)
+		handleRelease(input.releasePos);
+	updateCursor();
+	drawView();
+	if (_whiteHold)
+		_screen.fillRect(Common::Rect(_screen.w, _screen.h), _screen.format.RGBToColor(255, 255, 255));
 }
 
 void XFilesEngine::restartGame() {

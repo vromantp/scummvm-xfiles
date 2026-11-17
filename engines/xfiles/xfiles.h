@@ -201,6 +201,12 @@ private:
 	};
 
 	void runGame();
+	/** One main-loop frame with the menu open: update, click, draw. */
+	void runMenuFrame(const Input &input);
+	/** One main-loop frame with a movie playing: clicks, the video, the bar and the text layers over it. */
+	void runMovieFrame(const Input &input);
+	/** One main-loop frame of the view (a still may be over it): sync, clicks, cursor, draw. */
+	void runViewFrame(Input input, bool still);
 	void createScript();
 	/** The new-game half of runGame (Game_Start, XFiles.exe 0x48cd70). */
 	void startNewGame();

@@ -647,7 +647,7 @@ void Script::logHook(const Common::String &name, HookStatus status) {
 }
 
 bool Script::isHolding() const {
-	return _heldVariable && getVariable(_heldVariable) != _heldNone;
+	return _tool.variable && getVariable(_tool.variable) != _tool.none;
 }
 
 void Script::showJournalPages() {
@@ -695,8 +695,8 @@ void Script::showBiblePages(bool init) {
 }
 
 void Script::clearHeldItem() {
-	if (_heldVariable)
-		_variables[_heldVariable] = _heldNone;
+	if (_tool.variable)
+		_variables[_tool.variable] = _tool.none;
 }
 
 void Script::putBack() {
@@ -704,19 +704,19 @@ void Script::putBack() {
 	// deactivation (0x437c20) resets the variable
 	if (!isHolding())
 		return;
-	debugC(1, kDebugScript, "-- #%u put back", _heldCursorItem);
-	int32 held = getVariable(_heldVariable);
+	debugC(1, kDebugScript, "-- #%u put back", _tool.cursorItem);
+	int32 held = getVariable(_tool.variable);
 	clearHeldItem();
-	_heldCursorItem = 0; // Inv_SetHeldCursor(0)
+	_tool.cursorItem = 0; // Inv_SetHeldCursor(0)
 	if (_hooks)
 		_hooks->heldItemChanged(0);
 	// The binoculars' held object deactivates (0x51c160): the base first, then the view change back
-	if (_binocularsHeld) {
-		_binocularsHeld = false;
+	if (_tool.binocularsHeld) {
+		_tool.binocularsHeld = false;
 		binocularsView(false);
-		_binocularsMode = 0;
+		_tool.binocularsMode = 0;
 	}
-	toolPause(held, _heldNone); // 0x5078f0(1) after the tool object's deactivation (after the view change back)
+	toolPause(held, _tool.none); // 0x5078f0(1) after the tool object's deactivation (after the view change back)
 }
 
 bool Script::hasInventoryIcon(uint32 id) const {
@@ -727,10 +727,10 @@ bool Script::hasInventoryIcon(uint32 id) const {
 }
 
 void Script::selectInventory(uint32 id) {
-	if (_heldCursorItem == id)
+	if (_tool.cursorItem == id)
 		return;
 	putBack();
-	_heldCursorItem = id; // Inv_SetHeldCursor, before the Mouse Click triggers
+	_tool.cursorItem = id; // Inv_SetHeldCursor, before the Mouse Click triggers
 	if (_hooks)
 		_hooks->heldItemChanged(id);
 	debugC(1, kDebugScript, "-- click:%u (inventory)", id);

@@ -315,7 +315,7 @@ public:
 	/** The point of the click that follows a nav, for a wipe from an empty hotspot rectangle. */
 	void setClickPoint(const Common::Point &p) { _travel.clickPoint = p; }
 	void clearTransition() { _travel.transition = kTransitionCut; }
-	bool isCameraEnabled() const { return _cameraEnabled && isHolding() && getVariable(_heldVariable) == 3; }
+	bool isCameraEnabled() const { return _tool.cameraEnabled && isHolding() && getVariable(_tool.variable) == 3; }
 	/**
 	 * Camera_OnMouseClick (0x4f26a0) at a click in the band, for the camera in hand: the shutter, the photo and the
 	 * count, the camera actions of the objects under the viewfinder, the second reaction of a character.
@@ -528,7 +528,7 @@ public:
 	/** The end is taken: asked (the question was shown) writes 0 back to the variable, as 0x4fbd60 does. */
 	void answerEndGame(bool asked);
 	/** The variable registered by RegCurrInvVar (iCurrInventory); 0 before it. */
-	uint32 getHeldVariable() const { return _heldVariable; }
+	uint32 getHeldVariable() const { return _tool.variable; }
 	/** An item is in hand: iCurrInventory is not Inventory_None. */
 	bool isHolding() const;
 	/** The held-item object's deactivation (XFiles.exe 0x437c20): iCurrInventory is Inventory_None again. */
@@ -540,9 +540,9 @@ public:
 	/** A gun click on a .HOT hotspot of the given kind (HotSpotObj_OnMouseClick 0x4b4470). */
 	void hotClick(uint32 kind);
 	/** The value of the held inventory item (Inv_CurrentValue), or 0 when nothing is held. */
-	int32 getHeldValue() const { return isHolding() ? getVariable(_heldVariable) : 0; }
+	int32 getHeldValue() const { return isHolding() ? getVariable(_tool.variable) : 0; }
 	/** The gun (OnGunClick's inventory value) is in hand: .HOT hotspots of the shootout take clicks and show the tool cursor. */
-	bool isGunHeld() const { return _gunValue && isHolding() && getVariable(_heldVariable) == (int32)_gunValue; }
+	bool isGunHeld() const { return _tool.gunValue && isHolding() && getVariable(_tool.variable) == (int32)_tool.gunValue; }
 	/** The gun in hand and a click no object took (0x4cb520): the shot, and in some locations a remark after it. */
 	void gunClick();
 	/** A sound that follows a movie of its own (the gun's remark): played as a Do Asset action would. */
@@ -935,7 +935,6 @@ private:
 	Common::Array<uint32> _inventory, _evidence, _history;
 	Common::Array<VCPhoto> _photos;            ///< The VCPhotos in database order
 	int32 _photosOnCamera;                     ///< VCGameState +46: taken, not yet downloaded
-	bool _cameraEnabled;                       ///< The camera in hand was taken outside a special view (Camera +0x1c0)
 	bool firesOnRestore(uint32 id) const;
 	int _restoreMode;                          ///< Position mode while restore() runs, else -1: which Object Activation fires
 	int32 _disc;                               ///< Disc in use (VCGameState +42)
@@ -953,12 +952,6 @@ private:
 	Common::Array<uint32> _shanksVars[3];      ///< RegShanksNode2, 3 and 6: their variables, in argument order
 	Common::Array<uint32> _nodeVars[7];        ///< RegNode2..6Vars, RegLink2/3Vars: their variables, in argument order
 	uint32 _viewSpecialVariable;               ///< RegViewSpecial: iCurrViewSpecial
-	uint32 _heldVariable;                      ///< RegCurrInvVar: iCurrInventory
-	int32 _heldNone;                           ///< Its Inventory_None value
-	uint32 _gunValue;                          ///< The inventory value OnGunClick set (0 until the gun is taken)
-	uint32 _heldCursorItem;                    ///< Inv_Held() + 4 (0x6b8974): the VCInventory ID whose cursor is held
-	int _binocularsMode;                       ///< Mode out of the held binoculars object (+0x10C); the drawing is B-005
-	bool _binocularsHeld;                      ///< The binoculars' held object (0x51baf0) exists: putBack() runs its view change back
 	Common::Array<uint32> _pressed;            ///< See takePressedItems()
 	uint32 _held;                              ///< The interface item the mouse button is down on (press()), 0 for none
 	Common::HashMap<uint, int32> _preferences; ///< See setPreference()
@@ -1099,6 +1092,18 @@ private:
 		bool glowOn = false;                        ///< The glow flag (0x6b2aa8): SetAIGlow(1) sets it with level 0
 	};
 	Hint _ai;
+
+	/** The item in hand and the tool objects */
+	struct HeldTool {
+		uint32 variable = 0;                      ///< RegCurrInvVar: iCurrInventory
+		int32 none = 0;                           ///< Its Inventory_None value
+		uint32 gunValue = 0;                      ///< The inventory value OnGunClick set (0 until the gun is taken)
+		uint32 cursorItem = 0;                    ///< Inv_Held() + 4 (0x6b8974): the VCInventory ID whose cursor is held
+		int binocularsMode = 0;                      ///< Mode out of the held binoculars object (+0x10C); the drawing is B-005
+		bool binocularsHeld = false;                 ///< The binoculars' held object (0x51baf0) exists: putBack() runs its view change back
+		bool cameraEnabled = false;                  ///< The camera in hand was taken outside a special view (Camera +0x1c0)
+	};
+	HeldTool _tool;
 };
 
 } // End of namespace XFiles

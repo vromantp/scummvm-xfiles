@@ -81,7 +81,7 @@ static uint32 getTriggerOffset(uint32 classId) {
 	}
 }
 
-Script::Script(const VCData &data) : _data(data), _hooks(nullptr), _phone(*this, data), _computer(*this), _pda(*this, data), _prefs(*this), _texts(nullptr), _timerSerial(0), _random(1), _fixedSeeds(false), _seedBase(0), _restoreMode(-1), _disc(1), _photosOnCamera(0), _cameraEnabled(false), _evidenceRowShown(false), _tint(0), _restored(false), _restorePending(false), _focus(0), _held(0), _currNodeVariable(0), _viewSpecialVariable(0), _heldVariable(0), _heldNone(0), _gunValue(0), _heldCursorItem(0), _binocularsMode(0), _binocularsHeld(false), _fireSerial(0), _inEvent(false), _viewSerial(0), _fireDepth(0), _nextId(0), _endGamePending(false), _endGameVar(0), _endGameValue(0), _prefArtificialIntuition(0), _cookEmailCount(0), _cookEmailFlag(0), _uberParanoia(0), _journalLeft(0), _bibleLeft(0) {
+Script::Script(const VCData &data) : _data(data), _hooks(nullptr), _phone(*this, data), _computer(*this), _pda(*this, data), _prefs(*this), _texts(nullptr), _timerSerial(0), _random(1), _fixedSeeds(false), _seedBase(0), _restoreMode(-1), _disc(1), _photosOnCamera(0), _evidenceRowShown(false), _tint(0), _restored(false), _restorePending(false), _focus(0), _held(0), _currNodeVariable(0), _viewSpecialVariable(0), _fireSerial(0), _inEvent(false), _viewSerial(0), _fireDepth(0), _nextId(0), _endGamePending(false), _endGameVar(0), _endGameValue(0), _prefArtificialIntuition(0), _cookEmailCount(0), _cookEmailFlag(0), _uberParanoia(0), _journalLeft(0), _bibleLeft(0) {
 	memset(_prefVariables, 0, sizeof(_prefVariables));
 	memset(_shootVars, 0, sizeof(_shootVars));
 	memset(_shootIdx, 0, sizeof(_shootIdx));
@@ -809,7 +809,7 @@ void Script::click(uint32 id, const Common::Point *at) {
 	// no trigger; none (slot 10 or empty) opens the box as with nothing in hand. With the gun the exe first plays
 	// the held item's animation once (blocking; not ported)
 	_dlg.clickOpensBox = !isHolding();
-	if (clickClass == kClassCharView && isHolding() && !isTestedOnClick(id, _heldVariable)) {
+	if (clickClass == kClassCharView && isHolding() && !isTestedOnClick(id, _tool.variable)) {
 		if (uint32 asset = getHeldReaction(id))
 			playStock(asset);
 		else
@@ -857,8 +857,8 @@ void Script::roll(uint32 id, bool into) {
 	fire(id, into ? kEventRollInto : kEventRollOutOf);
 	// CharView_OnRoll 0x443010: rolling into a character with an Atoms topic with the gun, handcuffs or stiletto in
 	// hand that its triggers do not take: S5 "Don't do that"
-	if (into && isHolding() && _data.getClassOf(id) == kClassCharView && !isTestedOnClick(id, _heldVariable, kEventRollInto)) {
-		int32 item = getVariable(_heldVariable);
+	if (into && isHolding() && _data.getClassOf(id) == kClassCharView && !isTestedOnClick(id, _tool.variable, kEventRollInto)) {
+		int32 item = getVariable(_tool.variable);
 		uint32 slots[kReactionSlots];
 		if ((item == 9 || item == 10 || item == 23) && getReactionSlots(id, slots))
 			playStock(slots[5]);

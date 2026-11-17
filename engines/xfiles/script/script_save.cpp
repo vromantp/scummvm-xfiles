@@ -37,7 +37,7 @@ void Script::start() {
 	log("== start: " + nameOrNone(_data, title.name));
 	// Game_Start (0x48cd70) writes the preferences before the title activates
 	shootoutReset(); // 0x48ccd0
-	_gunValue = 0;
+	_tool.gunValue = 0;
 	loadPreferences();
 	fire(title.id, kEventObjectActivation);
 }

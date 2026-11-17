@@ -197,7 +197,7 @@ void Script::enableTarget(uint32 target, bool value) {
 	bool was = isEnabled(target);
 	_enabled[target] = value;
 	// The held item disabled goes back (0x436c20)
-	if (!value && _heldCursorItem && _heldCursorItem == target)
+	if (!value && _tool.cursorItem && _tool.cursorItem == target)
 		putBack();
 	// An evidence icon gets its object when it is enabled (0x4201a0),
 	// firing its Object Activation; disabling removes its kit icon too
@@ -794,7 +794,7 @@ uint32 Script::getHeldReaction(uint32 charViewId) {
 		return 0;
 	// 0x490d50
 	int slot = kReactionNone;
-	switch (getVariable(_heldVariable)) {
+	switch (getVariable(_tool.variable)) {
 	case 1:
 	case 4:
 	case 6:
@@ -842,7 +842,7 @@ bool Script::hasHeldReactionSlot(uint32 charViewId) const {
 	if (!isHolding() || !getReactionSlots(charViewId, slots))
 		return false;
 	// The items whose slot at 0x490d50 is not 10 (none)
-	int32 item = getVariable(_heldVariable);
+	int32 item = getVariable(_tool.variable);
 	switch (item) {
 	case 1:
 	case 4:

@@ -136,7 +136,7 @@ bool Script::binocularsBlock(const Common::Point &pos) const {
 int Script::heldToolType() const {
 	if (!isHolding())
 		return 8;
-	switch (getVariable(_heldVariable)) {
+	switch (getVariable(_tool.variable)) {
 	case 2:
 		return 1;
 	case 3:
@@ -197,8 +197,8 @@ bool Script::runCameraActions(uint32 id) {
 			if (!_data.getAction(t.actions[j], a) || !a.conditional)
 				continue;
 			const VCExpression &c = a.condition;
-			bool tested = c.lhs.kind == kOperandVariable && c.lhs.value == _heldVariable;
-			tested = tested || (c.rhs.kind == kOperandVariable && c.rhs.value == _heldVariable);
+			bool tested = c.lhs.kind == kOperandVariable && c.lhs.value == _tool.variable;
+			tested = tested || (c.rhs.kind == kOperandVariable && c.rhs.value == _tool.variable);
 			LocalVariables locals;
 			if (tested && test(c, EventFields(), locals)) {
 				execute(a, kEventMouseClick, EventFields(), locals);
@@ -326,11 +326,11 @@ void Script::addToolHooks() {
 			return false;
 		// 0x4e1b30: the item goes into the variable if it is not in hand; then, unless the view has a view change of the
 		// binoculars' own (not ported), a character reacts
-		if (s._heldVariable && s.getVariable(s._heldVariable) != c.args[0]) {
-			int32 prior = s.getVariable(s._heldVariable);
-			s._variables[s._heldVariable] = c.args[0];
-			s._binocularsHeld = s.isHolding(); // stands for the held object 0x51baf0
-			s._binocularsMode = s.binocularsMode();
+		if (s._tool.variable && s.getVariable(s._tool.variable) != c.args[0]) {
+			int32 prior = s.getVariable(s._tool.variable);
+			s._variables[s._tool.variable] = c.args[0];
+			s._tool.binocularsHeld = s.isHolding(); // stands for the held object 0x51baf0
+			s._tool.binocularsMode = s.binocularsMode();
 			s.toolPause(prior, c.args[0]); // its activation, 0x51c130
 			if (!s.binocularsView(true))
 				s.toolReaction(c.args[0]);
@@ -341,9 +341,9 @@ void Script::addToolHooks() {
 		if (!c.has(1))
 			return false;
 		// 0x4e1d80
-		if (s._heldVariable && s.getVariable(s._heldVariable) != c.args[0]) {
-			s.toolPause(s.getVariable(s._heldVariable), c.args[0]);
-			s._variables[s._heldVariable] = c.args[0];
+		if (s._tool.variable && s.getVariable(s._tool.variable) != c.args[0]) {
+			s.toolPause(s.getVariable(s._tool.variable), c.args[0]);
+			s._variables[s._tool.variable] = c.args[0];
 			s.toolReaction(c.args[0]);
 		}
 		return true;
@@ -352,9 +352,9 @@ void Script::addToolHooks() {
 		if (!c.has(1))
 			return false;
 		// 0x4e1f80
-		if (s._heldVariable && s.getVariable(s._heldVariable) != c.args[0]) {
-			s.toolPause(s.getVariable(s._heldVariable), c.args[0]);
-			s._variables[s._heldVariable] = c.args[0];
+		if (s._tool.variable && s.getVariable(s._tool.variable) != c.args[0]) {
+			s.toolPause(s.getVariable(s._tool.variable), c.args[0]);
+			s._variables[s._tool.variable] = c.args[0];
 			s.toolReaction(c.args[0]);
 		}
 		return true;
@@ -364,10 +364,10 @@ void Script::addToolHooks() {
 			return false;
 		// 0x4e1c50: no character reaction for the camera (it passes 3 to Tool_CharReaction). The camera object is
 		// enabled unless the view is a special one (iCurrViewSpecial 1)
-		if (s._heldVariable && s.getVariable(s._heldVariable) != c.args[0]) {
-			s.toolPause(s.getVariable(s._heldVariable), c.args[0]);
-			s._variables[s._heldVariable] = c.args[0];
-			s._cameraEnabled = !s._viewSpecialVariable || s.getVariable(s._viewSpecialVariable) != 1;
+		if (s._tool.variable && s.getVariable(s._tool.variable) != c.args[0]) {
+			s.toolPause(s.getVariable(s._tool.variable), c.args[0]);
+			s._variables[s._tool.variable] = c.args[0];
+			s._tool.cameraEnabled = !s._viewSpecialVariable || s.getVariable(s._viewSpecialVariable) != 1;
 		}
 		return true;
 	});
@@ -375,26 +375,26 @@ void Script::addToolHooks() {
 		if (!c.has(1))
 			return false;
 		// 0x4e1e80: the gun is taken like the camera, without a character reaction (no Tool_CharReaction)
-		if (s._heldVariable && s.getVariable(s._heldVariable) != c.args[0])
-			s._variables[s._heldVariable] = c.args[0];
-		s._gunValue = c.args[0];
+		if (s._tool.variable && s.getVariable(s._tool.variable) != c.args[0])
+			s._variables[s._tool.variable] = c.args[0];
+		s._tool.gunValue = c.args[0];
 		return true;
 	});
 	t.add("RegCurrInvVar", [](Script &s, const HookCall &c) {
 		if (!c.has(2) || !c.isVariable(0))
 			return false;
 		// 0x458e60: the variable starts as "nothing in hand"
-		s._heldVariable = c.action.args[0].value;
-		s._heldNone = c.args[1];
-		s._variables[s._heldVariable] = s._heldNone;
+		s._tool.variable = c.action.args[0].value;
+		s._tool.none = c.args[1];
+		s._variables[s._tool.variable] = s._tool.none;
 		return true;
 	});
 	t.add("OnInvClick", [](Script &s, const HookCall &c) {
 		if (!c.has(1))
 			return false;
 		// Inv_Select 0x49b410: the item's value goes into the variable
-		if (s._heldVariable)
-			s._variables[s._heldVariable] = c.args[0];
+		if (s._tool.variable)
+			s._variables[s._tool.variable] = c.args[0];
 		return true;
 	});
 	t.add("SelectInv", [](Script &s, const HookCall &c) {
@@ -420,7 +420,7 @@ void Script::addToolHooks() {
 		if (!c.has(1))
 			return false;
 		// 0x50a570: 0 puts back any item, else only that one
-		if (c.args[0] == 0 || s._heldCursorItem == (uint32)c.args[0])
+		if (c.args[0] == 0 || s._tool.cursorItem == (uint32)c.args[0])
 			s.putBack();
 		return true;
 	});
@@ -438,7 +438,7 @@ void Script::addToolHooks() {
 				s.log(Common::String::format("      PDA refused: bDisablePDA = 1, alert #%u", kPDAAlertSound));
 				if (s._hooks)
 					s._hooks->playAsset(kPDAAlertSound, kModePlayOnce, false, 0, 0);
-				s._heldCursorItem = 0;
+				s._tool.cursorItem = 0;
 				if (s._hooks)
 					s._hooks->heldItemChanged(0);
 				return true;
@@ -449,7 +449,7 @@ void Script::addToolHooks() {
 		if (s.isHolding()) {
 			s.putBack();
 		} else {
-			s._heldCursorItem = 0;
+			s._tool.cursorItem = 0;
 			if (s._hooks)
 				s._hooks->heldItemChanged(0);
 		}

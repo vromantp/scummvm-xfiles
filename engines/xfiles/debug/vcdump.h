@@ -31,7 +31,6 @@ class NeoFile;
 class Script;
 class VCData;
 struct VCSave;
-struct VCSave;
 
 /*
  * Readable dumps of the databases for the debugger. The text is UTF-8 and

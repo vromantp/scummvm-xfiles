@@ -27,6 +27,7 @@ MODULE_OBJS = \
 	script_media.o \
 	script_save.o \
 	script_view.o \
+	shootout.o \
 	sound.o \
 	subliminal.o \
 	tools.o \

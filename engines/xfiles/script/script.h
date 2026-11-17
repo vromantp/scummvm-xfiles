@@ -871,6 +871,10 @@ private:
 	bool regShanksNode(int slot, uint count, const HookCall &call);
 	/** SetShanksVar (0x4c4710): compute the "tell will" flag, then the warehouse e-mail check. */
 	void setShanksVar(uint32 variableId);
+	/** setShanksVar's rules for the "tell will" flags of node 2, 3 and 6: true when var is one of them, value its new value. */
+	bool shanksTellRule2(uint32 var, int32 node, int32 &value);
+	bool shanksTellRule3(uint32 var, int32 node, int32 &value);
+	bool shanksTellRule6(uint32 var, int32 node, int32 &value);
 	/** RegNode2..6Vars, RegLink2/3Vars: keep the argument variables of slot 0..4 (nodes 2..6) or 5, 6 (links 2, 3). */
 	bool regNodeVars(int slot, uint count, const HookCall &call);
 	/** SetIsNode2..6Done, SetIsLink2/3Done (0x4ad400..0x4ad760): write the slot's "complete" flag from the current node. */

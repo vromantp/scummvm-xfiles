@@ -336,7 +336,10 @@ private:
 	void updateCursor();
 	/** The VCCursor to show for what is at a point; 0 for the default cursor. */
 	uint32 getCursorAt(const Common::Point &pos) const;
-	bool _viewPaused = false; ///< A shown layout holds the view's movies stopped (B-007)
+	bool _viewPaused = false; ///< A shown layout or a picture clip holds the view's movies stopped (B-007, B-246)
+	bool _clipHold = false;   ///< A picture clip plays over the held view (Scene_PauseView from SoundObj_OnActivate)
+	HotFile _viewHot;         ///< The held view's .HOT entries while a clip has _hot
+	Movie *_viewHotMovie = nullptr;
 	bool _wasModal = false;   ///< A layout had the input at the last frame (its closing resumes the AI icon, 0x509520)
 	uint32 _firingCursor = 0; ///< The VCCursor a gun hit shows (73520, the red sight), 0 for none
 	uint32 _firingView = 0;   ///< The view that was current at the hit

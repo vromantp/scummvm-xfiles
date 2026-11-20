@@ -237,6 +237,9 @@ void XFilesEngine::closeView() {
 	_viewAssets.clear();
 	_viewId = 0;
 	_viewPaused = false; // A new view starts unpaused
+	_clipHold = false;
+	_viewHot.clear();
+	_viewHotMovie = nullptr;
 }
 
 void XFilesEngine::updateViewPause() {

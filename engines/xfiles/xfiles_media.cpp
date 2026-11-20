@@ -248,7 +248,20 @@ void XFilesEngine::updateQueuedStill() {
 void XFilesEngine::playQueuedVideo(const Input &input) {
 	uint32 id = _script->getVideoQueue()[0];
 	if (!_video->isOpen() || _video->getAssetId() != id) {
-		closeView();
+		// Scene_PauseView (0x46cd80) from SoundObj_OnActivate (0x441190): the front view's movies stop at their frame
+		// while a picture clip plays and go on from it after (B-246); no dim
+		if (!_clipHold && !_layers.empty()) {
+			_clipHold = true;
+			_viewHot = _hot;
+			_viewHotMovie = _hotMovie;
+			_hot.clear();
+			_hotMovie = nullptr;
+			if (!_viewPaused && !_paused) {
+				for (uint i = 0; i < _layers.size(); i++)
+					_layers[i]->pause(true);
+			}
+			_viewPaused = true;
+		}
 		if (!openMovie(*_video, id)) {
 			_script->finishVideo();
 			return;
@@ -288,6 +301,14 @@ void XFilesEngine::releaseVideoHot() {
 	if (_hotMovie == _video) {
 		_hot.clear();
 		_hotMovie = nullptr;
+	}
+	if (_clipHold) {
+		// The clip is over: the view's hotspots are back; updateViewPause resumes its movies (a layout may hold them)
+		_clipHold = false;
+		_hot = _viewHot;
+		_hotMovie = _viewHotMovie;
+		_viewHot.clear();
+		_viewHotMovie = nullptr;
 	}
 }
 

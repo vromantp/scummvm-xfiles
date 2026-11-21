@@ -23,15 +23,15 @@
 #define XFILES_XFILES_H
 
 #include "common/array.h"
-#include "common/path.h"
-#include "common/str-array.h"
+#include "common/error.h"
+#include "common/events.h"
 #include "common/hashmap.h"
+#include "common/keyboard.h"
+#include "common/path.h"
 #include "common/random.h"
 #include "common/rect.h"
 #include "common/scummsys.h"
-#include "common/error.h"
-#include "common/events.h"
-#include "common/keyboard.h"
+#include "common/str-array.h"
 #include "engines/engine.h"
 #include "graphics/managed_surface.h"
 #include "graphics/surface.h"
@@ -40,18 +40,18 @@ namespace Graphics {
 class Font;
 }
 
+#include "xfiles/detection.h"
+#include "xfiles/features/headcredits.h"
+#include "xfiles/features/subliminal.h"
+#include "xfiles/media/discfiles.h"
+#include "xfiles/media/hot.h"
+#include "xfiles/media/sound.h"
+#include "xfiles/script/script.h"
 #include "xfiles/ui/captions.h"
 #include "xfiles/ui/cursors.h"
-#include "xfiles/detection.h"
 #include "xfiles/ui/dialogbox.h"
-#include "xfiles/media/discfiles.h"
-#include "xfiles/features/headcredits.h"
-#include "xfiles/media/hot.h"
 #include "xfiles/ui/interface.h"
 #include "xfiles/ui/prefs.h"
-#include "xfiles/script/script.h"
-#include "xfiles/media/sound.h"
-#include "xfiles/features/subliminal.h"
 
 namespace Common {
 class WinResources;
@@ -76,7 +76,7 @@ public:
 
 	bool hasFeature(EngineFeature f) const override {
 		return f == kSupportsReturnToLauncher || f == kSupportsSubtitleOptions || f == kSupportsLoadingDuringRuntime ||
-			f == kSupportsSavingDuringRuntime || f == kSupportsChangingOptionsDuringRuntime;
+			   f == kSupportsSavingDuringRuntime || f == kSupportsChangingOptionsDuringRuntime;
 	}
 
 	Common::Language getLanguage() const { return _gameDescription->language; }
@@ -160,7 +160,7 @@ private:
 		bool escape;
 		bool rightClick; ///< The right button went down
 		Common::Point rightPos;
-		bool release;       ///< The left button went up
+		bool release; ///< The left button went up
 		Common::Point releasePos;
 	};
 
@@ -336,7 +336,7 @@ private:
 			kNav
 		} kind;
 		uint32 id;
-		uint32 cursor;    ///< Its VCCursor (a nav's: its hotspot's)
+		uint32 cursor; ///< Its VCCursor (a nav's: its hotspot's)
 	};
 
 	ViewHit hitView(const Common::Point &pos, bool skipCharViews = false) const;
@@ -392,78 +392,78 @@ private:
 	Captions _captions;
 	HeadCredits _headCredits;
 	Subliminal _subliminal;
-	bool _compose = true;                 ///< Screen +0x950 (B-010): the picture is composed, so the words can show
-	uint32 _composeClip = 0;              ///< The queued clip whose start last recomputed _compose (0: none)
+	bool _compose = true;    ///< Screen +0x950 (B-010): the picture is composed, so the words can show
+	uint32 _composeClip = 0; ///< The queued clip whose start last recomputed _compose (0: none)
 	DialogBox _dialogBox;
-	uint32 _dialogBoxView;                ///< The view the box was opened in
+	uint32 _dialogBoxView;                 ///< The view the box was opened in
 	Common::SeekableReadStream *_textsDll; ///< XFilesT.dll; _texts reads it lazily, so it lives as long as _texts
-	Common::WinResources *_texts;         ///< XFilesT.dll: topic texts (string table)
+	Common::WinResources *_texts;          ///< XFilesT.dll: topic texts (string table)
 	Common::Point _mouse;
-	uint32 _dragIdea;                     ///< The idea icon held with the button down, 0 for none
+	uint32 _dragIdea; ///< The idea icon held with the button down, 0 for none
 	Common::Point _dragStart;
-	bool _dragMoved;                      ///< The mouse moved since the button went down (0x44bae0)
-	HookTable<XFilesEngine> _hookTable;   ///< The C++ function hooks the engine implements, by name
-	Movie *_menuX;                        ///< The main menu's movies (49583 the X, 49587 the entries)
+	bool _dragMoved;                    ///< The mouse moved since the button went down (0x44bae0)
+	HookTable<XFilesEngine> _hookTable; ///< The C++ function hooks the engine implements, by name
+	Movie *_menuX;                      ///< The main menu's movies (49583 the X, 49587 the entries)
 	Movie *_menuEntries;
-	Movie *_menuClick;                    ///< The click sound of an entry
-	Movie *_menuLoop;                     ///< 49585, the X loop (MIDloop.mov)
-	Movie *_menuLoopSound;                ///< 94320, the loop's sound
-	Movie *_menuTop;                      ///< 49589, the top strip (a still)
-	PictureAsset *_nightVisionMask;       ///< 34751 nightvisiongogmask.pic, loaded when night vision is first in hand
-	PictureAsset *_binocularMask;         ///< 34753 binocularmask.pic
-	Graphics::Surface *_binocularScaled;  ///< the mask scaled for the beam size in _binocularScaledBeam
+	Movie *_menuClick;                   ///< The click sound of an entry
+	Movie *_menuLoop;                    ///< 49585, the X loop (MIDloop.mov)
+	Movie *_menuLoopSound;               ///< 94320, the loop's sound
+	Movie *_menuTop;                     ///< 49589, the top strip (a still)
+	PictureAsset *_nightVisionMask;      ///< 34751 nightvisiongogmask.pic, loaded when night vision is first in hand
+	PictureAsset *_binocularMask;        ///< 34753 binocularmask.pic
+	Graphics::Surface *_binocularScaled; ///< the mask scaled for the beam size in _binocularScaledBeam
 	int32 _binocularScaledBeam;
 	PictureAsset *_flashlightMask;        ///< 34745 flashlightmask.pic
 	Graphics::Surface *_flashlightScaled; ///< the mask scaled for the beam size and c1 in _flashlightScaledKey
 	int32 _flashlightScaledKey;
-	Graphics::Surface _bandUntinted;      ///< the band before the tint, kept while the n = 2 flashlight is in hand
-	bool _bandTintOn;                     ///< the letterbox tint in force: latched at a view play and at a tool show/hide (B-286)
+	Graphics::Surface _bandUntinted; ///< the band before the tint, kept while the n = 2 flashlight is in hand
+	bool _bandTintOn;                ///< the letterbox tint in force: latched at a view play and at a tool show/hide (B-286)
 	byte _bandTintRGB[3];
-	int _bandTintTool;                    ///< the held tool and binoculars mode the latch was taken with
-	PictureAsset *_viewfinder;            ///< 34749 moveableviewfinder.pic, loaded when the camera first shows
-	const Graphics::Font *_counterFont;   ///< the camera counter: Liberation Sans Bold 13, else the GUI font
+	int _bandTintTool;                  ///< the held tool and binoculars mode the latch was taken with
+	PictureAsset *_viewfinder;          ///< 34749 moveableviewfinder.pic, loaded when the camera first shows
+	const Graphics::Font *_counterFont; ///< the camera counter: Liberation Sans Bold 13, else the GUI font
 	struct PhotoPicture {
 		Common::String key;
 		Graphics::Surface *surface;
 	};
 	Common::Array<PhotoPicture> _photoPictures; ///< drawPhotos' cache
-	bool _counterFontOwned;               ///< _counterFont is ours to delete
-	PictureAsset *_menuReturn;            ///< 72895 return.pic over Previous, only from the game
-	bool _menuIntroDone;                  ///< g_menuIntroDone (0x6b1980): the fade-in has played this run, never cleared
-	bool _menuFading;                     ///< The X is still fading in, alone
-	bool _menuIntroPlay;                  ///< The entries run to frame 75 after the fade-in
-	uint32 _menuHelpEnd;                  ///< End of the help segment shown (0x46ba00's +0x110); 5000 for none
-	bool _menuHelpPlaying;                ///< A help segment runs; at its end the still at _menuHelpEnd shows
-	bool _menuTopHot;                     ///< The cursor was over the top strip
-	bool _menuOpen;                       ///< The menu is up over the running game
-	bool _menuLayout;                     ///< Options or Help (layout 49738, 50460) is up over the paused game
-	bool _menuReopen;                     ///< ReturnMainMenu or ReturnFromHelp ran: the menu reopens next frame
+	bool _counterFontOwned;                     ///< _counterFont is ours to delete
+	PictureAsset *_menuReturn;                  ///< 72895 return.pic over Previous, only from the game
+	bool _menuIntroDone;                        ///< g_menuIntroDone (0x6b1980): the fade-in has played this run, never cleared
+	bool _menuFading;                           ///< The X is still fading in, alone
+	bool _menuIntroPlay;                        ///< The entries run to frame 75 after the fade-in
+	uint32 _menuHelpEnd;                        ///< End of the help segment shown (0x46ba00's +0x110); 5000 for none
+	bool _menuHelpPlaying;                      ///< A help segment runs; at its end the still at _menuHelpEnd shows
+	bool _menuTopHot;                           ///< The cursor was over the top strip
+	bool _menuOpen;                             ///< The menu is up over the running game
+	bool _menuLayout;                           ///< Options or Help (layout 49738, 50460) is up over the paused game
+	bool _menuReopen;                           ///< ReturnMainMenu or ReturnFromHelp ran: the menu reopens next frame
 	bool _paused;
-	uint _pauseDepth;                     ///< Pauses asked for (menu, GMM, dialogs)
-	Graphics::ManagedSurface _menuShot;   ///< The screen when the menu opened (the saves' thumbnail)
-	uint32 _pauseStart;                   ///< getMillis() when the game was paused
-	uint32 _pausedTotal;                  ///< Milliseconds the game spent paused before
+	uint _pauseDepth;                   ///< Pauses asked for (menu, GMM, dialogs)
+	Graphics::ManagedSurface _menuShot; ///< The screen when the menu opened (the saves' thumbnail)
+	uint32 _pauseStart;                 ///< getMillis() when the game was paused
+	uint32 _pausedTotal;                ///< Milliseconds the game spent paused before
 	Preferences _preferences;           ///< The preferences' owner (prefs.h)
 	uint32 _uberVariables[3];           ///< iUberLoss, iUberParanoia, iUberXTrack, from RegUberVars
 
-	Movie *_video;                       ///< The play-once video on screen
-	uint32 _videoStarted;                ///< When it started (getMillis)
-	Common::Array<uint32> _viewAssets;   ///< What the view layers show
-	int32 _pendingClipTime;              ///< A restored save's clip time for the first view played; -1 if none
+	Movie *_video;                     ///< The play-once video on screen
+	uint32 _videoStarted;              ///< When it started (getMillis)
+	Common::Array<uint32> _viewAssets; ///< What the view layers show
+	int32 _pendingClipTime;            ///< A restored save's clip time for the first view played; -1 if none
 	uint32 _viewId;
-	Common::Array<Movie *> _layers;      ///< Background and overlays of the view
-	HotFile _hot;                        ///< The .HOT entries of the view's clip (B-177)
-	Movie *_hotMovie;                    ///< The layer whose time opens and closes their windows
+	Common::Array<Movie *> _layers; ///< Background and overlays of the view
+	HotFile _hot;                   ///< The .HOT entries of the view's clip (B-177)
+	Movie *_hotMovie;               ///< The layer whose time opens and closes their windows
 	Interface *_interface;
 	Cursors *_cursors;
-	uint32 _lastClickTime;               ///< For double-clicks
+	uint32 _lastClickTime; ///< For double-clicks
 	Common::Point _lastClickPos;
 	Interface::Hit _lastClickHit;
-	Interface::Hit _hover;               ///< What the mouse is over, for Roll Into and Roll Out Of
-	uint32 _charHover;                   ///< The character view the mouse is over, for Roll Into and Roll Out Of
+	Interface::Hit _hover; ///< What the mouse is over, for Roll Into and Roll Out Of
+	uint32 _charHover;     ///< The character view the mouse is over, for Roll Into and Roll Out Of
 	Common::HashMap<uint, TimerState> _timerStates;
 	Common::HashMap<uint, Common::Pair<uint32, uint32>> _assetRanges; ///< PrepBombTime's play ranges, per asset
-	bool _timersPaused;                  ///< The PDA paused the timers (0x6b1680)
+	bool _timersPaused;                                               ///< The PDA paused the timers (0x6b1680)
 	struct PressedItem {
 		uint32 id;
 		uint32 since;
@@ -473,21 +473,21 @@ private:
 		uint32 asset;
 		uint32 due; ///< gameMillis()
 	};
-	Common::Array<DelayedPlay> _delayedPlays;     ///< A tool's reaction clip, 2 s after the click (Script::toolReaction)
+	Common::Array<DelayedPlay> _delayedPlays; ///< A tool's reaction clip, 2 s after the click (Script::toolReaction)
 	// The hidden bar's reveal for a new item (0x4a1fb0): its icon joins
 	// after 500 ms, the bar hides again 1000 ms after that
 	static const uint32 kIconJoinDelay = 500;
 	static const uint32 kRevealHideDelay = 1000;
-	Script::OncePerProcess _onceFlags;            ///< Set pieces that play once per process: kept across a load, New and Try again
-	Common::Array<DelayedPlay> _pendingIcons;     ///< Items whose icon joins the bar at `due` (asset: the VCInventory)
-	bool _movieCursor;                            ///< A picture video heads the queue: it takes the cursor hit test (B-285)
-	bool _whiteHold;                              ///< AlienBlast's white stays on screen until a video or another fade (B-287)
-	bool _barRevealed;                            ///< The reveal shows the hidden bar until _barRevealEnd
-	uint32 _barRevealEnd;                         ///< gameMillis()
+	Script::OncePerProcess _onceFlags;        ///< Set pieces that play once per process: kept across a load, New and Try again
+	Common::Array<DelayedPlay> _pendingIcons; ///< Items whose icon joins the bar at `due` (asset: the VCInventory)
+	bool _movieCursor;                        ///< A picture video heads the queue: it takes the cursor hit test (B-285)
+	bool _whiteHold;                          ///< AlienBlast's white stays on screen until a video or another fade (B-287)
+	bool _barRevealed;                        ///< The reveal shows the hidden bar until _barRevealEnd
+	uint32 _barRevealEnd;                     ///< gameMillis()
 	/** The pending icons are dropped (a new game, a load); a save copies them into its snapshot instead. */
 	void flushPendingIcons();
-	Common::Array<PressedItem> _pressedItems;     ///< Phone buttons shown pressed (Script::takePressedItems)
-	SoundPlayer _sound;                           ///< The sounds and placed clips (sound.cpp)
+	Common::Array<PressedItem> _pressedItems; ///< Phone buttons shown pressed (Script::takePressedItems)
+	SoundPlayer _sound;                       ///< The sounds and placed clips (sound.cpp)
 
 	// Comparison with reference runs of the original (the research repo's
 	// docs/reference-runs.md, "Screenshots"): the xfiles_shots setting names a
@@ -507,24 +507,24 @@ private:
 	void stepAIClick();
 	Common::Path _shotsDir;
 	uint _shots;
-	uint32 _shotDue;                      ///< getMillis() of the pending shot; 0: none
+	uint32 _shotDue; ///< getMillis() of the pending shot; 0: none
 	Common::String _shotReason;
 	uint32 _shotId;
-	uint32 _shotView;                     ///< The view the last view shot was for
-	bool _shotBox;                        ///< The dialog box was on screen at the last frame
+	uint32 _shotView; ///< The view the last view shot was for
+	bool _shotBox;    ///< The dialog box was on screen at the last frame
 	Common::StringArray _steps;
-	bool _loadedSave;                     ///< xfiles_save: the game continues from an original .X save
+	bool _loadedSave; ///< xfiles_save: the game continues from an original .X save
 	VCSave _save;
 	PendingLoad _pendingLoad;
-	PendingLoad _checkpoint;              ///< The latest commit of the working database (Temp.gam in the exe)
-	bool _checkpointNew;                  ///< The game began with New: no commit yet, Try again restarts from XFiles.gam
-	bool _gameEnded;                      ///< EndGame took the game down: back to the start-up menu
-	int _stepAnswer;                      ///< The answer: step for "Try again?": 1 Yes, 0 No, -1 none yet
-	Common::StringArray _fastForward;     ///< xfiles_fastforward: steps run headless before the game starts (cleared after)
+	PendingLoad _checkpoint;          ///< The latest commit of the working database (Temp.gam in the exe)
+	bool _checkpointNew;              ///< The game began with New: no commit yet, Try again restarts from XFiles.gam
+	bool _gameEnded;                  ///< EndGame took the game down: back to the start-up menu
+	int _stepAnswer;                  ///< The answer: step for "Try again?": 1 Yes, 0 No, -1 none yet
+	Common::StringArray _fastForward; ///< xfiles_fastforward: steps run headless before the game starts (cleared after)
 	uint _nextStep;
-	uint32 _waitVideo;                    ///< A wait step waits for this video to end
-	uint32 _delayUntil;                   ///< A delay step waits until gameMillis() reaches this; 0: none
-	int _waitTimer;                       ///< A timer step waits for this timer to expire; -1: none
+	uint32 _waitVideo;  ///< A wait step waits for this video to end
+	uint32 _delayUntil; ///< A delay step waits until gameMillis() reaches this; 0: none
+	int _waitTimer;     ///< A timer step waits for this timer to expire; -1: none
 };
 
 extern XFilesEngine *g_engine;

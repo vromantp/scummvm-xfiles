@@ -109,8 +109,8 @@ enum VCOperandKind {
 	kOperandLocal = 1,
 	kOperandInt = 2,
 	kOperandChar = 3,
-	kOperandEvent = 4,    ///< Field of the triggering event
-	kOperandObject = 5    ///< .hdb object
+	kOperandEvent = 4, ///< Field of the triggering event
+	kOperandObject = 5 ///< .hdb object
 };
 
 enum VCEventType {
@@ -130,8 +130,8 @@ enum VCEventType {
 };
 
 enum VCAssetFlags {
-	kAssetFile = 0x01,     ///< File-based media, the blob lists a file per disc
-	kAssetRange = 0x02,    ///< The blob has an in/out range
+	kAssetFile = 0x01,  ///< File-based media, the blob lists a file per disc
+	kAssetRange = 0x02, ///< The blob has an in/out range
 	kAssetText = 0x04,
 	kAssetLoop = 0x08,
 	kAssetHotSpots = 0x10, ///< The clip's .HOT entries are live (0x5eb540, Player_ForAsset 0x505f50)
@@ -155,32 +155,32 @@ struct VCExpression {
 
 struct VCAction {
 	uint32 id;
-	byte type;           ///< VCActionType, or an unknown value
+	byte type; ///< VCActionType, or an unknown value
 	bool conditional;
 	VCExpression condition;
 
-	VCExpression statement;   ///< kActionStatement
-	uint32 assetList;         ///< kActionAsset, kActionSound3D
-	byte mode;                ///< Asset mode (kActionAsset, kActionSound3D), 0 = display, 1 = unshow (kActionInterface)
-	int16 x, y;               ///< kActionSound3D position
-	uint32 ms;                ///< kActionTimer
+	VCExpression statement; ///< kActionStatement
+	uint32 assetList;       ///< kActionAsset, kActionSound3D
+	byte mode;              ///< Asset mode (kActionAsset, kActionSound3D), 0 = display, 1 = unshow (kActionInterface)
+	int16 x, y;             ///< kActionSound3D position
+	uint32 ms;              ///< kActionTimer
 	byte timer;
 	byte command;
 	bool periodic;
-	uint32 target;            ///< kActionEnable: a VCEnabled in .gam
+	uint32 target; ///< kActionEnable: a VCEnabled in .gam
 	byte value;
-	uint32 path[4];           ///< kActionSetView: VCView, VCNode, VCLocaton, VCViewPoint
-	uint32 layout;            ///< kActionInterface
-	Common::String function;  ///< kActionFunction
+	uint32 path[4];          ///< kActionSetView: VCView, VCNode, VCLocaton, VCViewPoint
+	uint32 layout;           ///< kActionInterface
+	Common::String function; ///< kActionFunction
 	Common::Array<VCOperand> args;
-	Common::Array<byte> raw;  ///< Body of an unknown action type
+	Common::Array<byte> raw; ///< Body of an unknown action type
 
 	VCAction();
 };
 
 struct VCTrigger {
 	uint32 id;
-	byte event;               ///< VCEventType
+	byte event; ///< VCEventType
 	Common::Array<uint32> actions;
 };
 
@@ -217,7 +217,7 @@ struct VCViewPoint {
 
 struct VCView {
 	uint32 id;
-	uint32 facing;            ///< Below 9 a direction, else a VCName
+	uint32 facing; ///< Below 9 a direction, else a VCName
 	uint32 assets;
 	uint32 characters;
 	uint32 navs;
@@ -227,16 +227,16 @@ struct VCView {
 
 struct VCNav {
 	uint32 id;
-	uint32 target;            ///< VCView
+	uint32 target; ///< VCView
 	uint32 hotSpot;
 	uint32 triggers;
 };
 
 struct VCHotSpot {
 	uint32 id;
-	uint32 cursor;            ///< VCCursor shown over it
+	uint32 cursor; ///< VCCursor shown over it
 	VCRect rect;
-	uint32 name;              ///< VCName or 0 (the default hotspots: Left, Right, Forward)
+	uint32 name; ///< VCName or 0 (the default hotspots: Left, Right, Forward)
 };
 
 struct VCVariable {
@@ -327,18 +327,18 @@ struct VCInterfaceItem {
 /** Where one media asset lives on one disc (0 = hard disk, 1-7 = CD, 8 = larger installs). */
 struct VCMediaFile {
 	uint32 disc;
-	Common::String file;      ///< Mac-style path, e.g. "XV:19812.xmv"
-	uint32 start, end;        ///< Milliseconds into the file, or a picture index
+	Common::String file; ///< Mac-style path, e.g. "XV:19812.xmv"
+	uint32 start, end;   ///< Milliseconds into the file, or a picture index
 };
 
 struct VCAsset {
-	uint32 id;                ///< Also the media file number
+	uint32 id; ///< Also the media file number
 	uint32 name;
-	byte flags;               ///< VCAssetFlags
+	byte flags; ///< VCAssetFlags
 	byte category;
 	uint32 triggers;
-	bool readable;            ///< False if the media blob does not decode
-	Common::String path;      ///< Authoring path
+	bool readable;       ///< False if the media blob does not decode
+	Common::String path; ///< Authoring path
 	bool hasRange;
 	uint32 rangeIn, rangeOut;
 	Common::Array<VCMediaFile> files;
@@ -365,30 +365,30 @@ struct VCPhoto {
 		crop[3] = r.bottom;
 	}
 
-	uint32 asset;      ///< VCAssetRef the photo was taken of
-	uint32 clipTime;   ///< The player's time in that asset when it was taken
-	int16 crop[4];     ///< Left, top, right, bottom in the video frame
-	byte disc;         ///< The disc in use when it was taken
-	bool downloaded;   ///< PhotoDownload moved it off the camera
+	uint32 asset;    ///< VCAssetRef the photo was taken of
+	uint32 clipTime; ///< The player's time in that asset when it was taken
+	int16 crop[4];   ///< Left, top, right, bottom in the video frame
+	byte disc;       ///< The disc in use when it was taken
+	bool downloaded; ///< PhotoDownload moved it off the camera
 };
 
 /** What a .X save holds besides the variables and enable flags (VCGameState and the lists it names). */
 struct VCSave {
 	VCSave();
 
-	uint32 position[4];              ///< VCNode, VCLocaton, VCViewPoint, VCView
-	int16 positionMode;              ///< 0 the start view, 1 the current view, 2 from the pending Set View
-	Common::Array<uint32> history;   ///< VCConversation IDs asked
-	Common::Array<uint32> notes;     ///< VCPDANotes
+	uint32 position[4];            ///< VCNode, VCLocaton, VCViewPoint, VCView
+	int16 positionMode;            ///< 0 the start view, 1 the current view, 2 from the pending Set View
+	Common::Array<uint32> history; ///< VCConversation IDs asked
+	Common::Array<uint32> notes;   ///< VCPDANotes
 	Common::Array<uint32> emails, emailsRead, emailsPending;
 	int32 disc;
-	int32 photos;                    ///< Photos on the camera, not yet downloaded
+	int32 photos;                     ///< Photos on the camera, not yet downloaded
 	Common::Array<VCPhoto> photoList; ///< The VCPhotos in database order
 	uint32 hintList, hintTrigger;
 	int32 hintGlow;
-	int32 credits;                   ///< Head credits scroll position, -1 when not rolling
-	byte flashlight[3];              ///< SetFLightProps
-	byte tint;                       ///< Letterbox tint on
+	int32 credits;      ///< Head credits scroll position, -1 when not rolling
+	byte flashlight[3]; ///< SetFLightProps
+	byte tint;          ///< Letterbox tint on
 	byte tintColor[3];
 	Common::Array<uint32> sounds;    ///< Triples (VCAssetRef, by action, time)
 	Common::Array<uint32> inventory; ///< VCInventory IDs, in order
@@ -398,8 +398,8 @@ struct VCSave {
 	uint32 clip;                     ///< VCAssetRef playing in the current view, or 0
 	byte clipFlag;                   ///< That clip's flag bit 8 (the asset's flags & 8)
 	int32 clipTime;
-	uint32 dialogBox;                ///< VCCharView whose box was open, or 0
-	uint32 layout;                   ///< Full-screen interface layout shown, or 0
+	uint32 dialogBox; ///< VCCharView whose box was open, or 0
+	uint32 layout;    ///< Full-screen interface layout shown, or 0
 };
 
 /**

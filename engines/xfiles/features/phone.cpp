@@ -36,7 +36,7 @@ static const uint32 kPhoneDisplay = 39513;
 /** The item whose asset list is the phone book; entries are enabled as they are learnt. */
 static const uint32 kPhoneBook = 45309;
 /** Key tones for 0-9 (0x6b1910); 9 has the tone of 0. */
-static const uint32 kPhoneTones[10] = { 58637, 58629, 58630, 58631, 58632, 58633, 58634, 58635, 58636, 58637 };
+static const uint32 kPhoneTones[10] = {58637, 58629, 58630, 58631, 58632, 58633, 58634, 58635, 58636, 58637};
 /** The display's text: Courier New, 15 pixels, bold, dark green (0x4c7f00, 0x6ba560). */
 static const uint32 kPhoneTextColor = 0x1b300f;
 static const int kPhoneTextSize = 15;
@@ -51,28 +51,27 @@ struct PhoneCall {
 };
 
 static const PhoneCall kPhoneCalls[] = {
-	{ 67269, 67324, 67326 },
-	{ 67271, 67331, 67333 },
-	{ 67273, 67338, 67340 },
-	{ 67275, 67345, 67347 },
-	{ 67277, 67352, 67354 },
-	{ 67279, 67361, 67363 },
-	{ 67281, 67368, 67370 },
-	{ 67283, 67375, 67377 },
-	{ 67287, 67382, 67384 },
-	{ 67285, 67389, 67391 },
-	{ 67289, 67398, 67400 },
-	{ 67443, 74576, 74580 },   // The Lone Gunmen
-	{ 83868, 83863, 83865 }
-};
+	{67269, 67324, 67326},
+	{67271, 67331, 67333},
+	{67273, 67338, 67340},
+	{67275, 67345, 67347},
+	{67277, 67352, 67354},
+	{67279, 67361, 67363},
+	{67281, 67368, 67370},
+	{67283, 67375, 67377},
+	{67287, 67382, 67384},
+	{67285, 67389, 67391},
+	{67289, 67398, 67400},
+	{67443, 74576, 74580}, // The Lone Gunmen
+	{83868, 83863, 83865}};
 
 /** Recordings for numbers that do not answer (trigger, actions; 0x6560e0). */
 static const uint32 kPhoneFailures[5][2] = {
-	{ 67405, 67407 },
-	{ 67410, 67412 },
-	{ 67415, 67422 },
-	{ 67451, 67453 },
-	{ 83303, 83305 }           // Ten digits outside area code 206
+	{67405, 67407},
+	{67410, 67412},
+	{67415, 67422},
+	{67451, 67453},
+	{83303, 83305} // Ten digits outside area code 206
 };
 enum {
 	kFailureTooLong = 2,
@@ -94,18 +93,17 @@ struct PhoneKey {
 };
 
 static const PhoneKey kPhoneKeys[] = {
-	{ 0x0d, 57171, 57172 },    // Return: Send
-	{ '0', 43274, 43276 },
-	{ '1', 43238, 43240 },
-	{ '2', 43242, 43244 },
-	{ '3', 43246, 43248 },
-	{ '4', 43250, 43252 },
-	{ '5', 43254, 43256 },
-	{ '6', 43258, 43260 },
-	{ '7', 43262, 43264 },
-	{ '8', 43266, 43268 },
-	{ '9', 43270, 43272 }
-};
+	{0x0d, 57171, 57172}, // Return: Send
+	{'0', 43274, 43276},
+	{'1', 43238, 43240},
+	{'2', 43242, 43244},
+	{'3', 43246, 43248},
+	{'4', 43250, 43252},
+	{'5', 43254, 43256},
+	{'6', 43258, 43260},
+	{'7', 43262, 43264},
+	{'8', 43266, 43268},
+	{'9', 43270, 43272}};
 
 PhoneHooks::PhoneHooks(Script &script, const VCData &data)
 	: _script(script), _data(data), _bookSize(0), _bookIndex(0), _showsName(false), _tone(0) {
@@ -273,7 +271,7 @@ void PhoneHooks::send(uint32 numberVar, uint32 triggerVar, uint32 actionsVar, in
 		// Numbers in area code 206 also answer to their last 7 digits
 		Common::String known = text.encode();
 		bool local = known.hasPrefix(kPhoneAreaCode) && known.size() >= 7 &&
-			number == known.c_str() + known.size() - 7;
+					 number == known.c_str() + known.size() - 7;
 		if (known != number && !local)
 			continue;
 		_script.logLine(Common::String::format("      phone: calls #%u", kPhoneCalls[i].number));
@@ -285,7 +283,7 @@ void PhoneHooks::send(uint32 numberVar, uint32 triggerVar, uint32 actionsVar, in
 	// Otherwise the last digit picks the recording, for 7, 10 and 11 digits
 	uint failure = 1;
 	if (number.size() == 7 || number.size() == 10 || number.size() == 11) {
-		static const byte kByLastDigit[10] = { 2, 1, 2, 0, 2, 2, 3, 2, 3, 3 };
+		static const byte kByLastDigit[10] = {2, 1, 2, 0, 2, 2, 3, 2, 3, 3};
 		char last = number.lastChar();
 		failure = last >= '0' && last <= '9' ? kByLastDigit[last - '0'] : 1;
 	}

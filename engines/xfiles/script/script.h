@@ -25,16 +25,16 @@
 #include "common/array.h"
 #include "common/hashmap.h"
 #include "common/rect.h"
-#include "common/str.h"
 #include "common/str-array.h"
+#include "common/str.h"
 #include "common/ustr.h"
 
 #include "xfiles/features/computers.h"
-#include "xfiles/script/hooks.h"
 #include "xfiles/features/pda.h"
 #include "xfiles/features/phone.h"
-#include "xfiles/ui/prefs.h"
+#include "xfiles/script/hooks.h"
 #include "xfiles/script/vcdata.h"
+#include "xfiles/ui/prefs.h"
 
 namespace Common {
 class WinResources;
@@ -237,10 +237,10 @@ class Script {
 public:
 	/** A character's stock replies: the atoms of its topic without a label. */
 	enum {
-		kStockWhatsTheMatter = 2,   ///< "What's the matter with you?"
+		kStockWhatsTheMatter = 2, ///< "What's the matter with you?"
 		kStockAtomCount = 7,
-		kReactionSlots = 9,         ///< A character view's reaction slots: S0-S6, then 19656 and 19654
-		kReactionNone = 10          ///< No slot for the held item (CharView_ReactionSlot 0x490d50)
+		kReactionSlots = 9, ///< A character view's reaction slots: S0-S6, then 19656 and 19654
+		kReactionNone = 10  ///< No slot for the held item (CharView_ReactionSlot 0x490d50)
 	};
 
 	Script(const VCData &data);
@@ -339,11 +339,11 @@ public:
 
 	/** What a save holds besides the VCSave: the values the game changed. */
 	struct SavedValues {
-		Common::Array<uint32> variables;   ///< Pairs (VCVariable ID, value)
-		Common::Array<uint32> enabled;     ///< Pairs (VCEnabled ID, flag)
-		Common::Array<uint32> stringIds;   ///< VCString IDs of the strings that changed
-		Common::StringArray strings;       ///< Their values
-		uint32 nextId = 0;                 ///< The next free object ID (0: not saved)
+		Common::Array<uint32> variables; ///< Pairs (VCVariable ID, value)
+		Common::Array<uint32> enabled;   ///< Pairs (VCEnabled ID, flag)
+		Common::Array<uint32> stringIds; ///< VCString IDs of the strings that changed
+		Common::StringArray strings;     ///< Their values
+		uint32 nextId = 0;               ///< The next free object ID (0: not saved)
 	};
 	/** Every variable, enable flag and changed string now. */
 	void getSaved(SavedValues &values) const;
@@ -455,7 +455,7 @@ public:
 	void setFixedSeeds(uint32 base);
 	/** A random number generator (Random_Seed 0x468810). */
 	struct Dice {
-		bool own;     ///< Seeded for this use (setFixedSeeds); otherwise it draws from _random
+		bool own; ///< Seeded for this use (setFixedSeeds); otherwise it draws from _random
 		uint32 state;
 	};
 	/** The generator XFiles.exe builds at site, the return address of its Random_Seed call. */
@@ -580,8 +580,8 @@ public:
 
 	struct Timer {
 		uint32 ms;
-		uint32 serial;    ///< Changes each time a timer is (re)started
-		bool periodic;    ///< Restarts when it expires
+		uint32 serial; ///< Changes each time a timer is (re)started
+		bool periodic; ///< Restarts when it expires
 	};
 	const Common::HashMap<uint, Timer> &getTimers() const { return _timers; }
 
@@ -628,8 +628,8 @@ public:
 	};
 	/** Text drawn into an interface item (the phone's display, the PDA's texts). */
 	struct ItemText {
-		Common::U32StringArray lines;  ///< Laid out lines
-		uint32 color;   ///< RGB
+		Common::U32StringArray lines; ///< Laid out lines
+		uint32 color;                 ///< RGB
 		bool bold;
 		int face;       ///< TextFace
 		int size;       ///< Character height in pixels (GDI's -lfHeight)
@@ -680,7 +680,7 @@ public:
 	void setItemOrigin(uint32 item, const Common::Point &origin) { _itemOrigins[item] = origin; }
 	/** Lay out and set the text of an item (0x4be2c0); wrapWidth 0: a line per newline only. */
 	void setItemText(uint32 item, const Common::U32String &text, int size, bool bold, uint32 color, TextAlign align,
-		bool shadow, int wrapWidth, int face = kFaceMono);
+					 bool shadow, int wrapWidth, int face = kFaceMono);
 	void showLayout(uint32 layoutId);
 	/** iUberParanoia += n (0x4bf500). */
 	void addUberParanoia(int32 n);
@@ -695,7 +695,7 @@ public:
 	/** PDA text: Courier New, regular, black, left, no shadow, wrapped at width (0x4be2c0); ScrollTextList's colour and Arial are
 	 * optional. */
 	void setPDAText(uint32 item, const Common::U32String &text, int size, bool doubleWidth, uint32 color = 0,
-		bool bold = false, bool sans = false);
+					bool bold = false, bool sans = false);
 	/** Hide or show an item's object without touching its enabled flag or firing triggers (Queue_Show). */
 	void queueShowItem(uint32 itemId, bool shown);
 	/** The text of an item to change in place (a scroll), or nullptr. */
@@ -962,29 +962,29 @@ private:
 	PrefHooks _prefs;             ///< The Game Preferences screens (prefs.cpp)
 	Common::WinResources *_texts;
 	Common::HashMap<uint32, int32> _variables;
-	Common::HashMap<uint32, bool> _enabled;    ///< Objects without a VCEnabled are always enabled
-	Common::HashMap<uint, Timer> _timers;      ///< Running timers
+	Common::HashMap<uint32, bool> _enabled; ///< Objects without a VCEnabled are always enabled
+	Common::HashMap<uint, Timer> _timers;   ///< Running timers
 	uint32 _timerSerial;
-	uint32 _random;                            ///< State of the random numbers
-	bool _fixedSeeds;                          ///< See setFixedSeeds()
+	uint32 _random;   ///< State of the random numbers
+	bool _fixedSeeds; ///< See setFixedSeeds()
 	uint32 _seedBase;
 	Common::HashMap<uint32, uint32> _diceBuilt; ///< Generators built per call site, with _fixedSeeds
 	Common::Array<Layout> _layouts;
 	Common::Array<uint32> _kit;
 	Common::Array<uint32> _inventory, _evidence, _history;
-	Common::Array<VCPhoto> _photos;            ///< The VCPhotos in database order
-	int32 _photosOnCamera;                     ///< VCGameState +46: taken, not yet downloaded
+	Common::Array<VCPhoto> _photos; ///< The VCPhotos in database order
+	int32 _photosOnCamera;          ///< VCGameState +46: taken, not yet downloaded
 	bool firesOnRestore(uint32 id) const;
-	int _restoreMode;                          ///< Position mode while restore() runs, else -1: which Object Activation fires
-	int32 _disc;                               ///< Disc in use (VCGameState +42)
-	bool _evidenceRowShown;                    ///< EvIcons_SetRowShown, set by a shown evidence icon of a restore
-	byte _flashlight[3];                       ///< SetFLightProps as the save keeps it (FLight_SetProps 0x4d7d20 via 0x44bda0)
-	byte _tint;                                ///< SetLBoxTint (1) or ClearLBoxTint (0)
-	byte _tintColor[3];                        ///< The tint in the order the save stores it (blue, green, red)
-	VCSave _restoredSave;                      ///< The save restore() continued from
+	int _restoreMode;       ///< Position mode while restore() runs, else -1: which Object Activation fires
+	int32 _disc;            ///< Disc in use (VCGameState +42)
+	bool _evidenceRowShown; ///< EvIcons_SetRowShown, set by a shown evidence icon of a restore
+	byte _flashlight[3];    ///< SetFLightProps as the save keeps it (FLight_SetProps 0x4d7d20 via 0x44bda0)
+	byte _tint;             ///< SetLBoxTint (1) or ClearLBoxTint (0)
+	byte _tintColor[3];     ///< The tint in the order the save stores it (blue, green, red)
+	VCSave _restoredSave;   ///< The save restore() continued from
 	bool _restored;
-	bool _restorePending;                              ///< restore() set the save aside for SetStartView, which has not run yet
-	Common::HashMap<uint32, Common::String> _strings;  ///< VCString values that changed
+	bool _restorePending;                             ///< restore() set the save aside for SetStartView, which has not run yet
+	Common::HashMap<uint32, Common::String> _strings; ///< VCString values that changed
 	Common::HashMap<uint32, ItemText> _itemTexts;
 	uint32 _focus;
 	uint32 _currNodeVariable;                  ///< RegCurrNode
@@ -1014,44 +1014,44 @@ private:
 		bool positional;
 		int x, y;
 	};
-	uint32 _prefVariables[kPrefCount];         ///< The variable RegPreferences gave each preference, or 0
-	uint32 _prefArtificialIntuition;           ///< The variable RegPreferences gives Pref_bArtificialIntuition, or 0
-	uint32 _cookEmailCount;                    ///< The variable RegCookEmail gave iNumWillmoreEMailsToCook, or 0
-	uint32 _cookEmailFlag;                     ///< The variable it gave IFL_bPDAEmailedCookAboutNSA, or 0
-	uint32 _uberParanoia;                      ///< The variable RegUberVars gives iUberParanoia, or 0
-	Common::Array<uint32> _journalPages;       ///< JournalInit's pages: the enabled assets of item 49422 (0x6b9da8)
-	uint _journalLeft;                         ///< The journal's left page index (0x6b18d0)
-	Common::Array<uint32> _biblePages;         ///< BibleInit's pages: the enabled assets of item 80907 (0x6be708)
-	uint _bibleLeft;                           ///< The Bible's left page index (0x6b1eec)
+	uint32 _prefVariables[kPrefCount];   ///< The variable RegPreferences gave each preference, or 0
+	uint32 _prefArtificialIntuition;     ///< The variable RegPreferences gives Pref_bArtificialIntuition, or 0
+	uint32 _cookEmailCount;              ///< The variable RegCookEmail gave iNumWillmoreEMailsToCook, or 0
+	uint32 _cookEmailFlag;               ///< The variable it gave IFL_bPDAEmailedCookAboutNSA, or 0
+	uint32 _uberParanoia;                ///< The variable RegUberVars gives iUberParanoia, or 0
+	Common::Array<uint32> _journalPages; ///< JournalInit's pages: the enabled assets of item 49422 (0x6b9da8)
+	uint _journalLeft;                   ///< The journal's left page index (0x6b18d0)
+	Common::Array<uint32> _biblePages;   ///< BibleInit's pages: the enabled assets of item 80907 (0x6be708)
+	uint _bibleLeft;                     ///< The Bible's left page index (0x6b1eec)
 
 	// The Smolnikoff shootout: exe globals a save does not hold (0x6b1ef0..0x6b1f10, 0x6be8a4/7cc/834)
-	OncePerProcess _ownOnce;                   ///< Used when the engine hands no flags (vcdump: one game per process)
+	OncePerProcess _ownOnce; ///< Used when the engine hands no flags (vcdump: one game per process)
 	OncePerProcess *_once;
-	bool _endGamePending;                      ///< EndGame ran and waits for the engine's answer
-	uint32 _endGameVar;                        ///< Its variable (bReplay)
-	int32 _endGameValue;                       ///< and the value it had
+	bool _endGamePending; ///< EndGame ran and waits for the engine's answer
+	uint32 _endGameVar;   ///< Its variable (bReplay)
+	int32 _endGameValue;  ///< and the value it had
 
 	/** FixJumpCut(first, later) of a topic's Object Activation (0x47ca30). */
 	struct JumpCut {
-		bool first;   ///< The view's loop before the first clip after the question
-		bool later;   ///< The view's loop before the answer when a clip came before it
+		bool first; ///< The view's loop before the first clip after the question
+		bool later; ///< The view's loop before the answer when a clip came before it
 	};
 	struct TopicClip {
 		uint32 id;
-		uint32 limit;   ///< 750 for a piece of the view loop, 0 for an asset
-		uint32 end;     ///< Out point override after a merge
+		uint32 limit; ///< 750 for a piece of the view loop, 0 for an asset
+		uint32 end;   ///< Out point override after a merge
 	};
-	uint _fireSerial;                          ///< Counts the events fired from outside (see _viewSerial)
-	bool _inEvent;                             ///< An event spans several fire() calls: they share a _fireSerial
-	uint _viewSerial;                          ///< _fireSerial of the event that held the view: the videos it waits for
-	uint _fireDepth;                           ///< Nesting of fire(): a pending travel runs when it returns to 0
+	uint _fireSerial; ///< Counts the events fired from outside (see _viewSerial)
+	bool _inEvent;    ///< An event spans several fire() calls: they share a _fireSerial
+	uint _viewSerial; ///< _fireSerial of the event that held the view: the videos it waits for
+	uint _fireDepth;  ///< Nesting of fire(): a pending travel runs when it returns to 0
 	struct ActionFrame {
 		const Common::Array<uint32> *actions;
 		uint next; ///< Index of the next action to run
 		ActionFrame(const Common::Array<uint32> *a = nullptr, uint n = 0) : actions(a), next(n) {}
 	};
-	Common::Array<ActionFrame> _actionFrames;  ///< The running action lists, outermost first (isViewChangeQueued)
-	uint32 _nextId;                            ///< The database's next free object ID (new VCStrings take it)
+	Common::Array<ActionFrame> _actionFrames; ///< The running action lists, outermost first (isViewChangeQueued)
+	uint32 _nextId;                           ///< The database's next free object ID (new VCStrings take it)
 
 	/** The view change in progress: transition modes, the pending travel, the enter() and leave flags */
 	struct Travel {
@@ -1067,10 +1067,10 @@ private:
 		uint32 to[4] = {};                                  ///< Node, location, viewpoint and view of the pending travel
 		/// enter() runs the old path's deactivations (AlienBlast drops the queued travel)
 		bool enterDeactivating = false;
-		bool dropped = false;                               ///< AlienBlast ran in those deactivations: enter() activates nothing (B-204)
-		bool viewLeaving = false;                           ///< deactivateView() runs: a Set View in it is deferred (B-205)
-		bool leavePending = false;                          ///< A Set View ran while the view was left: its path waits in leavePath
-		uint32 leavePath[4] = {};                           ///< Node, location, viewpoint and view of that Set View
+		bool dropped = false;      ///< AlienBlast ran in those deactivations: enter() activates nothing (B-204)
+		bool viewLeaving = false;  ///< deactivateView() runs: a Set View in it is deferred (B-205)
+		bool leavePending = false; ///< A Set View ran while the view was left: its path waits in leavePath
+		uint32 leavePath[4] = {};  ///< Node, location, viewpoint and view of that Set View
 	};
 	Travel _travel;
 

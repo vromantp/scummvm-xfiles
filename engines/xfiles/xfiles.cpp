@@ -35,6 +35,7 @@
 #include "xfiles/debug/console.h"
 #include "xfiles/media/movie.h"
 #include "xfiles/media/pictures.h"
+#include "xfiles/parse.h"
 #include "xfiles/script/script.h"
 #include "xfiles/script/vcdata.h"
 #include "xfiles/ui/view_band.h"
@@ -251,6 +252,12 @@ Common::Error XFilesEngine::run() {
 	_steps = Common::StringTokenizer(ConfMan.get("xfiles_steps")).split();
 	if (!_steps.empty()) {
 		_mouse = Common::Point(320, 240); // tools/ref/run.ps1 Start-Game: move 320 240
+		// xfiles_mouse=X,Y: another start point (the triage engine check uses -1,-1, under no item)
+		Common::String start = ConfMan.get("xfiles_mouse");
+		int32 x = 0, y = 0;
+		const char *comma = start.empty() ? nullptr : parseInt(start.c_str(), x);
+		if (comma && *comma == ',' && parseInt(comma + 1, y))
+			_mouse = Common::Point(x, y);
 	}
 	syncSoundSettings();
 	_fastForward = Common::StringTokenizer(ConfMan.get("xfiles_fastforward")).split();

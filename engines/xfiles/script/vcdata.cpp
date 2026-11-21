@@ -586,6 +586,10 @@ bool VCData::getEnabled(uint32 id, uint32 &target, bool &enabled) const {
 static void readBlobList(const NeoFile &db, uint32 mark, Common::Array<uint32> &list) {
 	uint32 offset = db.readUint32(mark), length = db.readUint32(mark + 4);
 	list.clear();
+	if (offset > db.getSize() || length > db.getSize() - offset) {
+		warning("VCData: blob list at 0x%x has %u bytes at 0x%x, past the end of the file", mark, length, offset);
+		return;
+	}
 	for (uint32 i = 0; i + 4 <= length; i += 4) {
 		uint32 at = offset + i;
 		list.push_back(db.readByte(at) | db.readByte(at + 1) << 8 | db.readByte(at + 2) << 16 | (uint32)db.readByte(at + 3) << 24);

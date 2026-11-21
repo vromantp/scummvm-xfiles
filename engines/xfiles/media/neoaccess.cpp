@@ -87,9 +87,13 @@ bool NeoFile::readNodeHeader(uint32 mark, bool &leaf, uint16 &count) const {
 	return true;
 }
 
-bool NeoFile::walk(uint32 root, Common::Array<NeoEntry> &entries) const {
+bool NeoFile::walk(uint32 root, Common::Array<NeoEntry> &entries, uint depth) const {
 	if (!root)
 		return true;
+	if (depth >= kMaxDepth) {
+		warning("NeoFile: node tree deeper than %u levels", kMaxDepth);
+		return false;
+	}
 	bool leaf;
 	uint16 count;
 	if (!readNodeHeader(root, leaf, count))
@@ -100,21 +104,25 @@ bool NeoFile::walk(uint32 root, Common::Array<NeoEntry> &entries) const {
 			entry.mark = readUint32(root + kNodeHeaderSize + 8 * i);
 			entry.key = readUint32(root + kNodeHeaderSize + 8 * i + 4);
 			entries.push_back(entry);
-		} else if (!walk(readUint32(root + kNodeHeaderSize + 4 * i), entries)) {
+		} else if (!walk(readUint32(root + kNodeHeaderSize + 4 * i), entries, depth + 1)) {
 			return false;
 		}
 	}
 	return true;
 }
 
-bool NeoFile::readClassTable(uint32 root) {
+bool NeoFile::readClassTable(uint32 root, uint depth) {
+	if (depth >= kMaxDepth) {
+		warning("NeoFile: node tree deeper than %u levels", kMaxDepth);
+		return false;
+	}
 	bool leaf;
 	uint16 count;
 	if (!readNodeHeader(root, leaf, count))
 		return false;
 	for (uint i = 0; i < count; i++) {
 		if (!leaf) {
-			if (!readClassTable(readUint32(root + kNodeHeaderSize + 4 * i)))
+			if (!readClassTable(readUint32(root + kNodeHeaderSize + 4 * i), depth + 1))
 				return false;
 			continue;
 		}
@@ -157,9 +165,13 @@ bool NeoFile::getObjects(uint32 classId, Common::Array<NeoEntry> &entries) const
 	return c && walk(c->root, entries);
 }
 
-bool NeoFile::readIdIndex(uint32 root, Common::Array<uint32> &ids) const {
+bool NeoFile::readIdIndex(uint32 root, Common::Array<uint32> &ids, uint depth) const {
 	if (!root)
 		return true;
+	if (depth >= kMaxDepth) {
+		warning("NeoFile: node tree deeper than %u levels", kMaxDepth);
+		return false;
+	}
 	bool leaf;
 	uint16 count;
 	if (!readNodeHeader(root, leaf, count))
@@ -168,7 +180,7 @@ bool NeoFile::readIdIndex(uint32 root, Common::Array<uint32> &ids) const {
 		uint32 value = readUint32(root + kNodeHeaderSize + 4 * i);
 		if (leaf)
 			ids.push_back(value);
-		else if (!readIdIndex(value, ids))
+		else if (!readIdIndex(value, ids, depth + 1))
 			return false;
 	}
 	return true;

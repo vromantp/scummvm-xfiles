@@ -78,14 +78,14 @@ public:
 	const Common::Array<NeoClass> &getClasses() const { return _classes; }
 	const NeoClass *getClass(uint32 id) const;
 
-	/** Append every leaf entry under root to entries, in key order. Returns false on a bad node. */
-	bool walk(uint32 root, Common::Array<NeoEntry> &entries) const;
+	/** Append every leaf entry under root to entries, in key order. Returns false on a bad node or a tree deeper than kMaxDepth (depth is the caller's level). */
+	bool walk(uint32 root, Common::Array<NeoEntry> &entries, uint depth = 0) const;
 
 	/** Append (mark, object ID) for every object of a class. */
 	bool getObjects(uint32 classId, Common::Array<NeoEntry> &entries) const;
 
 	/** Append the object IDs of a list index (leaves hold bare u32 IDs). */
-	bool readIdIndex(uint32 root, Common::Array<uint32> &ids) const;
+	bool readIdIndex(uint32 root, Common::Array<uint32> &ids, uint depth = 0) const;
 
 	/**
 	 * Read the object IDs of an embedded 26-byte object list at mark
@@ -108,7 +108,10 @@ public:
 
 private:
 	bool readNodeHeader(uint32 mark, bool &leaf, uint16 &count) const;
-	bool readClassTable(uint32 root);
+	bool readClassTable(uint32 root, uint depth = 0);
+
+	/** Deepest node tree accepted; a file with more nests (or loops) and is rejected. */
+	static const uint kMaxDepth = 32;
 
 	Common::Array<byte> _data;
 	Common::Array<NeoClass> _classes;

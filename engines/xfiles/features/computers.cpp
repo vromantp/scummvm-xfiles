@@ -247,7 +247,9 @@ static const uint32 kSbaseItems[31] = {
 };
 // clang-format on
 
-ComputerHooks::ComputerHooks(Script &script) : _script(script), _loginState(0), _connectedBefore(false), _wrongTries(0), _pwbkTries(0), _countersInVariables(-1), _forwardKind(0), _forwardCount(0), _record(0), _cookShown(false), _recordShown(false), _sbaseCount(0), _photosDownloaded(0), _photoOffset(0), _photoEnlarged(-1), _photoOpen(false) {
+ComputerHooks::ComputerHooks(Script &script) : _script(script), _loginState(0), _connectedBefore(false), _wrongTries(0),
+	_pwbkTries(0), _countersInVariables(-1), _forwardKind(0), _forwardCount(0), _record(0), _cookShown(false),
+	_recordShown(false), _sbaseCount(0), _photosDownloaded(0), _photoOffset(0), _photoEnlarged(-1), _photoOpen(false) {
 }
 
 void ComputerHooks::addHooks(HookTable<Script> &t) {

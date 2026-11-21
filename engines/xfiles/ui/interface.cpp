@@ -211,7 +211,8 @@ void Interface::Graphic::draw(Graphics::Surface &dst, int x, int y) const {
 // -- Interface ----------------------------------------------------------------
 
 Interface::Interface(const VCData &data, const DiscFiles &files) : _data(data), _files(files), _aiGlow(false), _kitOpen(false),
-	_evidenceRowShown(false), _inventorySeeded(false), _texts(nullptr), _smooth(true), _font(nullptr), _rolloverText(false), _barClosed(false), _barOpen(false),
+	_evidenceRowShown(false), _inventorySeeded(false), _texts(nullptr), _smooth(true), _font(nullptr),
+	_rolloverText(false), _barClosed(false), _barOpen(false),
 	_mouseInBar(false), _enteredBar(false), _suspended(false), _held(0) {
 	static const uint32 kClasses[] = { kClassActionIcon, kClassInventory, kClassEmotionIcon };
 	for (uint i = 0; i < ARRAYSIZE(kClasses); i++) {
@@ -494,7 +495,8 @@ void Interface::syncIcons(const Script &script, uint32 classId, Common::Array<Ic
 		_inventorySeeded = true;
 	// The inventory's order is Script's (a new game's class order, then the order items were enabled in),
 	// which is also what a save keeps
-	const Common::Array<uint32> &order = classId == kClassInventory ? script.getInventory() : _classOrder[classId == kClassActionIcon ? 0 : 2];
+	const Common::Array<uint32> &order = classId == kClassInventory ? script.getInventory()
+		: _classOrder[classId == kClassActionIcon ? 0 : 2];
 	for (uint i = 0; i < order.size(); i++) {
 		uint32 id = order[i];
 		if (!script.isEnabled(id))

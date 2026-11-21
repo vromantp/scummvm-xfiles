@@ -31,7 +31,8 @@
 
 namespace XFiles {
 
-SoundPlayer::SoundPlayer(const DiscFiles &files) : _files(files), _data(nullptr), _script(nullptr), _toneFollowUp(0), _tone(nullptr), _soundView(0) {
+SoundPlayer::SoundPlayer(const DiscFiles &files) : _files(files), _data(nullptr), _script(nullptr), _toneFollowUp(0),
+	_tone(nullptr), _soundView(0) {
 }
 
 SoundPlayer::~SoundPlayer() {

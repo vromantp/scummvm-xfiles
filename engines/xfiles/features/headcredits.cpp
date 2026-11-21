@@ -56,7 +56,8 @@ enum {
 	kBottom = kBandBottom - 5
 };
 
-HeadCredits::HeadCredits() : _smooth(true), _files(nullptr), _dll(nullptr), _strings(nullptr), _font(nullptr), _enabled(false), _rolling(false), _paused(false),
+HeadCredits::HeadCredits() : _smooth(true), _files(nullptr), _dll(nullptr), _strings(nullptr), _font(nullptr),
+	_enabled(false), _rolling(false), _paused(false),
 	_shownAny(false), _index(-1), _position(-1), _restored(-1), _next(0), _hideAt(0) {
 }
 

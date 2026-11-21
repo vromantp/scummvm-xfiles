@@ -1065,7 +1065,8 @@ private:
 		bool navViewQueued = false;                         ///< A nav click is running: its view change is queued (0x46f210)
 		bool pending = false;                               ///< SwapDisc was called in this event (0x6b19a8)
 		uint32 to[4] = {};                                  ///< Node, location, viewpoint and view of the pending travel
-		bool enterDeactivating = false;                     ///< enter() runs the old path's deactivations (AlienBlast drops the queued travel)
+		/// enter() runs the old path's deactivations (AlienBlast drops the queued travel)
+		bool enterDeactivating = false;
 		bool dropped = false;                               ///< AlienBlast ran in those deactivations: enter() activates nothing (B-204)
 		bool viewLeaving = false;                           ///< deactivateView() runs: a Set View in it is deferred (B-205)
 		bool leavePending = false;                          ///< A Set View ran while the view was left: its path waits in leavePath

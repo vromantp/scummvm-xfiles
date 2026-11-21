@@ -125,7 +125,8 @@ static void listRemove(Common::Array<uint32> &list, uint32 id) {
 }
 
 PdaHooks::PdaHooks(Script &script, const VCData &data)
-	: _script(script), _data(data), _inboxTop(0), _addrTop(0), _addrMode(0), _addrDest(nullptr), _pdaFontSize(kPDAFontSize), _pdaLayout(false), _scrollItem(0),
+	: _script(script), _data(data), _inboxTop(0), _addrTop(0), _addrMode(0), _addrDest(nullptr),
+	  _pdaFontSize(kPDAFontSize), _pdaLayout(false), _scrollItem(0),
 	  _scrollSize(kPDAFontSize), _scrollColor(0), _scrollBold(false), _scrollSans(false), _addressIndex(0), _noteDay(0), _noteDays(0) {
 	for (uint i = 0; i < kNoteDayCount; i++)
 		_noteOrder[i] = i;

@@ -235,7 +235,8 @@ Common::String dumpState(const VCData &data, const Script &script, const VCSave 
 	out += Common::String::format("  \"credits\": %d, \"flashlight\": [%u, %u, %u], \"lbox_tint\": %u, \"lbox_color\": [%u, %u, %u],\n",
 		s.credits,
 		s.flashlight[0], s.flashlight[1], s.flashlight[2], s.tint, s.tintColor[0], s.tintColor[1], s.tintColor[2]);
-	out += Common::String::format("  \"view_clip\": %u, \"view_clip_flag\": %u, \"view_clip_time\": %d, \"dbox_charview\": %u, \"layout\": %u, \"position_mode\": %d,\n",
+	out += Common::String::format("  \"view_clip\": %u, \"view_clip_flag\": %u, \"view_clip_time\": %d, "
+		"\"dbox_charview\": %u, \"layout\": %u, \"position_mode\": %d,\n",
 		s.clip, s.clipFlag, s.clipTime, s.dialogBox, s.layout, s.positionMode);
 	out += jsonStateList("sounds", s.sounds) + ",\n";
 	out += jsonStateList("inventory", s.inventory) + ",\n";

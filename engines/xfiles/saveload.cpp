@@ -251,7 +251,13 @@ void XFilesEngine::fillSnapshot(VCSave &save) {
 		if (_data->getAsset(_viewAssets[0], asset)) {
 			save.clip = asset.id;
 			save.clipFlag = (asset.flags & kAssetLoop) != 0;
-			save.clipTime = _layers[0]->getTime();
+			// The layer that shows the asset: syncView skips an asset that does not open
+			for (uint i = 0; i < _layers.size(); i++) {
+				if (_layers[i]->getAssetId() == _viewAssets[0]) {
+					save.clipTime = _layers[i]->getTime();
+					break;
+				}
+			}
 		}
 	}
 	save.credits = _headCredits.getLastCredit();

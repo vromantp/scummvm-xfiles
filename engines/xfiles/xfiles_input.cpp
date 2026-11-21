@@ -427,17 +427,7 @@ XFilesEngine::ViewHit XFilesEngine::hitView(const Common::Point &pos, bool skipC
 	if (!_data->getView(_script->getView(), view))
 		return hit;
 	Common::Array<uint32> ids;
-	_data->getMembers(view.explorables, ids);
-	for (uint i = 0; i < ids.size(); i++) {
-		VCExplorable e;
-		if (_script->isEnabled(ids[i]) && _data->getExplorable(ids[i], e) && containsPoint(e.rect, pos)) {
-			hit.kind = ViewHit::kExplorable;
-			hit.id = ids[i];
-			hit.cursor = e.cursor;
-			return hit;
-		}
-	}
-	ids.clear();
+	// HitTestObject 0x519e40: character views, then explorables, then navs; the first whose rect holds the point
 	if (!skipCharViews)
 		_data->getMembers(view.characters, ids);
 	for (uint i = 0; i < ids.size(); i++) {
@@ -446,6 +436,17 @@ XFilesEngine::ViewHit XFilesEngine::hitView(const Common::Point &pos, bool skipC
 			hit.kind = ViewHit::kCharView;
 			hit.id = ids[i];
 			hit.cursor = cv.cursor;
+			return hit;
+		}
+	}
+	ids.clear();
+	_data->getMembers(view.explorables, ids);
+	for (uint i = 0; i < ids.size(); i++) {
+		VCExplorable e;
+		if (_script->isEnabled(ids[i]) && _data->getExplorable(ids[i], e) && containsPoint(e.rect, pos)) {
+			hit.kind = ViewHit::kExplorable;
+			hit.id = ids[i];
+			hit.cursor = e.cursor;
 			return hit;
 		}
 	}

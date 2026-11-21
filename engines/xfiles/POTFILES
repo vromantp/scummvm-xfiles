@@ -1,2 +1,4 @@
 engines/xfiles/metaengine.cpp
+engines/xfiles/saveload.cpp
+engines/xfiles/ui/menu.cpp
 engines/xfiles/xfiles.cpp

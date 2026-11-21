@@ -101,6 +101,7 @@ XFilesEngine::~XFilesEngine() {
 	delete _script;
 	delete _data;
 	_screen.free();
+	g_engine = nullptr;
 }
 
 bool XFilesEngine::loadDatabases(bool fromSave) {

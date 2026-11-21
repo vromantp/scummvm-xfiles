@@ -182,6 +182,9 @@ struct PdaHooks::Handlers {
 			Common::Array<uint32> members;
 			if (s.data().getInterfaceItem(kAddressBookItem, book) && s.data().getMembers(book.assets, members)) {
 				for (uint i = 0; i < members.size(); i++) {
+					// 0x435590: only the enabled assets
+					if (!s.isEnabled(members[i]))
+						continue;
 					AddrEntry e;
 					e.id = members[i];
 					e.selected = false;

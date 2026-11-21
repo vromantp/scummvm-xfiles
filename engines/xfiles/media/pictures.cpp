@@ -36,7 +36,8 @@ namespace XFiles {
 // A .pff archive: "PFF ", the entry count n, n + 1 entry offsets (the last
 // is the file size), then n frame durations in ms (0 in archives that are
 // not animations). The asset's media file gives the first and last entry.
-static Common::SeekableReadStream *openArchive(const VCData &data, const DiscFiles &files, uint32 assetId, VCMediaFile &file, uint32 &count) {
+static Common::SeekableReadStream *openArchive(const VCData &data, const DiscFiles &files, uint32 assetId, VCMediaFile &file,
+	uint32 &count) {
 	VCAsset asset;
 	if (!data.getAsset(assetId, asset) || asset.files.empty()) {
 		warning("Pictures: #%u is not a picture asset", assetId);

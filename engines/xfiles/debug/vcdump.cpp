@@ -222,7 +222,8 @@ Common::String dumpState(const VCData &data, const Script &script, const VCSave 
 		numbers.push_back(it->_key);
 	Common::sort(numbers.begin(), numbers.end());
 	for (uint i = 0; i < numbers.size(); i++)
-		out += Common::String::format("%s\"%u\": [%u, %d]", i ? ", " : "", numbers[i], timers.getVal(numbers[i]).ms, timers.getVal(numbers[i]).periodic ? 1 : 0);
+		out += Common::String::format("%s\"%u\": [%u, %d]", i ? ", " : "", numbers[i], timers.getVal(numbers[i]).ms,
+			timers.getVal(numbers[i]).periodic ? 1 : 0);
 	out += "}";
 	// The save's game state with the keys of save_delta.py (docs/formats/saves.md)
 	const VCSave &s = *snapshot;
@@ -231,7 +232,8 @@ Common::String dumpState(const VCData &data, const Script &script, const VCSave 
 		script.getView());
 	out += Common::String::format("  \"disc\": %d, \"photos_on_camera\": %d, \"ai_actions\": %u, \"ai_trigger\": %u, \"ai_glow\": %d,\n",
 		s.disc, s.photos, s.hintList, s.hintTrigger, s.hintGlow);
-	out += Common::String::format("  \"credits\": %d, \"flashlight\": [%u, %u, %u], \"lbox_tint\": %u, \"lbox_color\": [%u, %u, %u],\n", s.credits,
+	out += Common::String::format("  \"credits\": %d, \"flashlight\": [%u, %u, %u], \"lbox_tint\": %u, \"lbox_color\": [%u, %u, %u],\n",
+		s.credits,
 		s.flashlight[0], s.flashlight[1], s.flashlight[2], s.tint, s.tintColor[0], s.tintColor[1], s.tintColor[2]);
 	out += Common::String::format("  \"view_clip\": %u, \"view_clip_flag\": %u, \"view_clip_time\": %d, \"dbox_charview\": %u, \"layout\": %u, \"position_mode\": %d,\n",
 		s.clip, s.clipFlag, s.clipTime, s.dialogBox, s.layout, s.positionMode);

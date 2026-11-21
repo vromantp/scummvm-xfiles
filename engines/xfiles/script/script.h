@@ -599,9 +599,11 @@ public:
 	const VCSave &getRestoredSave() const { return _restoredSave; }
 	/** Whether the row of collected evidence is shown (DispEvIcons or a restore with a shown icon). */
 	bool isEvidenceRowShown() const { return _evidenceRowShown; }
-	/** The inventory in the order of the bar: the save's after a restore, a new game's class order, then as items are enabled and disabled. */
+	/** The inventory in the order of the bar: the save's after a restore, a new game's class order, then as items are enabled and
+	 * disabled. */
 	const Common::Array<uint32> &getInventory() const { return _inventory; }
-	/** Evidence icons outside the kit: (VCEvidenceIcon, shown) pairs: as restored from a save, DispEvIcons sets all, an icon enabled later is hidden (0). */
+	/** Evidence icons outside the kit: (VCEvidenceIcon, shown) pairs: as restored from a save, DispEvIcons sets all, an icon enabled
+	 * later is hidden (0). */
 	const Common::Array<uint32> &getEvidence() const { return _evidence; }
 	/** Conversations recorded as asked (see recordTopic()), sorted, as restored from a save and asked since. */
 	const Common::Array<uint32> &getHistory() const { return _history; }
@@ -690,7 +692,8 @@ public:
 	void playAssetAt(uint32 asset, int x, int y);
 	/** The text of a file asset: Windows-1252, carriage returns dropped. */
 	bool readTextFile(uint32 asset, Common::U32String &text);
-	/** PDA text: Courier New, regular, black, left, no shadow, wrapped at width (0x4be2c0); ScrollTextList's colour and Arial are optional. */
+	/** PDA text: Courier New, regular, black, left, no shadow, wrapped at width (0x4be2c0); ScrollTextList's colour and Arial are
+	 * optional. */
 	void setPDAText(uint32 item, const Common::U32String &text, int size, bool doubleWidth, uint32 color = 0,
 		bool bold = false, bool sans = false);
 	/** Hide or show an item's object without touching its enabled flag or firing triggers (Queue_Show). */
@@ -797,7 +800,8 @@ private:
 	bool getReactionSlots(uint32 charViewId, uint32 (&slots)[kReactionSlots]) const;
 	/** The reaction clip of the item in hand on a character view (0x490d50), 0 for none. Rolls for the cattle prod. */
 	uint32 getHeldReaction(uint32 charViewId);
-	/** The conditional actions of an object's Mouse Click triggers that test iCurrInventory and hold, each run alone (0x4d22b0); whether any ran. */
+	/** The conditional actions of an object's Mouse Click triggers that test iCurrInventory and hold, each run alone (0x4d22b0); whether
+	 * any ran. */
 	bool runCameraActions(uint32 id);
 	/** Tool_CharReaction 0x4e2160: the first enabled character view of the view with the item's slot plays it 2 s later. */
 	void toolReaction(int32 item);
@@ -833,7 +837,8 @@ public:
 private:
 	/** A tool object (binoculars, camera, flashlight, night vision) pauses the timed text while held; the gun and plain items do not. */
 	static bool isPausingTool(int32 item) { return item == 2 || item == 3 || item == 8 || item == 13; }
-	/** The held variable goes from `from` to `to` (the click hooks): the old tool object deactivates (resume), the new one activates (pause). */
+	/** The held variable goes from `from` to `to` (the click hooks): the old tool object deactivates (resume), the new one activates
+	 * (pause). */
 	void toolPause(int32 from, int32 to);
 	/** The topics of a character view, in box order. */
 	void getBoxTopics(uint32 charViewId, Common::Array<uint32> &topics) const;

@@ -81,9 +81,11 @@ void XFilesEngine::syncView() {
 			// The restored clip time applies to the first player started
 			movie->play(asset.flags & kAssetLoop, _pendingClipTime);
 			// The clip's .HOT file, only for an asset with flag 0x10 (Player_ForAsset): its entries open and close by the clip's time
-			if (!_hotMovie && (asset.flags & kAssetHotSpots) && _hot.load(_discFiles, asset, _script->getPreferenceValue(kPrefActionSceneDifficulty)))
+			if (!_hotMovie && (asset.flags & kAssetHotSpots) && _hot.load(_discFiles, asset,
+				_script->getPreferenceValue(kPrefActionSceneDifficulty)))
 				_hotMovie = movie;
-			debugC(2, kDebugScript, "-- view clip #%u from %d ms", ids[i], _pendingClipTime >= 0 ? _pendingClipTime : (int)asset.files[0].start);
+			debugC(2, kDebugScript, "-- view clip #%u from %d ms", ids[i],
+				_pendingClipTime >= 0 ? _pendingClipTime : (int)asset.files[0].start);
 			_pendingClipTime = -1;
 		}
 		_layers.push_back(movie);
@@ -374,7 +376,8 @@ void XFilesEngine::drawView() {
 }
 
 const Graphics::Surface *XFilesEngine::getPhotoPicture(const VCPhoto &photo, int w, int h) {
-	Common::String key = Common::String::format("%u/%u/%d,%d,%d,%d/%dx%d", photo.asset, photo.clipTime, photo.crop[0], photo.crop[1], photo.crop[2], photo.crop[3], w, h);
+	Common::String key = Common::String::format("%u/%u/%d,%d,%d,%d/%dx%d", photo.asset, photo.clipTime, photo.crop[0], photo.crop[1],
+		photo.crop[2], photo.crop[3], w, h);
 	for (uint i = 0; i < _photoPictures.size(); i++) {
 		if (_photoPictures[i].key == key)
 			return _photoPictures[i].surface;

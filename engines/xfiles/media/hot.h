@@ -44,7 +44,8 @@ struct HotEntry {
  */
 class HotFile {
 public:
-	/** Load the entries of the asset's first file that has a .HOT; false if there is none. difficulty: the preference's character (E, H, S). */
+	/** Load the entries of the asset's first file that has a .HOT; false if there is none. difficulty: the preference's character (E, H,
+	 * S). */
 	bool load(const DiscFiles &files, const VCAsset &asset, int32 difficulty);
 	void clear() { _entries.clear(); }
 	bool isEmpty() const { return _entries.empty(); }

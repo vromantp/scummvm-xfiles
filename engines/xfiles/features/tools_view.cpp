@@ -78,7 +78,8 @@ void XFilesEngine::drawViewfinder() {
 	_viewfinder->draw(band, x, y);
 	// The photos left, red, System bold 13 at the picture's corner
 	if (!_counterFont) {
-		_counterFont = Graphics::loadTTFFontFromArchive("LiberationSans-Bold.ttf", kCounterFontSize, Graphics::kTTFSizeModeCharacter, 0, 0, getPreference(kPrefSmoothText) ? Graphics::kTTFRenderModeLight : Graphics::kTTFRenderModeMonochrome);
+		_counterFont = Graphics::loadTTFFontFromArchive("LiberationSans-Bold.ttf", kCounterFontSize, Graphics::kTTFSizeModeCharacter, 0, 0,
+			getPreference(kPrefSmoothText) ? Graphics::kTTFRenderModeLight : Graphics::kTTFRenderModeMonochrome);
 		_counterFontOwned = _counterFont != nullptr;
 		if (!_counterFont)
 			_counterFont = FontMan.getFontByUsage(Graphics::FontManager::kBigGUIFont);

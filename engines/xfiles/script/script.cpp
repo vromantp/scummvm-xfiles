@@ -817,7 +817,8 @@ void Script::click(uint32 id, const Common::Point *at) {
 	}
 	VCCharView clicked;
 	if (clickClass == kClassCharView && _data.getCharView(id, clicked))
-		_travel.clickPoint = at ? *at : Common::Point((clicked.rect.left + clicked.rect.right) / 2, (clicked.rect.top + clicked.rect.bottom) / 2);
+		_travel.clickPoint = at ? *at : Common::Point((clicked.rect.left + clicked.rect.right) / 2,
+			(clicked.rect.top + clicked.rect.bottom) / 2);
 	fire(id, kEventMouseClick);
 	// A character view with an item in hand that no trigger took (0x436080): the slot's clip plays as a sound, with
 	// no trigger; none (slot 10 or empty) opens the box as with nothing in hand. With the gun the exe first plays

@@ -89,7 +89,8 @@ bool Captions::loadFonts() {
 #ifdef USE_FREETYPE2
 	Graphics::TTFRenderMode mode = _smooth ? Graphics::kTTFRenderModeLight : Graphics::kTTFRenderModeMonochrome;
 	_cardFont = Graphics::loadTTFFontFromArchive("LiberationMono-Regular.ttf", kCardFontSize, Graphics::kTTFSizeModeCharacter, 0, 0, mode);
-	_captionFont = Graphics::loadTTFFontFromArchive("LiberationSans-Regular.ttf", kCaptionFontSize, Graphics::kTTFSizeModeCharacter, 0, 0, mode);
+	_captionFont = Graphics::loadTTFFontFromArchive("LiberationSans-Regular.ttf", kCaptionFontSize, Graphics::kTTFSizeModeCharacter, 0, 0,
+		mode);
 #endif
 	if (!_cardFont || !_captionFont)
 		warning("Captions: cannot load the fonts from fonts.dat");

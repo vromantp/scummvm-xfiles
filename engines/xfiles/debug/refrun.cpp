@@ -88,7 +88,8 @@ void XFilesEngine::stepClickHot(const Common::String &step, const Common::Array<
 			if (late ? now >= e.endMs : (now >= e.startMs && now < e.endMs)) {
 				Common::Point band = getBandPosition(*_hotMovie);
 				Common::Point pos(band.x + (e.rect.left + e.rect.right) / 2, band.y + (e.rect.top + e.rect.bottom) / 2);
-				debugC(1, kDebugScript, "-- xclick %s at %d,%d (clip time %u)", late ? "after the window" : "in the window", pos.x, pos.y, now);
+				debugC(1, kDebugScript, "-- xclick %s at %d,%d (clip time %u)", late ? "after the window" : "in the window", pos.x, pos.y,
+					now);
 				_mouse = pos;
 				handleClick(pos);
 				return;

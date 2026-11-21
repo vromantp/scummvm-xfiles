@@ -424,7 +424,8 @@ void ComputerHooks::setFieldAsset(uint32 item, uint32 asset, int size, uint32 co
 
 void ComputerHooks::forwardObject(char kind) {
 	// 0x42a120
-	static const char *const kCodes[9] = { "MKM1013", "DRC0919", "PJI0219", "JDV0823", "APS1210", "GXR1200", "JXK0223", "AXH0531", "FFF0919" };
+	static const char *const kCodes[9] = { "MKM1013", "DRC0919", "PJI0219", "JDV0823", "APS1210", "GXR1200", "JXK0223", "AXH0531",
+		"FFF0919" };
 	_forwardKind = kind;
 	int size = _script.pda().mailFontSize();
 	if (kind == 'I') {

@@ -183,7 +183,8 @@ bool XFilesEngine::canSaveGameStateCurrently(Common::U32String *msg) {
 			*msg = _("Put the item back first");
 		return false;
 	}
-	return _script && !_pendingLoad.valid && _script->isViewActive() && !_script->isBusy() && _script->getVideoQueue().empty() && !_video->isOpen() &&
+	return _script && !_pendingLoad.valid && _script->isViewActive() && !_script->isBusy() && _script->getVideoQueue().empty()
+		&& !_video->isOpen() &&
 		_pressedItems.empty();
 }
 

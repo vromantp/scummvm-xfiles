@@ -46,7 +46,8 @@ void Script::playAsset(uint32 id, byte mode, const VCAction *sound3D) {
 	if (_media.soundEnds && (mode == kModePlayOnce || mode == kModePlayLoop) && isPlaying(id))
 		return;
 	// Without known sound ends nothing drops the play, so the stopped sound ends before it restarts
-	if (!_media.soundEnds && (mode == kModePlayOnce || mode == kModePlayLoop) && Common::find(_media.pendingStops.begin(), _media.pendingStops.end(), id) != _media.pendingStops.end()) {
+	if (!_media.soundEnds && (mode == kModePlayOnce || mode == kModePlayLoop) && Common::find(_media.pendingStops.begin(),
+		_media.pendingStops.end(), id) != _media.pendingStops.end()) {
 		_media.pendingStops.erase(Common::find(_media.pendingStops.begin(), _media.pendingStops.end(), id));
 		endSound(id, "stopped");
 		endClip(id, "stopped");
@@ -105,7 +106,8 @@ void Script::playAsset(uint32 id, byte mode, const VCAction *sound3D) {
 			if (!hasObject)
 				_hooks->stopViewAsset(id);
 		}
-		if ((_media.sounds.contains(id) || _media.clips.contains(id)) && Common::find(_media.pendingStops.begin(), _media.pendingStops.end(), id) == _media.pendingStops.end())
+		if ((_media.sounds.contains(id) || _media.clips.contains(id)) && Common::find(_media.pendingStops.begin(),
+			_media.pendingStops.end(), id) == _media.pendingStops.end())
 			_media.pendingStops.push_back(id);
 		// A video stopped while it plays ends; one still waiting never starts
 		for (uint i = _media.videoQueue.size(); i-- > 0; ) {
@@ -143,7 +145,8 @@ void Script::endSound(uint32 id, const char *how) {
 }
 
 bool Script::isPlaying(uint32 id) const {
-	return _media.sounds.contains(id) || _media.clips.contains(id) || Common::find(_media.videoQueue.begin(), _media.videoQueue.end(), id) != _media.videoQueue.end();
+	return _media.sounds.contains(id) || _media.clips.contains(id) || Common::find(_media.videoQueue.begin(), _media.videoQueue.end(),
+		id) != _media.videoQueue.end();
 }
 
 void Script::playAssetAt(uint32 asset, int x, int y) {
@@ -160,7 +163,8 @@ void Script::playAssetAt(uint32 asset, int x, int y) {
 }
 
 void Script::startClip(const VCAsset &a, int x, int y) {
-	log(Common::String::format("      %s #%u ", kModeNames[kModePlayOnce], a.id) + formatFile(a.files[0]) + "  \"" + nameOrNone(_data, a.name) + "\"");
+	log(Common::String::format("      %s #%u ", kModeNames[kModePlayOnce], a.id) + formatFile(a.files[0]) + "  \"" + nameOrNone(_data,
+		a.name) + "\"");
 	_media.clips[a.id] = true;
 	activateAsset(a.id);
 	if (_hooks)

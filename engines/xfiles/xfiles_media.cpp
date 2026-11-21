@@ -86,7 +86,8 @@ void XFilesEngine::fadeToColor(byte cr, byte cg, byte cb, uint32 holdMs) {
 				for (int x = 0; x < shot.w; x++) {
 					byte r, g, b;
 					fmt.colorToRGB(shot.getPixel(x, y), r, g, b);
-					_screen.setPixel(x, y, fmt.RGBToColor((r * scale + cr * step) / kFadeSteps, (g * scale + cg * step) / kFadeSteps, (b * scale + cb * step) / kFadeSteps));
+					_screen.setPixel(x, y, fmt.RGBToColor((r * scale + cr * step) / kFadeSteps, (g * scale + cg * step) / kFadeSteps,
+						(b * scale + cb * step) / kFadeSteps));
 				}
 			}
 		}
@@ -272,7 +273,8 @@ void XFilesEngine::playQueuedVideo(const Input &input) {
 		_videoStarted = gameMillis();
 		// The clip's .HOT file: its entries open and close by the clip's time, as for a view clip (B-031)
 		VCAsset asset;
-		if (_data->getAsset(id, asset) && (asset.flags & kAssetHotSpots) && _hot.load(_discFiles, asset, _script->getPreferenceValue(kPrefActionSceneDifficulty)))
+		if (_data->getAsset(id, asset) && (asset.flags & kAssetHotSpots) && _hot.load(_discFiles, asset,
+			_script->getPreferenceValue(kPrefActionSceneDifficulty)))
 			_hotMovie = _video;
 	}
 	// A piece of the view's loop between conversation clips plays for a

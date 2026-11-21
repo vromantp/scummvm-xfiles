@@ -78,7 +78,8 @@ public:
 	const Common::Array<NeoClass> &getClasses() const { return _classes; }
 	const NeoClass *getClass(uint32 id) const;
 
-	/** Append every leaf entry under root to entries, in key order. Returns false on a bad node or a tree deeper than kMaxDepth (depth is the caller's level). */
+	/** Append every leaf entry under root to entries, in key order. Returns false on a bad node or a tree deeper than kMaxDepth (depth
+	 * is the caller's level). */
 	bool walk(uint32 root, Common::Array<NeoEntry> &entries, uint depth = 0) const;
 
 	/** Append (mark, object ID) for every object of a class. */

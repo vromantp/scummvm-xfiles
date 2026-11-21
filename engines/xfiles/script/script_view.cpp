@@ -874,7 +874,8 @@ void Script::setNavTransition(const VCNav &nav) {
 		_travel.navTransition = kTransitionLeft + (hotSpot.cursor - 284);
 	_travel.navTransitionEmpty = hotSpot.rect.left >= hotSpot.rect.right || hotSpot.rect.top >= hotSpot.rect.bottom;
 	if (!_travel.navTransitionEmpty)
-		_travel.navTransitionCentre = Common::Point((hotSpot.rect.left + hotSpot.rect.right) / 2, (hotSpot.rect.top + hotSpot.rect.bottom) / 2);
+		_travel.navTransitionCentre = Common::Point((hotSpot.rect.left + hotSpot.rect.right) / 2,
+			(hotSpot.rect.top + hotSpot.rect.bottom) / 2);
 }
 
 void Script::goTo(uint32 target) {

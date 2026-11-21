@@ -99,7 +99,8 @@ void SoundPlayer::startSound(uint32 id, bool loop, bool positional, int16 x, int
 	// A restored sound's time is its in point (0x4a88d0)
 	if (startMs)
 		sound.movie->setStart(startMs);
-	debugC(1, kDebugScript, "-- sound #%u %s%s from %u ms", id, asset.files[0].file.c_str(), loop ? ", looped" : "", startMs ? startMs : asset.files[0].start);
+	debugC(1, kDebugScript, "-- sound #%u %s%s from %u ms", id, asset.files[0].file.c_str(), loop ? ", looped" : "",
+		startMs ? startMs : asset.files[0].start);
 	if (positional)
 		placeSound(sound, sound3D);
 	sound.movie->play(loop);

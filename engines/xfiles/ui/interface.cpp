@@ -877,7 +877,8 @@ void Interface::drawItems(Graphics::Surface &dst) const {
 		// (the PDA, a photo) and Help's explanation (items 50470 and 51090 come after 68589's FadeBack(1))
 		bool dimItem = _items[i].id != kNeverTintedItem &&
 		               ((int)_items[i].layoutIndex < modalLayout ||
-		                (_suspended && Common::find(_suspendedItems.begin(), _suspendedItems.end(), _items[i].id) != _suspendedItems.end()));
+		                (_suspended && Common::find(_suspendedItems.begin(), _suspendedItems.end(),
+			_items[i].id) != _suspendedItems.end()));
 		if (dimItem) {
 			Common::Rect area = _items[i].rect;
 			area.clip(Common::Rect(dst.w, dst.h));
@@ -922,10 +923,12 @@ Graphics::Font *Interface::getItemFont(int size, bool bold, int face) const {
 	if (!font) {
 		if (face == Script::kFaceSans) {
 			// Arial: Liberation Sans has its metrics
-			font = Graphics::loadTTFFontFromArchive(bold ? "LiberationSans-Bold.ttf" : "LiberationSans-Regular.ttf", size, Graphics::kTTFSizeModeCharacter, 0, 0, mode);
+			font = Graphics::loadTTFFontFromArchive(bold ? "LiberationSans-Bold.ttf" : "LiberationSans-Regular.ttf", size,
+				Graphics::kTTFSizeModeCharacter, 0, 0, mode);
 		} else {
 			// Courier New: Liberation Mono has its metrics
-			font = Graphics::loadTTFFontFromArchive(bold ? "LiberationMono-Bold.ttf" : "LiberationMono-Regular.ttf", size, Graphics::kTTFSizeModeCharacter, 0, 0, mode);
+			font = Graphics::loadTTFFontFromArchive(bold ? "LiberationMono-Bold.ttf" : "LiberationMono-Regular.ttf", size,
+				Graphics::kTTFSizeModeCharacter, 0, 0, mode);
 		}
 	}
 #endif

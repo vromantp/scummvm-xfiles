@@ -129,7 +129,8 @@ struct Script::GameHooks {
 		if (!s._hooks || !s._hooks->getTimerLeft(c.args[0], left))
 			return true;
 		uint32 start = left < kBombTimerLength ? kBombTimerLength - left : 0;
-		s.log(Common::String::format("      PrepBombTime: timer %d has %u ms left, asset #%d plays from %u ms", c.args[0], left, c.args[1], start));
+		s.log(Common::String::format("      PrepBombTime: timer %d has %u ms left, asset #%d plays from %u ms", c.args[0], left, c.args[1],
+			start));
 		s._hooks->setAssetRange(c.args[1], start, kBombTimerLength);
 		return true;
 	}

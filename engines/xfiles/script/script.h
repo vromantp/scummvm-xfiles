@@ -857,6 +857,7 @@ private:
 	void shootoutReset();
 	void doSmolShootout(const HookCall &call);
 	void smIsWillShot(uint32 timer);
+	void smGoonShoots(uint32 deadVar, uint32 countVar, uint32 timer);
 	void smolGoonShot();
 	/** The .HOT click actions (HotSpot_ClickAction 0x4b4a20, docs/formats/hot.md "Click actions", B-031). */
 	int hotActionFor(uint32 kind, bool &gunAnimation) const;

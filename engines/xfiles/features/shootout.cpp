@@ -137,6 +137,25 @@ void Script::smIsWillShot(uint32 timer) {
 	}
 }
 
+void Script::smGoonShoots(uint32 deadVar, uint32 countVar, uint32 timer) {
+	// 0x4f9820: the roll is always made; the count picks the threshold row (2 or 3), else no shot
+	Dice dice = newDice(0x4f9853);
+	int r = roll(dice, 0, 100);
+	int32 difficulty = getPreferenceValue(kPrefActionSceneDifficulty);
+	bool easy = difficulty == 'E', hard = difficulty == 'H';
+	int32 count = getVariable(countVar);
+	int limit = -1;
+	if (count == 2)
+		limit = easy ? 20 : (hard ? 60 : 40);
+	else if (count == 3)
+		limit = easy ? 50 : (hard ? 80 : 65);
+	int32 dead = limit >= 0 && r < limit ? 1 : 0;
+	if (!dead)
+		_timers.erase(timer & 0xff); // Timer Stop, as smIsWillShot does
+	if (getVariable(deadVar) != dead)
+		setVariable(deadVar, dead);
+}
+
 void Script::smolGoonShot() {
 	// 0x4f9d20: the goon on screen is dead; every variable is written, changed or not
 	if (_shoot.cur >= 1 && _shoot.cur <= 3)

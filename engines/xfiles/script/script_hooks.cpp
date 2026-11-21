@@ -185,6 +185,12 @@ void Script::addGameHooks() {
 		s.smIsWillShot(c.args[0]);
 		return true;
 	});
+	t.add("SmGoonShoots", [](Script &s, const HookCall &c) {
+		if (!c.has(3) || !c.isVariable(0) || !c.isVariable(1))
+			return false;
+		s.smGoonShoots(c.action.args[0].value, c.action.args[1].value, c.args[2]);
+		return true;
+	});
 	t.add("SmolGoonShot1", [](Script &s, const HookCall &) {
 		s.smolGoonShot();
 		return true;

@@ -23,6 +23,7 @@
 #define XFILES_MOVIE_H
 
 #include "audio/mixer.h"
+#include "common/noncopyable.h"
 #include "common/ustr.h"
 #include "graphics/pixelformat.h"
 #include "graphics/surface.h"
@@ -42,7 +43,7 @@ struct VCAsset;
  * shown as a single frame (backgrounds). The last decoded frame stays
  * available after the end, converted to the screen format.
  */
-class Movie {
+class Movie : public Common::NonCopyable {
 public:
 	Movie();
 	~Movie();

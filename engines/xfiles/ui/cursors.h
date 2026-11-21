@@ -24,6 +24,7 @@
 
 #include "common/array.h"
 #include "common/hashmap.h"
+#include "common/noncopyable.h"
 #include "graphics/pixelformat.h"
 
 namespace Graphics {
@@ -44,7 +45,7 @@ class VCData;
  * several .pff entries are animations, stepped with the archive's frame
  * durations (0x448770).
  */
-class Cursors {
+class Cursors : public Common::NonCopyable {
 public:
 	Cursors(const VCData &data, const DiscFiles &files);
 	~Cursors();

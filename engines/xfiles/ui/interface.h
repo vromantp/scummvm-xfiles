@@ -24,6 +24,7 @@
 
 #include "common/array.h"
 #include "common/hashmap.h"
+#include "common/noncopyable.h"
 #include "common/rect.h"
 #include "common/ustr.h"
 #include "graphics/pixelformat.h"
@@ -166,7 +167,7 @@ public:
 
 private:
 	/** A picture (an entry of a .pff archive) or a movie, looped. */
-	class Graphic {
+	class Graphic : public Common::NonCopyable {
 	public:
 		Graphic();
 		~Graphic();

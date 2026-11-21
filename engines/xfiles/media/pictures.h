@@ -23,6 +23,7 @@
 #define XFILES_PICTURES_H
 
 #include "common/array.h"
+#include "common/noncopyable.h"
 #include "common/scummsys.h"
 
 namespace Graphics {
@@ -42,7 +43,7 @@ class VCData;
  * pure blue if one of its four corner pixels is pure blue; otherwise it is
  * drawn opaque.
  */
-class PictureAsset {
+class PictureAsset : public Common::NonCopyable {
 public:
 	/** Takes the surface (screen format) and the alpha per pixel (w * h bytes, or nullptr for opaque). */
 	PictureAsset(Graphics::Surface *surface, byte *alpha);

@@ -24,6 +24,7 @@
 
 #include "common/array.h"
 #include "common/hashmap.h"
+#include "common/noncopyable.h"
 #include "common/rect.h"
 #include "graphics/surface.h"
 
@@ -40,7 +41,7 @@ class VCData;
  * attach() binds the running game's data and Script (both are rebuilt by New Game and a load); the time
  * and the 3D preference come from the engine as arguments, so this class keeps no clock.
  */
-class SoundPlayer {
+class SoundPlayer : public Common::NonCopyable {
 public:
 	explicit SoundPlayer(const DiscFiles &files);
 	~SoundPlayer();

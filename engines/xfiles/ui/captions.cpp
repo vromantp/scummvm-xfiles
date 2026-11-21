@@ -29,13 +29,12 @@
 #include "graphics/surface.h"
 
 #include "xfiles/ui/captions.h"
+#include "xfiles/ui/view_band.h"
 
 namespace XFiles {
 
 enum {
-	// The view band, where the location card goes (XFiles.exe: rectangle at 0x6bb978)
-	kBandLeft = 20,
-	kBandBottom = 330,
+	// The location card sits at the bottom left of the view band (XFiles.exe: rectangle at 0x6bb978)
 	kCardMargin = 15,
 	// Typing: after a delay, three characters every 50 ms; the whole text
 	// then stays four seconds (XFiles.exe 0x484340 and 0x42bd40)

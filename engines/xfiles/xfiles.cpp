@@ -37,21 +37,11 @@
 #include "xfiles/media/pictures.h"
 #include "xfiles/script/script.h"
 #include "xfiles/script/vcdata.h"
+#include "xfiles/ui/view_band.h"
 
 namespace XFiles {
 
 XFilesEngine *g_engine;
-
-enum {
-	kScreenWidth = 640,
-	kScreenHeight = 480,
-	// The view band: navigation frames and videos are 600x240 at (20, 90);
-	// hotspot rectangles are in screen coordinates
-	kBandLeft = 20,
-	kBandTop = 90,
-	kBandWidth = 600,
-	kBandHeight = 240
-};
 
 XFilesEngine::XFilesEngine(OSystem *syst, const ADGameDescription *gameDesc) : Engine(syst),
 	_gameDescription(gameDesc), _randomSource("xfiles"), _data(nullptr), _script(nullptr), _menuX(nullptr), _menuEntries(nullptr), _menuClick(nullptr), _menuLoop(nullptr), _menuLoopSound(nullptr), _menuTop(nullptr), _nightVisionMask(nullptr), _binocularMask(nullptr), _binocularScaled(nullptr), _binocularScaledBeam(0), _flashlightMask(nullptr), _flashlightScaled(nullptr), _flashlightScaledKey(0), _bandTintOn(false), _bandTintTool(0), _viewfinder(nullptr), _counterFont(nullptr), _counterFontOwned(false), _menuReturn(nullptr), _menuIntroDone(false), _menuFading(false), _menuIntroPlay(false), _menuHelpEnd(5000), _menuHelpPlaying(false), _menuTopHot(false), _menuOpen(false), _menuLayout(false), _menuReopen(false), _paused(false), _pauseDepth(0), _pauseStart(0), _pausedTotal(0), _video(nullptr), _videoStarted(0), _viewId(0), _hotMovie(nullptr), _shots(0), _shotDue(0), _shotId(0), _shotView(0), _shotBox(false), _nextStep(0), _waitVideo(0), _delayUntil(0), _waitTimer(-1), _dialogBoxView(0),

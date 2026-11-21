@@ -28,18 +28,11 @@
 #include "xfiles/media/movie.h"
 #include "xfiles/script/script.h"
 #include "xfiles/script/vcdata.h"
+#include "xfiles/ui/view_band.h"
 
 namespace XFiles {
 
 enum {
-	kScreenWidth = 640,
-	kScreenHeight = 480,
-	// The view band: navigation frames and videos are 600x240 at (20, 90);
-	// hotspot rectangles are in screen coordinates
-	kBandLeft = 20,
-	kBandTop = 90,
-	kBandWidth = 600,
-	kBandHeight = 240,
 	// Two clicks at most this far apart in time and space make a double-click
 	// (the Windows defaults)
 	kDoubleClickMs = 500,

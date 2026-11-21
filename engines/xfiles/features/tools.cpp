@@ -128,7 +128,7 @@ int Script::binocularsMode() const {
 }
 
 bool Script::binocularsBlock(const Common::Point &pos) const {
-	if (heldToolType() != 1 || pos.x < 0 || pos.x >= 640 || pos.y < 90 || pos.y >= 330)
+	if (heldToolType() != 1 || pos.x < 0 || pos.x >= kScreenWidth || pos.y < kBandTop || pos.y >= kBandBottom)
 		return false;
 	return !_viewSpecialVariable || getVariable(_viewSpecialVariable) != 7878;
 }

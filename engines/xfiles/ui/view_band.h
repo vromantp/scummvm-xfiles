@@ -27,12 +27,16 @@
 namespace XFiles {
 
 enum {
+	kScreenWidth = 640,
+	kScreenHeight = 480,
 	// The view band: navigation frames and videos are 600x240 at (20, 90);
 	// hotspot rectangles are in screen coordinates
 	kBandLeft = 20,
 	kBandTop = 90,
 	kBandWidth = 600,
-	kBandHeight = 240
+	kBandHeight = 240,
+	kBandRight = kBandLeft + kBandWidth,
+	kBandBottom = kBandTop + kBandHeight
 };
 
 inline void readPixel(const Graphics::Surface &s, int x, int y, byte &r, byte &g, byte &b) {

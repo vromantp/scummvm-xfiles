@@ -34,6 +34,7 @@
 #include "xfiles/media/pictures.h"
 #include "xfiles/script/script.h"
 #include "xfiles/script/vcdata.h"
+#include "xfiles/ui/view_band.h"
 
 namespace XFiles {
 
@@ -41,8 +42,8 @@ namespace XFiles {
 enum {
 	kBarLeft = 0,
 	kBarTop = 420,
-	kBarRight = 640,
-	kBarBottom = 480
+	kBarRight = kScreenWidth,
+	kBarBottom = kScreenHeight
 };
 
 enum {
@@ -57,8 +58,7 @@ enum {
 	// below the icon, centred on it and kept on the screen
 	kTextFontSize = 12,
 	kTextGap = 2,
-	kTextMargin = 3,
-	kScreenWidth = 640
+	kTextMargin = 3
 };
 
 // Panes (0x487060, 0x45b160): start without and with closed captions,

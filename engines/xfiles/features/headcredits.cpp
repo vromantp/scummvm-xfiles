@@ -30,6 +30,7 @@
 #include "xfiles/detection.h"
 #include "xfiles/media/discfiles.h"
 #include "xfiles/features/headcredits.h"
+#include "xfiles/ui/view_band.h"
 
 namespace XFiles {
 
@@ -52,7 +53,7 @@ enum {
 	// of the view band and its shadow below that (0x459390, rectangles
 	// 0x6b7c10 and 0x6b7c40)
 	kCentreX = 320,
-	kBottom = 330 - 5
+	kBottom = kBandBottom - 5
 };
 
 HeadCredits::HeadCredits() : _smooth(true), _files(nullptr), _dll(nullptr), _strings(nullptr), _font(nullptr), _enabled(false), _rolling(false), _paused(false),

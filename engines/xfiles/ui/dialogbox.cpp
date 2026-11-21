@@ -26,6 +26,7 @@
 
 #include "xfiles/ui/dialogbox.h"
 #include "xfiles/media/pictures.h"
+#include "xfiles/ui/view_band.h"
 
 namespace XFiles {
 
@@ -36,8 +37,6 @@ enum {
 	// Placement (0x4819b0): centred on the character's rectangle, inside
 	// the view band, at this height
 	kBoxTop = 285,
-	kBandLeft = 20,
-	kBandRight = 620,
 	// Parts of the folder, relative to its top left corner (static
 	// rectangles initialised at 0x50de80 ... 0x50e140)
 	kListX = 11, kListY = 20, kListW = 212, kListH = 90,

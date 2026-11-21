@@ -20,6 +20,7 @@
  */
 
 #include "common/debug.h"
+#include "common/ptr.h"
 #include "common/stream.h"
 
 #include "xfiles/detection.h"
@@ -41,11 +42,10 @@ bool HotFile::load(const DiscFiles &files, const VCAsset &asset, int32 difficult
 		if (dot < 0)
 			continue;
 		name = name.substr(0, dot) + ".HOT";
-		Common::SeekableReadStream *stream = files.openFile(asset.files[i].disc, name);
+		Common::ScopedPtr<Common::SeekableReadStream> stream(files.openFile(asset.files[i].disc, name));
 		if (!stream)
 			continue;
 		if (stream->size() < 8 || stream->readUint32BE() != MKTAG('H', 'S', 'P', 'T')) {
-			delete stream;
 			continue;
 		}
 		uint32 count = stream->readUint32LE();
@@ -72,7 +72,6 @@ bool HotFile::load(const DiscFiles &files, const VCAsset &asset, int32 difficult
 			}
 			_entries.push_back(e);
 		}
-		delete stream;
 		debugC(2, kDebugScript, "HotFile: %s, %u entries", name.c_str(), _entries.size());
 		return !_entries.empty();
 	}

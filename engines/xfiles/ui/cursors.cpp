@@ -19,6 +19,7 @@
  *
  */
 
+#include "common/ptr.h"
 #include "common/system.h"
 #include "common/textconsole.h"
 #include "common/formats/winexe.h"
@@ -62,14 +63,13 @@ Cursors::~Cursors() {
 
 void Cursors::init(const Graphics::PixelFormat &format) {
 	_format = format;
-	Common::SeekableReadStream *stream = _files.openFile(0, "XFiles.exe");
-	Common::WinResources *exe = stream ? Common::WinResources::createFromEXE(stream) : nullptr;
+	Common::ScopedPtr<Common::SeekableReadStream> stream(_files.openFile(0, "XFiles.exe"));
+	Common::WinResources *exe = stream ? Common::WinResources::createFromEXE(stream.get()) : nullptr;
 	if (exe)
 		_default = Graphics::WinCursorGroup::createCursorGroup(exe, Common::WinResourceID(kDefaultCursorId));
 	if (exe)
 		_tool = Graphics::WinCursorGroup::createCursorGroup(exe, Common::WinResourceID(kToolCursorGroup));
 	delete exe;
-	delete stream;
 	if (!_default || _default->cursors.empty())
 		warning("Cursors: cannot load cursor %u of XFiles.exe; using the Windows arrow", kDefaultCursorId);
 	showDefault();

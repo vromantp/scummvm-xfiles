@@ -20,6 +20,7 @@
  */
 
 #include "common/ptr.h"
+#include "common/ptr.h"
 #include "common/stream.h"
 #include "common/substream.h"
 #include "common/textconsole.h"
@@ -42,24 +43,22 @@ static Common::SeekableReadStream *openArchive(const VCData &data, const DiscFil
 		return nullptr;
 	}
 	file = asset.files[0];
-	Common::SeekableReadStream *stream = files.openFile(file.disc, file.file);
+	Common::ScopedPtr<Common::SeekableReadStream> stream(files.openFile(file.disc, file.file));
 	if (!stream) {
 		warning("Pictures: cannot open %s for #%u", file.file.c_str(), assetId);
 		return nullptr;
 	}
 	if (stream->readUint32BE() != MKTAG('P', 'F', 'F', ' ')) {
 		warning("Pictures: %s is not a .pff archive", file.file.c_str());
-		delete stream;
 		return nullptr;
 	}
 	count = stream->readUint32LE();
 	// Every entry has a four byte offset after the eight byte header
 	if (stream->size() < 8 || count > (uint64)(stream->size() - 8) / 4) {
 		warning("Pictures: %s lists %u entries, more than it can hold", file.file.c_str(), count);
-		delete stream;
 		return nullptr;
 	}
-	return stream;
+	return stream.release();
 }
 
 static bool isBlue(const Graphics::Surface &surface, const Graphics::Palette &palette, int x, int y) {

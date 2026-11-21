@@ -100,7 +100,7 @@ XFilesEngine::XFilesEngine(OSystem *syst, const ADGameDescription *gameDesc) : E
 	_cursors(nullptr),
 	_lastClickTime(0),
 	_dragIdea(0),
-	_charHover(0),
+	_viewHover(0),
 	_dragMoved(false),
 	_timersPaused(false),
 	_movieCursor(false),

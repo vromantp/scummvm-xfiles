@@ -231,7 +231,7 @@ void XFilesEngine::playTransition(int mode, const Graphics::Surface &oldBand, co
 
 void XFilesEngine::closeView() {
 	_hot.clear();
-	_charHover = 0;
+	_viewHover = 0;
 	_hotMovie = nullptr;
 	for (uint i = 0; i < _layers.size(); i++)
 		delete _layers[i];

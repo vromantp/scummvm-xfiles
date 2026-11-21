@@ -460,7 +460,7 @@ private:
 	Common::Point _lastClickPos;
 	Interface::Hit _lastClickHit;
 	Interface::Hit _hover; ///< What the mouse is over, for Roll Into and Roll Out Of
-	uint32 _charHover;     ///< The character view the mouse is over, for Roll Into and Roll Out Of
+	uint32 _viewHover;     ///< The character view, explorable or nav the mouse is over, for Roll Into and Roll Out Of
 	Common::HashMap<uint, TimerState> _timerStates;
 	Common::HashMap<uint, Common::Pair<uint32, uint32>> _assetRanges; ///< PrepBombTime's play ranges, per asset
 	bool _timersPaused;                                               ///< The PDA paused the timers (0x6b1680)

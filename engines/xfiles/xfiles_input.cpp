@@ -73,21 +73,24 @@ void XFilesEngine::updateInterface(bool underMovie) {
 		if (hover.kind != Interface::kHitNone)
 			_script->roll(hover.id, true);
 	}
-	// Roll Into and Roll Out Of for the character view under the mouse (CharView_OnRoll 0x443010: the gun,
-	// handcuffs or stiletto in hand make a character with stock replies say "Don't do that")
-	uint32 charHover = 0;
+	// Roll Into and Roll Out Of for the character view, explorable or nav under the mouse (0x45e880; the handlers
+	// 0x443010, 0x443320 and 0x4433c0 fire nothing during an idea drag, but the rolled object still changes). The gun,
+	// handcuffs or stiletto in hand make a character with stock replies say "Don't do that" (CharView_OnRoll)
+	uint32 viewHover = 0;
 	if (hover.kind == Interface::kHitNone && !_interface->isModal() && !_script->binocularsBlock(_mouse)) {
 		ViewHit viewHit = hitView(_mouse);
-		if (viewHit.kind == ViewHit::kCharView)
-			charHover = viewHit.id;
+		if (viewHit.kind != ViewHit::kNone)
+			viewHover = viewHit.id;
 	}
-	if (charHover != _charHover) {
-		uint32 old = _charHover;
-		_charHover = charHover;
-		if (old)
-			_script->roll(old, false);
-		if (charHover)
-			_script->roll(charHover, true);
+	if (viewHover != _viewHover) {
+		uint32 old = _viewHover;
+		_viewHover = viewHover;
+		if (!(_dragIdea && _dragMoved)) {
+			if (old)
+				_script->roll(old, false);
+			if (viewHover)
+				_script->roll(viewHover, true);
+		}
 	}
 	// The item in hand goes back when the mouse moves into the bar
 	// (InvBar_OnRoll 0x468330); a disabled one goes back in Script::enable

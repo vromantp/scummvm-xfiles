@@ -20,6 +20,7 @@
  */
 
 #include "xfiles/ui/prefs.h"
+#include "xfiles/parse.h"
 #include "xfiles/script/script.h"
 
 #include "audio/mixer.h"
@@ -60,11 +61,13 @@ static bool isLetter(uint index) {
 /** A letter preference's setting: one letter (any case) or the legacy ASCII code. False for anything else. */
 static bool parseLetter(const Common::String &text, int32 &value) {
 	if (text.size() == 1 && Common::isAlpha(text[0])) {
-		value = toupper((unsigned char)text[0]);
+		Common::String upper(text);
+		upper.toUppercase();
+		value = (byte)upper[0];
 		return true;
 	}
 	int32 number;
-	if (!text.empty() && sscanf(text.c_str(), "%d", &number) == 1) {
+	if (parseInt(text.c_str(), number)) {
 		value = number;
 		return true;
 	}
@@ -106,9 +109,9 @@ void Preferences::setScripted(const Common::String &spec) {
 		const char *colon = strchr(token.c_str(), ':');
 		if (!colon)
 			continue;
-		int index = atoi(token.c_str());
+		int index = parseIntOr0(token.c_str());
 		if (index >= 0 && index < kCount) {
-			_scriptedValues[index] = atoi(colon + 1);
+			_scriptedValues[index] = parseIntOr0(colon + 1);
 			_hasScripted[index] = true;
 		}
 	}

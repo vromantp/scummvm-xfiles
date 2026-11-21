@@ -24,6 +24,7 @@
 #include "image/png.h"
 
 #include "xfiles/media/movie.h"
+#include "xfiles/parse.h"
 #include "xfiles/script/vcdata.h"
 #include "xfiles/debug/vcdump.h"
 #include "xfiles/xfiles.h"
@@ -108,8 +109,9 @@ void XFilesEngine::stepAnswer(const Common::String &step) {
 
 void XFilesEngine::stepMouse(const Common::String &step) {
 	// Engine only (B-228): move the mouse to a screen position, no click (the sim ignores it)
-	int x = 0, y = 0;
-	if (sscanf(step.c_str() + 6, "%d,%d", &x, &y) == 2) {
+	int32 x = 0, y = 0;
+	const char *comma = parseInt(step.c_str() + 6, x);
+	if (comma && *comma == ',' && parseInt(comma + 1, y)) {
 		_mouse = Common::Point(x, y);
 		g_system->warpMouse(x, y);
 	}
@@ -117,8 +119,9 @@ void XFilesEngine::stepMouse(const Common::String &step) {
 
 void XFilesEngine::stepClickAt(const Common::String &step, const Common::Array<uint32> &queue) {
 	// Engine only: a click at a screen position (the menu's while it is up)
-	int x = 0, y = 0;
-	if (sscanf(step.c_str() + 7, "%d,%d", &x, &y) == 2) {
+	int32 x = 0, y = 0;
+	const char *comma = parseInt(step.c_str() + 7, x);
+	if (comma && *comma == ',' && parseInt(comma + 1, y)) {
 		Common::Point pos(x, y);
 		_mouse = pos;
 		if (_menuOpen)
@@ -140,7 +143,7 @@ void XFilesEngine::stepState(const Common::String &step) {
 
 void XFilesEngine::stepSaveLoad(const Common::String &step) {
 	// Engine only: save to or load from a ScummVM slot (the load runs at the start of the next frame)
-	int slot = atoi(step.c_str() + 9);
+	int slot = parseIntOr0(step.c_str() + 9);
 	Common::Error error = step[0] == 's' ? saveGameState(slot, "step") : loadGameState(slot);
 	if (error.getCode() != Common::kNoError)
 		warning("%s failed: %s", step.c_str(), error.getDesc().c_str());
@@ -190,7 +193,7 @@ void XFilesEngine::runSteps() {
 		}
 		if (step.hasPrefix("delay:")) {
 			// Engine only: let MS of game time pass (the head credits, timers)
-			_delayUntil = MAX<uint32>(1, gameMillis() + atoi(step.c_str() + 6));
+			_delayUntil = MAX<uint32>(1, gameMillis() + parseIntOr0(step.c_str() + 6));
 			return;
 		}
 		if (step == "wait") {
@@ -245,7 +248,7 @@ void XFilesEngine::runSteps() {
 		if (step.hasPrefix("timer:")) {
 			// The engine's timers run in real time: wait for this one to
 			// expire, if it runs
-			uint timer = atoi(step.c_str() + 6);
+			uint timer = parseIntOr0(step.c_str() + 6);
 			if (_script->getTimers().contains(timer)) {
 				_waitTimer = timer;
 				return;
@@ -254,12 +257,12 @@ void XFilesEngine::runSteps() {
 		}
 		// A character view clicked opens the dialog box, as handleClick does
 		VCCharView cv;
-		if (step.hasPrefix("click:") && _data->getCharView(atoi(step.c_str() + 6), cv)) {
+		if (step.hasPrefix("click:") && _data->getCharView(parseIntOr0(step.c_str() + 6), cv)) {
 			_script->click(cv.id);
 			if (_script->opensBoxOnClick())
 				openDialogBox(cv);
 		} else if (step.hasPrefix("ask:")) {
-			askTopic(atoi(step.c_str() + 4));
+			askTopic(parseIntOr0(step.c_str() + 4));
 		} else {
 			_script->step(step);
 		}

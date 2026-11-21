@@ -24,6 +24,7 @@
 #include "common/textconsole.h"
 
 #include "xfiles/detection.h"
+#include "xfiles/parse.h"
 #include "xfiles/script/script.h"
 #include "xfiles/script/script_internal.h"
 #include "xfiles/script/script_trace.h"
@@ -921,7 +922,7 @@ void Script::step(const Common::String &s) {
 		kind = s.substr(0, colon);
 		arg = s.substr(colon + 1);
 	}
-	uint32 id = (uint32)atoi(arg.c_str());
+	uint32 id = (uint32)parseIntOr0(arg.c_str());
 	// The phone's buttons pressed by the last step go up (100 ms later in the exe)
 	for (uint i = 0; i < _pressed.size(); i++)
 		releaseItem(_pressed[i]);
@@ -957,7 +958,7 @@ void Script::step(const Common::String &s) {
 	} else if (kind == "photo") {
 		// the camera tool clicked in the band at x,y
 		size_t comma = arg.findFirstOf(',');
-		cameraClick(Common::Point(id, comma == Common::String::npos ? 0 : atoi(arg.substr(comma + 1).c_str())));
+		cameraClick(Common::Point(id, comma == Common::String::npos ? 0 : parseIntOr0(arg.substr(comma + 1).c_str())));
 	} else if (kind == "press")
 		press(id);
 	else if (kind == "release")
@@ -976,7 +977,7 @@ void Script::step(const Common::String &s) {
 		// idea:ICON[:CHARVIEW]: the icon dropped on that character view (the exe plays the topic of the one under the
 		// drop; tarakan-to-evidence2, B-167)
 		size_t second = arg.findFirstOf(':');
-		idea(id, second == Common::String::npos ? 0 : (uint32)atoi(arg.c_str() + second + 1));
+		idea(id, second == Common::String::npos ? 0 : (uint32)parseIntOr0(arg.c_str() + second + 1));
 	} else if (kind == "goto")
 		goTo(id);
 	else if (kind == "nav")

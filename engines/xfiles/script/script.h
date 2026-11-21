@@ -864,7 +864,6 @@ private:
 	void hotEasterCandy();
 	void setViewState(char letter);
 	void setViewByExe(uint32 view);
-	void setShootoutVariables();
 	/** The node, location and viewpoint that hold a view: the current viewpoint first, else the whole database. */
 	bool findViewPath(uint32 view, uint32 (&path)[4]) const;
 	/** RegShanksNode2/3/6: keep the argument variables of node slot 0, 1 or 2. */

@@ -48,7 +48,7 @@ static bool syncValues(Common::Serializer &s, Common::Array<uint32> &list, uint 
 	s.syncAsUint32LE(count);
 	if (s.isLoading()) {
 		// Every value takes four bytes of the stream
-		if (count > limit)
+		if (count > limit / 4 / per)
 			return false;
 		list.resize(count * per);
 	}
@@ -61,7 +61,8 @@ static bool syncStrings(Common::Serializer &s, Script::SavedValues &values, uint
 	uint32 count = values.stringIds.size();
 	s.syncAsUint32LE(count);
 	if (s.isLoading()) {
-		if (count > limit)
+		// An entry takes an id (four bytes) and a string (at least one)
+		if (count > limit / 5)
 			return false;
 		values.stringIds.resize(count);
 		values.strings.resize(count);

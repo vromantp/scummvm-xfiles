@@ -53,6 +53,12 @@ static Common::SeekableReadStream *openArchive(const VCData &data, const DiscFil
 		return nullptr;
 	}
 	count = stream->readUint32LE();
+	// Every entry has a four byte offset after the eight byte header
+	if (stream->size() < 8 || count > (uint64)(stream->size() - 8) / 4) {
+		warning("Pictures: %s lists %u entries, more than it can hold", file.file.c_str(), count);
+		delete stream;
+		return nullptr;
+	}
 	return stream;
 }
 

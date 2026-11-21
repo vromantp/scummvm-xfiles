@@ -40,8 +40,13 @@ NeoFile::NeoFile() : _version(0), _freeListRoot(0), _classRoot(0), _classCount(0
 
 bool NeoFile::load(Common::SeekableReadStream &stream) {
 	_classes.clear();
+	_data.clear();
+	if (stream.size() < kHeaderSize) {
+		warning("NeoFile: %d bytes is too short for the header", (int)stream.size());
+		return false;
+	}
 	_data.resize(stream.size());
-	if (stream.size() < kHeaderSize || stream.read(_data.data(), _data.size()) != _data.size())
+	if (stream.read(_data.data(), _data.size()) != _data.size())
 		return false;
 
 	_version = readUint32(0);

@@ -669,14 +669,11 @@ void Interface::tintRect(Graphics::Surface &dst, const Common::Rect &rect) {
 	const Graphics::PixelFormat &fmt = dst.format;
 	for (int y = area.top; y < area.bottom; y++) {
 		for (int x = area.left; x < area.right; x++) {
-			uint32 pixel = fmt.bytesPerPixel == 2 ? *(const uint16 *)dst.getBasePtr(x, y) : *(const uint32 *)dst.getBasePtr(x, y);
+			uint32 pixel = dst.getPixel(x, y);
 			uint8 r, g, b;
 			fmt.colorToRGB(pixel, r, g, b);
 			pixel = fmt.RGBToColor(r * 60 / 255, g * 60 / 255, b * 60 / 255);
-			if (fmt.bytesPerPixel == 2)
-				*(uint16 *)dst.getBasePtr(x, y) = pixel;
-			else
-				*(uint32 *)dst.getBasePtr(x, y) = pixel;
+			dst.setPixel(x, y, pixel);
 		}
 	}
 }
@@ -780,13 +777,9 @@ void Interface::blit(Graphics::Surface &dst, const Graphics::Surface &src, int x
 void Interface::tintChanged(Graphics::Surface &dst, const Graphics::Surface &before, const Common::Rect &area) {
 	if (area.isEmpty() || before.w != area.width())
 		return;
-	const Graphics::PixelFormat &fmt = dst.format;
 	for (int py = area.top; py < area.bottom; py++) {
 		for (int px = area.left; px < area.right; px++) {
-			const void *was = before.getBasePtr(px - area.left, py - area.top);
-			bool same = fmt.bytesPerPixel == 2 ? *(const uint16 *)dst.getBasePtr(px, py) == *(const uint16 *)was
-			                                   : *(const uint32 *)dst.getBasePtr(px, py) == *(const uint32 *)was;
-			if (!same)
+			if (dst.getPixel(px, py) != before.getPixel(px - area.left, py - area.top))
 				tintRect(dst, Common::Rect(px, py, px + 1, py + 1));
 		}
 	}

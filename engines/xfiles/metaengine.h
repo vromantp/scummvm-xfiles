@@ -32,6 +32,8 @@ public:
 
 	bool hasFeature(MetaEngineFeature f) const override;
 
+	Common::KeymapArray initKeymaps(const char *target) const override;
+
 	/** The game screen kept by the in-game menu while it is up, else the screen. */
 	void getSavegameThumbnail(Graphics::Surface &thumb) override;
 };

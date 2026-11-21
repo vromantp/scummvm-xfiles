@@ -30,6 +30,7 @@
 #include "common/rect.h"
 #include "common/scummsys.h"
 #include "common/error.h"
+#include "common/events.h"
 #include "common/keyboard.h"
 #include "engines/engine.h"
 #include "graphics/managed_surface.h"
@@ -57,6 +58,12 @@ class WinResources;
 }
 
 namespace XFiles {
+
+/** Keymap actions (metaengine.cpp initKeymaps); text keys stay raw key events. */
+enum XFilesAction : Common::CustomEventType {
+	kActionNone,
+	kActionEscape
+};
 
 class Movie;
 class PictureAsset;

@@ -258,7 +258,7 @@ XFilesEngine::Input XFilesEngine::pollInput() {
 			input.skip = true;
 			input.rightClick = _steps.empty();
 			input.rightPos = event.mouse;
-		} else if (event.type == Common::EVENT_KEYDOWN && event.kbd.keycode == Common::KEYCODE_ESCAPE) {
+		} else if (event.type == Common::EVENT_CUSTOM_ENGINE_ACTION_START && event.customType == kActionEscape) {
 			input.skip = true;
 			input.escape = true;
 		} else if (event.type == Common::EVENT_KEYDOWN && _script && _steps.empty()) {

@@ -19,6 +19,9 @@
  *
  */
 
+#include "backends/keymapper/action.h"
+#include "backends/keymapper/keymapper.h"
+#include "backends/keymapper/standard-actions.h"
 #include "common/translation.h"
 #include "graphics/managed_surface.h"
 #include "graphics/scaler.h"
@@ -38,6 +41,33 @@ Common::Error XFilesMetaEngine::createInstance(OSystem *syst, Engine **engine, c
 
 bool XFilesMetaEngine::hasFeature(MetaEngineFeature f) const {
 	return checkExtendedSaves(f) || f == kSupportsLoadingDuringStartup;
+}
+
+Common::KeymapArray XFilesMetaEngine::initKeymaps(const char *target) const {
+	using namespace Common;
+
+	Keymap *keymap = new Keymap(Keymap::kKeymapTypeGame, "xfiles", _("Game keymappings"));
+	Action *act;
+
+	act = new Action(kStandardActionLeftClick, _("Left click"));
+	act->setLeftClickEvent();
+	act->addDefaultInputMapping("MOUSE_LEFT");
+	act->addDefaultInputMapping("JOY_A");
+	keymap->addAction(act);
+
+	act = new Action(kStandardActionRightClick, _("Right click / Skip video"));
+	act->setRightClickEvent();
+	act->addDefaultInputMapping("MOUSE_RIGHT");
+	act->addDefaultInputMapping("JOY_B");
+	keymap->addAction(act);
+
+	act = new Action(kStandardActionSkip, _("Skip video / Game menu"));
+	act->setCustomEngineActionEvent(XFiles::kActionEscape);
+	act->addDefaultInputMapping("ESCAPE");
+	act->addDefaultInputMapping("JOY_X");
+	keymap->addAction(act);
+
+	return Keymap::arrayOf(keymap);
 }
 
 void XFilesMetaEngine::getSavegameThumbnail(Graphics::Surface &thumb) {

@@ -817,6 +817,36 @@ void ComputerHooks::photoScroll(bool down) {
 	photoRebuild();
 }
 
+bool ComputerHooks::wheel(const Common::Point &pos, bool down) {
+	// Only while the viewer's layout shows its scroll buttons
+	static const uint32 kUp = 51421, kDown = 51422;
+	bool upShown = false, downShown = false;
+	const Common::Array<Script::Layout> &layouts = _script.getLayouts();
+	for (uint i = 0; i < layouts.size(); i++) {
+		for (uint j = 0; j < layouts[i].items.size(); j++) {
+			upShown = upShown || layouts[i].items[j] == kUp;
+			downShown = downShown || layouts[i].items[j] == kDown;
+		}
+	}
+	if (!_photoOpen || !upShown || !downShown || !_script.isEnabled(kUp) || !_script.isEnabled(kDown))
+		return false;
+	Common::Rect area;
+	for (uint i = 0; i < kPhotoThumbs; i++) {
+		VCInterfaceItem data;
+		if (!_script.data().getInterfaceItem(getPhotoSlotItem(i), data))
+			continue;
+		Common::Rect slot(data.rect.left, data.rect.top, data.rect.right, data.rect.bottom);
+		if (area.isEmpty())
+			area = slot;
+		else
+			area.extend(slot);
+	}
+	if (!area.contains(pos))
+		return false;
+	photoScroll(down);
+	return true;
+}
+
 void ComputerHooks::photoClose() {
 	// 0x4e2a70: the pictures go; the counters stay until the next PhotoInit
 	_photoThumbs.clear();

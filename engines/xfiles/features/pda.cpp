@@ -530,6 +530,91 @@ void PdaHooks::mainScroll(int32 n) {
 	t.firstLine = MIN(first, last);
 }
 
+// -- Mouse wheel (B-357) --------------------------------------------------------
+
+bool PdaHooks::buttonsShown(uint32 up, uint32 down) const {
+	bool upShown = false, downShown = false;
+	const Common::Array<Script::Layout> &layouts = _script.getLayouts();
+	for (uint i = 0; i < layouts.size(); i++) {
+		upShown = upShown || listHas(layouts[i].items, up);
+		downShown = downShown || listHas(layouts[i].items, down);
+	}
+	return upShown && downShown && _script.isEnabled(up) && _script.isEnabled(down);
+}
+
+Common::Rect PdaHooks::itemsRect(const uint32 *items, uint count) const {
+	Common::Rect r;
+	for (uint i = 0; i < count; i++) {
+		VCInterfaceItem data;
+		if (!_data.getInterfaceItem(items[i], data))
+			continue;
+		Common::Rect item(data.rect.left, data.rect.top, data.rect.right, data.rect.bottom);
+		if (r.isEmpty())
+			r = item;
+		else
+			r.extend(item);
+	}
+	return r;
+}
+
+bool PdaHooks::wheel(const Common::Point &pos, bool down) {
+	// The one-line buttons (MainScroll 0/1, ScrollHeaders 0/1, ScrollAddrs c 0/1) found in the database, as up/down pairs
+	static const uint32 kTextButtons[][2] = {
+		{44262, 44263}, {54951, 54952}, {55704, 55705}, {55721, 55722}, {58334, 58335},
+		{60771, 60772}, {65960, 65961}, {67659, 67664}, {71624, 71627}
+	};
+	if (_scrollItem && _script.findItemText(_scrollItem)) {
+		VCInterfaceItem text;
+		if (_data.getInterfaceItem(_scrollItem, text)) {
+			Common::Rect area(text.rect.left, text.rect.top, text.rect.right, text.rect.bottom);
+			for (uint i = 0; area.contains(pos) && i < ARRAYSIZE(kTextButtons); i++) {
+				VCInterfaceItem button;
+				if (!buttonsShown(kTextButtons[i][0], kTextButtons[i][1]) ||
+						!_data.getInterfaceItem(kTextButtons[i][0], button))
+					continue;
+				// The buttons beside the text: just right of it and in its height
+				if (button.rect.left >= area.left && button.rect.left <= area.right + 40 && button.rect.top < area.bottom &&
+						button.rect.bottom > area.top) {
+					mainScroll(down ? 1 : 0);
+					return true;
+				}
+			}
+		}
+	}
+
+	// The inbox: the PDA's rows with 42766/42767, the mail layout's with 42768/42769
+	uint32 rows[2 * kInboxRows];
+	for (uint k = 0; k < kInboxRows; k++) {
+		rows[2 * k] = fromItem(_pdaLayout, k);
+		rows[2 * k + 1] = subjectItem(_pdaLayout, k);
+	}
+	if (buttonsShown(_pdaLayout ? 42766 : 42768, _pdaLayout ? 42767 : 42769) &&
+			itemsRect(rows, ARRAYSIZE(rows)).contains(pos)) {
+		scrollHeaders(down ? 1 : 0);
+		return true;
+	}
+
+	// The address book's lists
+	static const struct {
+		char mode;
+		uint32 up, down;
+		const uint32 *rows;
+		uint count;
+	} kLists[] = {
+		{ 'T', 40429, 40428, kAddrRowsT, ARRAYSIZE(kAddrRowsT) },
+		{ 'C', 40447, 40446, kAddrRowsC, ARRAYSIZE(kAddrRowsC) },
+		{ 'A', 62806, 62814, kAddrRowsA, ARRAYSIZE(kAddrRowsA) },
+		{ 'B', 62808, 62809, kAddrRowsB, ARRAYSIZE(kAddrRowsB) }
+	};
+	for (uint i = 0; i < ARRAYSIZE(kLists); i++) {
+		if (buttonsShown(kLists[i].up, kLists[i].down) && itemsRect(kLists[i].rows, kLists[i].count).contains(pos)) {
+			scrollAddrs(kLists[i].mode, down ? 1 : 0);
+			return true;
+		}
+	}
+	return false;
+}
+
 // -- Address book -------------------------------------------------------------
 
 void PdaHooks::buildAddressList() {

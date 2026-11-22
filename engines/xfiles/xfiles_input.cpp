@@ -294,6 +294,21 @@ void XFilesEngine::handleClick(const Common::Point &pos) {
 	}
 }
 
+void XFilesEngine::handleWheel(const Common::Point &pos, int notches) {
+	// Engine addition (B-357, the exe ignores the wheel): a notch does what one click on the scroll button does
+	if (_menuLayout || _whiteHold)
+		return;
+	const bool down = notches > 0;
+	for (int i = ABS(notches); i > 0; i--) {
+		if (_dialogBox.isOpen() && _dialogBox.contains(pos)) {
+			_dialogBox.wheel(pos, down);
+			continue;
+		}
+		if (!_script->wheelScroll(pos, down))
+			break;
+	}
+}
+
 bool XFilesEngine::clickDialogBox(const Interface::Hit &hit, const Common::Point &pos) {
 	// A click outside the box closes it (assumed; DisplayDBox(0) also
 	// does); one on an icon goes on to the icon

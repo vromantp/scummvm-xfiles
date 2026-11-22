@@ -78,6 +78,8 @@ public:
 	void setTopics(const Common::Array<Topic> &talk, const Common::Array<Topic> &history);
 
 	/** A click at pos; topic is set for kHitTopic. */
+	/** Engine addition (B-357): a wheel notch over the topic list steps the scroll like the arrows. true: used up. */
+	bool wheel(const Common::Point &pos, bool down);
 	Hit click(const Common::Point &pos, uint32 &topic);
 	/** The topic a click at pos would ask (0 for none), without the click's side effects (the debug point search). */
 	uint32 topicAt(const Common::Point &pos) const;

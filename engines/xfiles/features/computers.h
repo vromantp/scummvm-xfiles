@@ -45,6 +45,9 @@ public:
 	/** Add the computer hooks to the Script's table. */
 	void addHooks(HookTable<Script> &table);
 
+	/** Engine addition (B-357, not in the exe): a wheel notch over the thumbnails scrolls them like the buttons 51421/51422. */
+	bool wheel(const Common::Point &pos, bool down);
+
 	/** The photo viewer is up (PhotoInit to PhotoClose): the engine draws the pictures over the layout. */
 	bool isPhotoViewerOpen() const { return _photoOpen; }
 	/** The record shown (0x6b9b94); the PDA notepad sets it to the shown day's item (0x4e71a0). */

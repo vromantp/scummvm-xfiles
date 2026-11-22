@@ -483,6 +483,8 @@ public:
 	/** Whether the first video loops: it ends only when a Stop action stops it. */
 	bool isVideoLooped() const { return !_media.videoPlays.empty() && _media.videoPlays[0].loop; }
 	bool isEnabled(uint32 id) const;
+	/** A mouse wheel notch at pos over a scroll text, list or the photo viewer (B-357, an engine addition); true: used up. */
+	bool wheelScroll(const Common::Point &pos, bool down) { return _pda.wheel(pos, down) || _computer.wheel(pos, down); }
 	/** The first member of an asset list that is enabled (XFiles.exe 0x41fe60), 0 if none. */
 	uint32 firstEnabled(uint32 listId) const;
 	/**

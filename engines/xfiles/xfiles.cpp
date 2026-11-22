@@ -306,6 +306,7 @@ XFilesEngine::Input XFilesEngine::pollInput() {
 	input.escape = false;
 	input.rightClick = false;
 	input.release = false;
+	input.wheel = 0;
 	Common::Event event;
 	while (g_system->getEventManager()->pollEvent(event)) {
 		// The widescreen canvas has black sides: canvas x to screen x (clamped to the 640 columns)
@@ -327,6 +328,9 @@ XFilesEngine::Input XFilesEngine::pollInput() {
 			_canvasMouseScreen = _mouse;
 			if (_dragIdea && (ABS(_mouse.x - _dragStart.x) > 3 || ABS(_mouse.y - _dragStart.y) > 3))
 				_dragMoved = true;
+		} else if ((event.type == Common::EVENT_WHEELUP || event.type == Common::EVENT_WHEELDOWN) && _steps.empty()) {
+			input.wheel += event.type == Common::EVENT_WHEELUP ? -1 : 1;
+			input.wheelPos = event.mouse;
 		} else if (event.type == Common::EVENT_RBUTTONDOWN) {
 			// The exe ends the playing video on a right-click as on a natural end
 			input.skip = true;
@@ -739,6 +743,8 @@ void XFilesEngine::runViewFrame(Input input, bool still) {
 		handleRightClick(input.rightPos);
 	if (input.release)
 		handleRelease(input.releasePos);
+	if (input.wheel)
+		handleWheel(input.wheelPos, input.wheel);
 	updateCursor();
 	drawView();
 	if (_whiteHold)

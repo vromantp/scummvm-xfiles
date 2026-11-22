@@ -227,6 +227,17 @@ uint32 DialogBox::topicAt(const Common::Point &pos) const {
 	return row >= 0 ? getTopics()[row].id : 0;
 }
 
+bool DialogBox::wheel(const Common::Point &pos, bool down) {
+	// Only while the scroll bar and its arrows are drawn
+	if (!isVisible() || !getMaxScroll() || !getRect(kListX, kListY, kListW, kListH).contains(pos))
+		return false;
+	if (down && _scroll < getMaxScroll())
+		_scroll++;
+	else if (!down && _scroll > 0)
+		_scroll--;
+	return true;
+}
+
 DialogBox::Hit DialogBox::click(const Common::Point &pos, uint32 &topic) {
 	if (!contains(pos))
 		return kHitOutside;

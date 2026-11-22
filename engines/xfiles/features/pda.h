@@ -47,6 +47,13 @@ public:
 	/** Add the e-mail, scroll text, address book and notepad hooks to the Script's table. */
 	void addHooks(HookTable<Script> &table);
 
+	/**
+	 * Engine addition (B-357, not in the exe): a mouse wheel notch over a text, the inbox headers or an address list
+	 * does what one click on its up (down false) or down scroll button does, only while both buttons are shown.
+	 * true: the notch is used up.
+	 */
+	bool wheel(const Common::Point &pos, bool down);
+
 	// What a save keeps (Script::snapshot and restore)
 	/** Add an e-mail to VCEmail unless it is there (0x41ab40, as EmailFlushMess does). */
 	void addEmail(uint32 id);
@@ -94,6 +101,9 @@ private:
 		uint count;
 	};
 	bool setAddrMode(char c);
+	bool buttonsShown(uint32 up, uint32 down) const;
+	/** The union of the rects of items (an empty rect if one is missing). */
+	Common::Rect itemsRect(const uint32 *items, uint count) const;
 	AddrModeInfo addrModeInfo() const;
 	uint addrShownCount() const;
 	uint32 addrShownId(uint i) const;

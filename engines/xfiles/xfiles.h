@@ -163,6 +163,8 @@ private:
 		Common::Point rightPos;
 		bool release; ///< The left button went up
 		Common::Point releasePos;
+	int wheel;            ///< Wheel notches this frame: up negative, down positive (B-357)
+	Common::Point wheelPos;
 	};
 
 	/** The main menu's entries, in order from the top. */
@@ -325,6 +327,8 @@ private:
 	/** The picture of a photo scaled to w x h (a frame of its asset at its time, cropped), cached; null without a frame. */
 	const Graphics::Surface *getPhotoPicture(const VCPhoto &photo, int w, int h);
 	void handleClick(const Common::Point &pos);
+	/** Mouse wheel notches (up negative): the dialog box's topics, a scroll text, the inbox, the address book, the photos. */
+	void handleWheel(const Common::Point &pos, int notches);
 	/** handleClick with the dialog box open: a topic, a click inside, outside or on an icon. true: the click is used up. */
 	bool clickDialogBox(const Interface::Hit &hit, const Common::Point &pos);
 	/** AIIconObj's click (0x5091d0). */

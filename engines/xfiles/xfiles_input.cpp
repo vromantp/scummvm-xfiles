@@ -169,8 +169,12 @@ void XFilesEngine::clickInventory(uint32 inventory) {
 	_script->selectInventory(inventory);
 }
 
-static bool inMenuCorner(const Common::Point &pos) {
-	return pos.x >= kMenuCornerLeft && pos.x < kScreenWidth && pos.y >= 0 && pos.y < kMenuCornerBottom;
+bool XFilesEngine::inMenuCorner(const Common::Point &pos) const {
+	int bottom = kMenuCornerBottom;
+	// The zoomed band starts at canvas y kZoomTop, the corner's y is the canvas y: the X cursor must not hang into it
+	if (_bandZoomed)
+		bottom = MIN<int>(bottom, kZoomTop - _cursors->extentBelow(kXCursor) + 1);
+	return pos.x >= kMenuCornerLeft && pos.x < kScreenWidth && pos.y >= 0 && pos.y < bottom;
 }
 
 static bool containsPoint(const VCRect &r, const Common::Point &pos) {

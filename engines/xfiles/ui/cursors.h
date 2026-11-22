@@ -61,6 +61,8 @@ public:
 	 * alpha plane; off, keyed on pure blue (Prefs_Apply 0x452d70). A change shows the cursor again.
 	 */
 	void update(bool translucent);
+	/** How far a VCCursor's frames reach below the mouse (height minus hotspot y); 0 without a picture. */
+	int extentBelow(uint32 cursorId);
 
 private:
 	struct Cursor {

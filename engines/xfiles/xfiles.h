@@ -333,6 +333,11 @@ private:
 	void clickCharView(uint32 id);
 	/** The step a click at pos gives, as handleClick resolves it ("click:ID", "nav:ID", "ask:ID", "aiclick"), or empty. */
 	Common::String stepAt(const Common::Point &pos) const;
+	/**
+	 * In the X corner (XCorner_ctor's rectangle). Widescreen with the band zoomed: only as low as keeps its cursor above
+	 * the band, which then starts at the corner's bottom edge.
+	 */
+	bool inMenuCorner(const Common::Point &pos) const;
 	/** Debug: log the screen point that gives step (`-- point STEP X,Y`, or `off-screen`), found on a 4-pixel grid. */
 	void logStepPoint(const Common::String &step);
 

@@ -116,6 +116,14 @@ void Cursors::update(bool translucent) {
 	}
 }
 
+int Cursors::extentBelow(uint32 cursorId) {
+	const Cursor *cursor = getCursor(cursorId);
+	int below = 0;
+	for (uint i = 0; cursor && i < cursor->frames.size(); i++)
+		below = MAX<int>(below, cursor->frames[i]->getSurface().h - cursor->hotY);
+	return below;
+}
+
 Cursors::Cursor *Cursors::getCursor(uint32 cursorId) {
 	if (_cursors.contains(cursorId))
 		return _cursors[cursorId];

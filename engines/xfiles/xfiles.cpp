@@ -1084,7 +1084,7 @@ void XFilesEngine::applyWidescreen(const Graphics::PixelFormat *format) {
 			g_system->fillScreen(0);
 		return;
 	}
-	// B-356: the option changed while the game runs; the canvas is resized with the format it already has
+	// The option changed while the game runs; the canvas is resized with the format it already has
 	if (dx == _wideDx)
 		return;
 	const Graphics::PixelFormat keep = _screen.format;
@@ -1099,7 +1099,9 @@ void XFilesEngine::applyWidescreen(const Graphics::PixelFormat *format) {
 	initGraphics(_wideDx ? kWideWidth : kScreenWidth, kScreenHeight, &keep);
 	g_system->fillScreen(0);
 	// The mouse stays on the same screen point; the frame is redrawn from the current screen at once
-	g_system->warpMouse(_mouse.x + _wideDx, _mouse.y);
+	// (-1,-1): under no item (e.g. the dead gap between the pane groups), the cursor stays where it is
+	if (_mouse.x >= 0)
+		g_system->warpMouse(_mouse.x + _wideDx, _mouse.y);
 	present();
 }
 

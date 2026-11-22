@@ -30,6 +30,7 @@
 #include "graphics/pixelformat.h"
 
 #include "xfiles/script/script.h"
+#include "xfiles/ui/wide_layout.h"
 
 namespace Common {
 class WinResources;
@@ -99,7 +100,7 @@ public:
 	/** Open or close the bar by the mouse (the last step of update; also runs under a movie). */
 	void updateBar(const Common::Point &mouse, bool hiddenBar);
 	/** The icons and their rollover texts (under the dialog box). */
-	void drawBar(Graphics::Surface &dst) const;
+	void drawBar(Graphics::Surface &dst, WideLayout *wide = nullptr) const;
 	/** The items of the shown layouts, the lowest key last (over the dialog box and the captions). */
 	void drawItems(Graphics::Surface &dst) const;
 

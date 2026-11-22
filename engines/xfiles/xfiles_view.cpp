@@ -214,6 +214,7 @@ void XFilesEngine::playTransition(int mode, const Graphics::Surface &oldBand, co
 		drawToolOverlay();
 		captureBandPass();
 		_headCredits.draw(_screen); // fixed on top, out of the slid picture (B-247)
+		_wide.mark(WideLayout::kCredits, _screen);
 		present();
 		if (done)
 			break;
@@ -362,16 +363,24 @@ void XFilesEngine::drawView() {
 	// The rest follows the exe's draw list, bottom to top (screen-composition.md): icons, the dialog box (translucent
 	// by Pref_bTranslucency, Prefs_Apply 0x452d70; Options and Help cover it and it takes no clicks then), the location
 	// card and head credits, captions, the subliminal word, then the layout items over all of it
-	_interface->drawBar(_screen);
+	_interface->drawBar(_screen, &_wide);
 	_dialogBox.draw(_screen, _mouse, !getPreference(kPrefTranslucency));
+	_wide.mark(WideLayout::kBox, _screen);
 	_captions.drawCard(_screen);
+	_wide.mark(WideLayout::kCard, _screen);
 	_headCredits.draw(_screen);
+	_wide.mark(WideLayout::kCredits, _screen);
 	for (uint i = 0; i < _layers.size(); i++)
 		drawCaptions(*_layers[i], getBandPosition(*_layers[i]));
 	_subliminal.draw(_screen);
+	_wide.mark(WideLayout::kSubliminal, _screen);
 	_interface->drawItems(_screen);
-	if (_dragIdea && _dragMoved)
+	if (_dragIdea && _dragMoved) {
+		// The dragged idea sits at the canvas mouse
+		_wide.setMouseOffset((_mouse == _canvasMouseScreen ? _canvasMouse : toCanvas(_mouse)) - _mouse);
 		_interface->drawDragged(_screen, _dragIdea, _mouse);
+		_wide.mark(WideLayout::kDrag, _screen);
+	}
 	drawPhotos();
 	// PlayAssetAt clips: group +0x220 key 0x16, over every layout item, the dialog box, captions and the flashlight light
 	_sound.drawClips(_screen, true);

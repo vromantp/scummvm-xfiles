@@ -26,11 +26,11 @@
 #include "common/system.h"
 #include "graphics/pixelformat.h"
 
-#include "xfiles/xfiles.h"
 #include "xfiles/media/movie.h"
 #include "xfiles/script/script.h"
 #include "xfiles/script/vcdata.h"
 #include "xfiles/ui/view_band.h"
+#include "xfiles/xfiles.h"
 
 namespace XFiles {
 
@@ -220,6 +220,7 @@ void XFilesEngine::drawCaptions(const Movie &movie, const Common::Point &pos) {
 		return;
 	// Text tracks sit below the picture (track matrix y 240), as wide as the video
 	_captions.drawCaption(_screen, movie.getCaption(), pos.x, pos.y + movie.getHeight(), movie.getWidth());
+	_wide.mark(WideLayout::kCaptions, _screen);
 }
 
 bool XFilesEngine::isStillVideo(uint32 id) const {

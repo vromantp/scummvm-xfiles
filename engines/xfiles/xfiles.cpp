@@ -309,7 +309,8 @@ XFilesEngine::Input XFilesEngine::pollInput() {
 	Common::Event event;
 	while (g_system->getEventManager()->pollEvent(event)) {
 		// The widescreen canvas has black sides: canvas x to screen x (clamped to the 640 columns)
-		event.mouse = toScreen(event.mouse);
+		Common::Point canvasMouse = event.mouse;
+		event.mouse = toScreen(canvasMouse);
 		if (event.type == Common::EVENT_LBUTTONDOWN && _steps.empty()) {
 			input.click = true;
 			input.pos = event.mouse;
@@ -322,6 +323,8 @@ XFilesEngine::Input XFilesEngine::pollInput() {
 			// A step list (xfiles_steps) keeps the mouse where a reference
 			// run puts it, whatever the real mouse does
 			_mouse = event.mouse;
+			_canvasMouse = canvasMouse;
+			_canvasMouseScreen = _mouse;
 			if (_dragIdea && (ABS(_mouse.x - _dragStart.x) > 3 || ABS(_mouse.y - _dragStart.y) > 3))
 				_dragMoved = true;
 		} else if (event.type == Common::EVENT_RBUTTONDOWN) {
@@ -368,57 +371,53 @@ uint XFilesEngine::getKeyValue(const Common::KeyState &kbd) {
 }
 
 Common::Point XFilesEngine::toScreen(const Common::Point &canvas) const {
-	if (_bandZoomed && canvas.x >= kZoomLeft && canvas.x < kZoomLeft + kZoomWidth && canvas.y >= kZoomTop &&
-			canvas.y < kZoomTop + kZoomHeight)
-		return Common::Point(kBandLeft + (4 * (canvas.x - kZoomLeft) + 2) / 5, kBandTop + (4 * (canvas.y - kZoomTop) + 2) / 5);
+	if (_bandZoomed)
+		return _wide.toScreen(canvas);
 	// The black sides act as the screen edge
 	return Common::Point(CLIP<int16>(canvas.x - _wideDx, 0, kScreenWidth - 1), CLIP<int16>(canvas.y, 0, kScreenHeight - 1));
 }
 
 Common::Point XFilesEngine::toCanvas(const Common::Point &screen) const {
-	if (_bandZoomed && screen.x >= kBandLeft && screen.x < kBandRight && screen.y >= kBandTop && screen.y < kBandBottom)
-		return Common::Point(kZoomLeft + (screen.x - kBandLeft) * 5 / 4, kZoomTop + (screen.y - kBandTop) * 5 / 4);
+	if (_bandZoomed)
+		return WideLayout::toCanvas(screen);
 	return Common::Point(screen.x + _wideDx, screen.y);
 }
 
 void XFilesEngine::captureBandPass() {
 	// Zoomed only with no shown layout and no menu; the caller checked the frame is the 600x240 band
 	_bandCaptured = false;
+	_wide.end();
 	if (!_wideDx || _menuOpen || _menuLayout || _interface->hasLayouts())
 		return;
 	_bandPass.free();
 	_bandPass.copyFrom(_screen.getSubArea(Common::Rect(kBandLeft, kBandTop, kBandRight, kBandBottom)));
 	_bandCaptured = true;
+	_wide.begin(_screen); // the UI pass records each element it draws from here on
 }
 
 void XFilesEngine::composeWide(Graphics::Surface &canvas, bool zoomed) {
-	// The framed screen at the frame offset; zoomed, the band pass scaled 1.25x (bilinear: it is video) over it, and the
-	// UI pass (still the 4:3 screen at the frame offset, B-354 places it) copied where it differs from the band pass
+	// The framed screen at the frame offset; zoomed, the band pass scaled 1.25x (bilinear: it is video) on black, and
+	// the UI pass's elements pasted at the places WideLayout gives them (B-354)
 	canvas.create(kWideWidth, kScreenHeight, _screen.format);
 	canvas.fillRect(Common::Rect(canvas.w, canvas.h), 0);
 	const int bpp = _screen.format.bytesPerPixel;
-	for (int y = 0; y < _screen.h; y++)
-		memcpy(canvas.getBasePtr(_wideDx, y), _screen.getBasePtr(0, y), _screen.w * bpp);
-	if (!zoomed)
+	if (!zoomed) {
+		for (int y = 0; y < _screen.h; y++)
+			memcpy(canvas.getBasePtr(_wideDx, y), _screen.getBasePtr(0, y), _screen.w * bpp);
 		return;
+	}
 	Graphics::Surface *scaled = _bandPass.scale(kZoomWidth, kZoomHeight, true);
 	for (int y = 0; y < kZoomHeight; y++)
 		memcpy(canvas.getBasePtr(kZoomLeft, kZoomTop + y), scaled->getBasePtr(0, y), kZoomWidth * bpp);
 	scaled->free();
 	delete scaled;
-	for (int y = 0; y < kBandHeight; y++) {
-		const byte *ui = (const byte *)_screen.getBasePtr(kBandLeft, kBandTop + y);
-		const byte *band = (const byte *)_bandPass.getBasePtr(0, y);
-		byte *dst = (byte *)canvas.getBasePtr(kBandLeft + _wideDx, kBandTop + y);
-		for (int x = 0; x < kBandWidth; x++, ui += bpp, band += bpp, dst += bpp) {
-			if (memcmp(ui, band, bpp))
-				memcpy(dst, ui, bpp);
-		}
-	}
+	_wide.compose(canvas);
 }
 
 void XFilesEngine::present() {
 	if (_wideDx && _bandCaptured) {
+		_wide.mark(WideLayout::kOther, _screen);
+		_wide.end();
 		Graphics::Surface canvas;
 		composeWide(canvas, true);
 		g_system->copyRectToScreen(canvas.getPixels(), canvas.pitch, 0, 0, canvas.w, canvas.h);
@@ -704,10 +703,13 @@ void XFilesEngine::runMovieFrame(const Input &input) {
 	updateCursor();
 	// A playing movie: drawView does not run; the bar (open by the mouse, seen in the original 2026-11-09)
 	// and the text layers still go over it
-	_interface->drawBar(_screen);
+	_interface->drawBar(_screen, &_wide);
 	_captions.drawCard(_screen);
+	_wide.mark(WideLayout::kCard, _screen);
 	_headCredits.draw(_screen);
+	_wide.mark(WideLayout::kCredits, _screen);
 	_subliminal.draw(_screen);
+	_wide.mark(WideLayout::kSubliminal, _screen);
 }
 
 void XFilesEngine::runViewFrame(Input input, bool still) {

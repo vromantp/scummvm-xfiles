@@ -826,12 +826,20 @@ void Interface::drawDragged(Graphics::Surface &dst, uint32 ideaId, const Common:
 	}
 }
 
-void Interface::drawBar(Graphics::Surface &dst) const {
+static void markWide(WideLayout *wide, WideLayout::Element element, const Graphics::Surface &screen) {
+	if (wide)
+		wide->mark(element, screen);
+}
+
+void Interface::drawBar(Graphics::Surface &dst, WideLayout *wide) const {
 	// A shown modal layout (or FadeBack) suspends the icons, the inventory and the items of the layouts under it:
 	// their pixels are multiplied by the suspend tint (B-007)
 	bool dim = isModal();
+	// Widescreen (B-354): each pane is recorded as it is drawn, to be placed on the canvas
 	drawIcons(dst, _actions, dim);
+	markWide(wide, WideLayout::kActions, dst);
 	drawIcons(dst, _emotions, dim);
+	markWide(wide, WideLayout::kEmotions, dst);
 	if ((_aiSuspended || dim) && !_aiIcon.empty() && _aiIcon[0].graphic) {
 		// The suspend tint (colour RGB 60, 60, 60, 0x5086b0) multiplies the icon's pixels: in the reference screenshots a
 		// suspended icon is the lit one times about 60/255. Only the pixels the icon draws change
@@ -840,8 +848,11 @@ void Interface::drawBar(Graphics::Surface &dst) const {
 	} else {
 		drawIcons(dst, _aiIcon, dim);
 	}
+	markWide(wide, WideLayout::kAIIcon, dst);
 	drawIcons(dst, _ideas, dim);
+	markWide(wide, WideLayout::kIdeas, dst);
 	drawIcons(dst, _evidence, dim);
+	markWide(wide, WideLayout::kEvidence, dst);
 	if (_barOpen) {
 		drawIcons(dst, _inventory, dim, _held);
 	} else if (_held && !isModal()) {
@@ -853,16 +864,23 @@ void Interface::drawBar(Graphics::Surface &dst) const {
 		}
 		drawIcons(dst, heldIcon, dim, _held);
 	}
+	markWide(wide, WideLayout::kInventory, dst);
 	bool kitShown = _kitOpen && !_evidenceRowShown;
 	if (kitShown)
 		drawIcons(dst, _kit, dim);
+	markWide(wide, WideLayout::kKit, dst);
 	// Kit icons have no rollover text (0x437600 leaves out group 1)
 	drawRolloverText(dst, _actions);
+	markWide(wide, WideLayout::kActions, dst);
 	drawRolloverText(dst, _emotions);
+	markWide(wide, WideLayout::kEmotions, dst);
 	drawRolloverText(dst, _ideas);
+	markWide(wide, WideLayout::kIdeaText, dst);
 	drawRolloverText(dst, _evidence);
+	markWide(wide, WideLayout::kEvidence, dst);
 	if (_barOpen)
 		drawRolloverText(dst, _inventory);
+	markWide(wide, WideLayout::kInventory, dst);
 }
 
 void Interface::drawItems(Graphics::Surface &dst) const {

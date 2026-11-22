@@ -35,6 +35,7 @@ MODULE_OBJS = \
 	features/tools_view.o \
 	script/vcdata.o \
 	debug/vcdump.o \
+	ui/wide_layout.o \
 	xfiles.o \
 	xfiles_input.o \
 	xfiles_media.o \

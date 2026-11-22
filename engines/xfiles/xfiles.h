@@ -52,6 +52,7 @@ class Font;
 #include "xfiles/ui/dialogbox.h"
 #include "xfiles/ui/interface.h"
 #include "xfiles/ui/prefs.h"
+#include "xfiles/ui/wide_layout.h"
 
 namespace Common {
 class WinResources;
@@ -403,6 +404,10 @@ private:
 	Graphics::Surface _bandPass;
 	bool _bandCaptured = false;
 	bool _bandZoomed = false;
+	/** Widescreen UI placement (B-354): the records of the UI pass, and the canvas mouse (with the screen mouse it maps to). */
+	WideLayout _wide;
+	Common::Point _canvasMouse;
+	Common::Point _canvasMouseScreen;
 	Captions _captions;
 	HeadCredits _headCredits;
 	Subliminal _subliminal;

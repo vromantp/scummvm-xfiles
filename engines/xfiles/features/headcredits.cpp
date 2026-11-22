@@ -84,7 +84,7 @@ bool HeadCredits::load(const DiscFiles &files) {
 void HeadCredits::loadFont() {
 #ifdef USE_FREETYPE2
 	Common::SeekableReadStream *font = _files ? _files->openFile(0, "Hcd.ttr") : nullptr;
-	// Hcd.ttr has no gasp table: Windows smooths it at every size (docs/plans/B-350.md)
+	// Hcd.ttr has no gasp table: Windows smooths it at every size (docs/subsystems/preferences.md)
 	Graphics::TTFRenderMode mode = smoothTextMode(_smooth, kGdiNoGasp, kFontSize, false);
 	if (font)
 		_font = Graphics::loadTTFFont(font, DisposeAfterUse::YES, kFontSize, Graphics::kTTFSizeModeCharacter, 0, 0, mode);

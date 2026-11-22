@@ -89,7 +89,7 @@ Captions::~Captions() {
 bool Captions::loadFonts() {
 #ifdef USE_FREETYPE2
 	// QuickTime draws the captions and the location card at Best quality, so both are smoothed at every size
-	// whenever Smooth Text is on, not by Windows' gasp rule (docs/plans/B-350.md)
+	// whenever Smooth Text is on, not by Windows' gasp rule (docs/subsystems/preferences.md)
 	Graphics::TTFRenderMode cardMode = smoothTextMode(_smooth, kGdiNoGasp, kCardFontSize, false);
 	Graphics::TTFRenderMode captionMode = smoothTextMode(_smooth, kGdiNoGasp, kCaptionFontSize, false);
 	_cardFont = Graphics::loadTTFFontFromArchive("LiberationMono-Regular.ttf", kCardFontSize, Graphics::kTTFSizeModeCharacter, 0, 0, cardMode);

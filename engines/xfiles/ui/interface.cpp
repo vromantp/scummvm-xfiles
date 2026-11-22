@@ -914,7 +914,7 @@ Graphics::Font *Interface::getItemFont(int size, bool bold, int face) const {
 		// hinted ones (FT_LOAD_TARGET_MONO gives the same for every character), also when smoothed, and it
 		// does not kern: this wraps every journal page and suicide note as the exe does
 		Common::SeekableReadStream *stream = _files.openFile(0, "Jrn.ttr");
-		// Jrn.ttr has no gasp table: smoothed at every size (docs/plans/B-350.md)
+		// Jrn.ttr has no gasp table: smoothed at every size (docs/subsystems/preferences.md)
 		Graphics::TTFRenderMode handMode = smoothTextMode(_smooth, kGdiNoGasp, size, false) == Graphics::kTTFRenderModeLight ?
 			Graphics::kTTFRenderModeNormalWithGridFitting : Graphics::kTTFRenderModeMonochrome;
 		if (stream)

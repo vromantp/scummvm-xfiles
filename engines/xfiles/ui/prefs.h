@@ -89,7 +89,7 @@ enum GdiFace { kGdiArial, kGdiCourierNew, kGdiNoGasp, kGdiSystem };
 
 /**
  * Smooth Text as Windows 98 draws it: grayscale only where the face's gasp table allows it, else monochrome
- * (docs/plans/B-350.md). `ppem` is the GDI character height, the engine's kTTFSizeModeCharacter size.
+ * (docs/subsystems/preferences.md). `ppem` is the GDI character height, the engine's kTTFSizeModeCharacter size.
  */
 Graphics::TTFRenderMode smoothTextMode(bool smooth, GdiFace face, int ppem, bool bold);
 

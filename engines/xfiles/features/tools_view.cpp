@@ -79,7 +79,7 @@ void XFilesEngine::drawViewfinder() {
 	_viewfinder->draw(band, x, y);
 	// The photos left, red, System bold 13 at the picture's corner
 	if (!_counterFont) {
-		// System bold is a bitmap font in Windows: never smoothed (docs/plans/B-350.md)
+		// System bold is a bitmap font in Windows: never smoothed (docs/subsystems/preferences.md)
 		_counterFont = Graphics::loadTTFFontFromArchive("LiberationSans-Bold.ttf", kCounterFontSize, Graphics::kTTFSizeModeCharacter, 0, 0,
 			smoothTextMode(getPreference(kPrefSmoothText), kGdiSystem, kCounterFontSize, true));
 		_counterFontOwned = _counterFont != nullptr;

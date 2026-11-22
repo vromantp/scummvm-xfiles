@@ -226,15 +226,7 @@ Common::Error XFilesEngine::run() {
 			break;
 		}
 	}
-	// B-352: the widescreen canvas is fixed here; a scripted run keeps the 4:3 one (fixtures and goldens)
-	_wideDx = 0;
-	// xfiles_widescreen_scripted=true lets a headless check shoot the wide canvas
-	const bool scriptedOk = ConfMan.hasKey("xfiles_widescreen_scripted") && ConfMan.getBool("xfiles_widescreen_scripted");
-	if ((ConfMan.get("xfiles_steps").empty() || scriptedOk) && ConfMan.hasKey("xfiles_widescreen") && ConfMan.getBool("xfiles_widescreen"))
-		_wideDx = (kWideWidth - kScreenWidth) / 2;
-	initGraphics(_wideDx ? kWideWidth : kScreenWidth, kScreenHeight, &format);
-	if (_wideDx)
-		g_system->fillScreen(0);
+	applyWidescreen(&format);
 	_screen.create(kScreenWidth, kScreenHeight, g_system->getScreenFormat());
 	setDebugger(new Console());
 
@@ -1073,10 +1065,49 @@ void XFilesEngine::applyPreferences(bool resume) {
 		_subliminal.stop();
 }
 
+int XFilesEngine::wantedWideDx() const {
+	// B-352: a scripted run keeps the 4:3 canvas (fixtures and goldens); xfiles_widescreen_scripted=true lets a
+	// headless check shoot the wide canvas
+	const bool scriptedOk = ConfMan.hasKey("xfiles_widescreen_scripted") && ConfMan.getBool("xfiles_widescreen_scripted");
+	if ((ConfMan.get("xfiles_steps").empty() || scriptedOk) && ConfMan.hasKey("xfiles_widescreen") && ConfMan.getBool("xfiles_widescreen"))
+		return (kWideWidth - kScreenWidth) / 2;
+	return 0;
+}
+
+void XFilesEngine::applyWidescreen(const Graphics::PixelFormat *format) {
+	const int dx = wantedWideDx();
+	if (format) {
+		// First call, from run: the canvas is created with the chosen pixel format
+		_wideDx = dx;
+		initGraphics(_wideDx ? kWideWidth : kScreenWidth, kScreenHeight, format);
+		if (_wideDx)
+			g_system->fillScreen(0);
+		return;
+	}
+	// B-356: the option changed while the game runs; the canvas is resized with the format it already has
+	if (dx == _wideDx)
+		return;
+	const Graphics::PixelFormat keep = _screen.format;
+	_wideDx = dx;
+	// The stale wide state: no zoomed band, no recorded rects (they are canvas coordinates)
+	_bandCaptured = false;
+	_bandZoomed = false;
+	_bandPass.free();
+	_wide.reset();
+	_canvasMouse = Common::Point();
+	_canvasMouseScreen = Common::Point(-1, -1);
+	initGraphics(_wideDx ? kWideWidth : kScreenWidth, kScreenHeight, &keep);
+	g_system->fillScreen(0);
+	// The mouse stays on the same screen point; the frame is redrawn from the current screen at once
+	g_system->warpMouse(_mouse.x + _wideDx, _mouse.y);
+	present();
+}
+
 void XFilesEngine::applyGameSettings() {
 	// ScummVM's menu closed (kSupportsChangingOptionsDuringRuntime): its captions and volumes into the game
 	// (syncSoundSettings follows it)
 	_preferences.syncFromScummVM();
+	applyWidescreen();
 }
 
 void XFilesEngine::syncSoundSettings() {

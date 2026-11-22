@@ -409,6 +409,9 @@ private:
 	Graphics::Surface _screen;
 	/** Widescreen layout (B-352): x offset of the 640x480 screen on the canvas, 0 when the option is off. */
 	int _wideDx = 0;
+	int wantedWideDx() const;
+	/** Sets the canvas from the option: with a format (run) it initialises the graphics, without one (B-356) it switches a running game when the option changed. */
+	void applyWidescreen(const Graphics::PixelFormat *format = nullptr);
 	/** Widescreen zoomed band (B-353): the band pass captured this frame, and whether the last present() zoomed it. */
 	Graphics::Surface _bandPass;
 	bool _bandCaptured = false;

@@ -61,6 +61,13 @@ public:
 	void begin(const Graphics::Surface &screen);
 	/** Stop recording; the records stay for the mouse and the shots until the next begin. */
 	void end() { _active = false; }
+	/** Forget the records and the recording (the canvas size changed, B-356). */
+	void reset() {
+		_active = false;
+		_layers.clear();
+		_prev.free();
+		_mouseOffset = Common::Point();
+	}
 	bool isActive() const { return _active; }
 	/** Record what changed on the screen since the last mark as this element (no-op when not recording). */
 	void mark(Element element, const Graphics::Surface &screen);

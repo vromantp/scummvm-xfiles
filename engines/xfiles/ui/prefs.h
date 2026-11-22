@@ -23,6 +23,7 @@
 #define XFILES_PREFS_H
 
 #include "common/str.h"
+#include "graphics/fonts/ttf.h"
 #include "xfiles/script/hooks.h"
 #include "xfiles/script/vcdata.h"
 
@@ -82,6 +83,15 @@ private:
 	mutable int32 _snapshot[kCount];
 	mutable bool _hasSnapshot[kCount];
 };
+
+/** The face a font load asks smoothTextMode about: Windows decides per face (its gasp table). */
+enum GdiFace { kGdiArial, kGdiCourierNew, kGdiNoGasp, kGdiSystem };
+
+/**
+ * Smooth Text as Windows 98 draws it: grayscale only where the face's gasp table allows it, else monochrome
+ * (docs/plans/B-350.md). `ppem` is the GDI character height, the engine's kTTFSizeModeCharacter size.
+ */
+Graphics::TTFRenderMode smoothTextMode(bool smooth, GdiFace face, int ppem, bool bold);
 
 /**
  * The Game Preferences screens' hooks (PrefInit, AudioInit, the four volume sliders, the cycles, the toggles

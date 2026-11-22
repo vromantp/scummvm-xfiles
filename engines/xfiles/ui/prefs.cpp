@@ -32,6 +32,18 @@ namespace XFiles {
 
 // Preferences
 
+Graphics::TTFRenderMode smoothTextMode(bool smooth, GdiFace face, int ppem, bool bold) {
+	if (!smooth || face == kGdiSystem)
+		return Graphics::kTTFRenderModeMonochrome;
+	// Arial and Courier New: the gasp ranges read from the Windows 95 copy's fonts; the .ttr fonts have none
+	bool gray = true;
+	if (face == kGdiArial)
+		gray = ppem <= 8 || ppem >= (bold ? 11 : 18);
+	else if (face == kGdiCourierNew)
+		gray = ppem <= 8 || ppem >= (bold ? 16 : 37);
+	return gray ? Graphics::kTTFRenderModeLight : Graphics::kTTFRenderModeMonochrome;
+}
+
 // The ScummVM setting that keeps each preference (the exe's registry value), by Preference. Shared with ScummVM's
 // own menu: subtitles and the dialog, effect and music volumes; the rest are the engine's game-only keys.
 static const char *const kPrefSettings[kPrefCount] = {

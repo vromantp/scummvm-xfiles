@@ -26,6 +26,7 @@
 
 #include "xfiles/ui/dialogbox.h"
 #include "xfiles/media/pictures.h"
+#include "xfiles/ui/prefs.h"
 #include "xfiles/ui/view_band.h"
 
 namespace XFiles {
@@ -102,7 +103,7 @@ bool DialogBox::load(const VCData &data, const DiscFiles &files, const Graphics:
 void DialogBox::loadFont() {
 #ifdef USE_FREETYPE2
 	// Courier New's metrics
-	Graphics::TTFRenderMode mode = _smooth ? Graphics::kTTFRenderModeLight : Graphics::kTTFRenderModeMonochrome;
+	Graphics::TTFRenderMode mode = smoothTextMode(_smooth, kGdiCourierNew, kFontSize, false);
 	_font = Graphics::loadTTFFontFromArchive("LiberationMono-Regular.ttf", kFontSize, Graphics::kTTFSizeModeCharacter, 0, 0, mode);
 #endif
 	if (!_font)

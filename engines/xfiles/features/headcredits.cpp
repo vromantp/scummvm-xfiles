@@ -30,6 +30,7 @@
 #include "xfiles/detection.h"
 #include "xfiles/media/discfiles.h"
 #include "xfiles/features/headcredits.h"
+#include "xfiles/ui/prefs.h"
 #include "xfiles/ui/view_band.h"
 
 namespace XFiles {
@@ -83,7 +84,8 @@ bool HeadCredits::load(const DiscFiles &files) {
 void HeadCredits::loadFont() {
 #ifdef USE_FREETYPE2
 	Common::SeekableReadStream *font = _files ? _files->openFile(0, "Hcd.ttr") : nullptr;
-	Graphics::TTFRenderMode mode = _smooth ? Graphics::kTTFRenderModeLight : Graphics::kTTFRenderModeMonochrome;
+	// Hcd.ttr has no gasp table: Windows smooths it at every size (docs/plans/B-350.md)
+	Graphics::TTFRenderMode mode = smoothTextMode(_smooth, kGdiNoGasp, kFontSize, false);
 	if (font)
 		_font = Graphics::loadTTFFont(font, DisposeAfterUse::YES, kFontSize, Graphics::kTTFSizeModeCharacter, 0, 0, mode);
 #endif

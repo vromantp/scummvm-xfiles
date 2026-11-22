@@ -34,6 +34,7 @@
 #include "xfiles/media/pictures.h"
 #include "xfiles/script/script.h"
 #include "xfiles/script/vcdata.h"
+#include "xfiles/ui/prefs.h"
 #include "xfiles/ui/view_band.h"
 
 namespace XFiles {
@@ -250,7 +251,7 @@ void Interface::init(Common::WinResources *texts) {
 void Interface::loadFont() {
 #ifdef USE_FREETYPE2
 	// Arial is not available: Liberation Sans has its metrics
-	Graphics::TTFRenderMode mode = _smooth ? Graphics::kTTFRenderModeLight : Graphics::kTTFRenderModeMonochrome;
+	Graphics::TTFRenderMode mode = smoothTextMode(_smooth, kGdiArial, kTextFontSize, false);
 	_font = Graphics::loadTTFFontFromArchive("LiberationSans-Regular.ttf", kTextFontSize, Graphics::kTTFSizeModeCharacter, 0, 0, mode);
 #endif
 }
@@ -908,13 +909,14 @@ Graphics::Font *Interface::getItemFont(int size, bool bold, int face) const {
 		return _itemFonts[key];
 	Graphics::Font *font = nullptr;
 #ifdef USE_FREETYPE2
-	Graphics::TTFRenderMode mode = _smooth ? Graphics::kTTFRenderModeLight : Graphics::kTTFRenderModeMonochrome;
 	if (face == Script::kFaceHand) {
 		// ZonkersHand: the game's Jrn.ttr at GDI's lfHeight -14 (character height). GDI's advances are the
 		// hinted ones (FT_LOAD_TARGET_MONO gives the same for every character), also when smoothed, and it
 		// does not kern: this wraps every journal page and suicide note as the exe does
 		Common::SeekableReadStream *stream = _files.openFile(0, "Jrn.ttr");
-		Graphics::TTFRenderMode handMode = _smooth ? Graphics::kTTFRenderModeNormalWithGridFitting : Graphics::kTTFRenderModeMonochrome;
+		// Jrn.ttr has no gasp table: smoothed at every size (docs/plans/B-350.md)
+		Graphics::TTFRenderMode handMode = smoothTextMode(_smooth, kGdiNoGasp, size, false) == Graphics::kTTFRenderModeLight ?
+			Graphics::kTTFRenderModeNormalWithGridFitting : Graphics::kTTFRenderModeMonochrome;
 		if (stream)
 			font = Graphics::loadTTFFont(stream, DisposeAfterUse::YES, size, Graphics::kTTFSizeModeCharacter, 0, 0, handMode);
 		if (font)
@@ -925,10 +927,12 @@ Graphics::Font *Interface::getItemFont(int size, bool bold, int face) const {
 	if (!font) {
 		if (face == Script::kFaceSans) {
 			// Arial: Liberation Sans has its metrics
+			Graphics::TTFRenderMode mode = smoothTextMode(_smooth, kGdiArial, size, bold);
 			font = Graphics::loadTTFFontFromArchive(bold ? "LiberationSans-Bold.ttf" : "LiberationSans-Regular.ttf", size,
 				Graphics::kTTFSizeModeCharacter, 0, 0, mode);
 		} else {
 			// Courier New: Liberation Mono has its metrics
+			Graphics::TTFRenderMode mode = smoothTextMode(_smooth, kGdiCourierNew, size, bold);
 			font = Graphics::loadTTFFontFromArchive(bold ? "LiberationMono-Bold.ttf" : "LiberationMono-Regular.ttf", size,
 				Graphics::kTTFSizeModeCharacter, 0, 0, mode);
 		}

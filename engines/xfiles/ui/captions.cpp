@@ -29,6 +29,7 @@
 #include "graphics/surface.h"
 
 #include "xfiles/ui/captions.h"
+#include "xfiles/ui/prefs.h"
 #include "xfiles/ui/view_band.h"
 
 namespace XFiles {
@@ -87,10 +88,13 @@ Captions::~Captions() {
 
 bool Captions::loadFonts() {
 #ifdef USE_FREETYPE2
-	Graphics::TTFRenderMode mode = _smooth ? Graphics::kTTFRenderModeLight : Graphics::kTTFRenderModeMonochrome;
-	_cardFont = Graphics::loadTTFFontFromArchive("LiberationMono-Regular.ttf", kCardFontSize, Graphics::kTTFSizeModeCharacter, 0, 0, mode);
+	// QuickTime draws the captions and the location card at Best quality, so both are smoothed at every size
+	// whenever Smooth Text is on, not by Windows' gasp rule (docs/plans/B-350.md)
+	Graphics::TTFRenderMode cardMode = smoothTextMode(_smooth, kGdiNoGasp, kCardFontSize, false);
+	Graphics::TTFRenderMode captionMode = smoothTextMode(_smooth, kGdiNoGasp, kCaptionFontSize, false);
+	_cardFont = Graphics::loadTTFFontFromArchive("LiberationMono-Regular.ttf", kCardFontSize, Graphics::kTTFSizeModeCharacter, 0, 0, cardMode);
 	_captionFont = Graphics::loadTTFFontFromArchive("LiberationSans-Regular.ttf", kCaptionFontSize, Graphics::kTTFSizeModeCharacter, 0, 0,
-		mode);
+		captionMode);
 #endif
 	if (!_cardFont || !_captionFont)
 		warning("Captions: cannot load the fonts from fonts.dat");

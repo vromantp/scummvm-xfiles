@@ -30,6 +30,7 @@
 #include "xfiles/media/pictures.h"
 #include "xfiles/script/script.h"
 #include "xfiles/script/vcdata.h"
+#include "xfiles/ui/prefs.h"
 #include "xfiles/ui/view_band.h"
 #include "xfiles/xfiles.h"
 
@@ -78,8 +79,9 @@ void XFilesEngine::drawViewfinder() {
 	_viewfinder->draw(band, x, y);
 	// The photos left, red, System bold 13 at the picture's corner
 	if (!_counterFont) {
+		// System bold is a bitmap font in Windows: never smoothed (docs/plans/B-350.md)
 		_counterFont = Graphics::loadTTFFontFromArchive("LiberationSans-Bold.ttf", kCounterFontSize, Graphics::kTTFSizeModeCharacter, 0, 0,
-			getPreference(kPrefSmoothText) ? Graphics::kTTFRenderModeLight : Graphics::kTTFRenderModeMonochrome);
+			smoothTextMode(getPreference(kPrefSmoothText), kGdiSystem, kCounterFontSize, true));
 		_counterFontOwned = _counterFont != nullptr;
 		if (!_counterFont)
 			_counterFont = FontMan.getFontByUsage(Graphics::FontManager::kBigGUIFont);

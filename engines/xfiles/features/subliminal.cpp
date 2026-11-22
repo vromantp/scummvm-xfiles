@@ -30,6 +30,7 @@
 #include "xfiles/media/discfiles.h"
 #include "xfiles/script/script.h"
 #include "xfiles/features/subliminal.h"
+#include "xfiles/ui/prefs.h"
 
 namespace XFiles {
 
@@ -82,7 +83,7 @@ bool Subliminal::load(const DiscFiles &files) {
 void Subliminal::loadFont() {
 #ifdef USE_FREETYPE2
 	// Courier New's metrics
-	Graphics::TTFRenderMode mode = _smooth ? Graphics::kTTFRenderModeLight : Graphics::kTTFRenderModeMonochrome;
+	Graphics::TTFRenderMode mode = smoothTextMode(_smooth, kGdiCourierNew, kFontSize, false);
 	_font = Graphics::loadTTFFontFromArchive("LiberationMono-Regular.ttf", kFontSize, Graphics::kTTFSizeModeCharacter, 0, 0, mode);
 #endif
 }

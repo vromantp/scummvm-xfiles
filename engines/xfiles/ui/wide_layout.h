@@ -82,7 +82,7 @@ public:
 
 	/** Paste the records over the canvas (the scaled band is already there). */
 	void compose(Graphics::Surface &canvas) const;
-	/** Canvas point to screen point, for a canvas with the zoomed band. */
+	/** Canvas point to screen point, for a canvas with the zoomed band (-1,-1: the dead gap between the pane groups, B-360). */
 	Common::Point toScreen(const Common::Point &canvas) const;
 	/** Screen point to canvas point, for a canvas with the zoomed band. */
 	static Common::Point toCanvas(const Common::Point &screen);

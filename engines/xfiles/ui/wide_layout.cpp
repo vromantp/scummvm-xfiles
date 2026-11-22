@@ -251,8 +251,13 @@ Common::Point WideLayout::toScreen(const Common::Point &canvas) const {
 			Common::Point offset(kFrameDx, 0);
 			if (canvas.y >= kBarTop)
 				offset = offsetOf(kInventory);
-			else if (canvas.y >= kZoomTop + kZoomHeight)
+			else if (canvas.y >= kZoomTop + kZoomHeight) {
+				// The gap between the left group's right edge and the right group's left edge belongs to no pane (B-360):
+				// no screen point, as for the start point under no item
+				if (canvas.x >= kLeftDx + kScreenWidth / 2 && canvas.x < kRightDx + kScreenWidth / 2)
+					return Common::Point(-1, -1);
 				offset = offsetOf(canvas.x < kWideWidth / 2 ? kEmotions : kActions);
+			}
 			else if (canvas.y < kZoomTop && canvas.x >= 645)
 				offset = offsetOf(kAIIcon);
 			screen = Common::Point(canvas.x - offset.x, canvas.y - offset.y);

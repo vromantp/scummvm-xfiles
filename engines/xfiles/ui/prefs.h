@@ -52,6 +52,11 @@ public:
 	 * the syntax of vcdump's --pref) instead of the ScummVM settings, and writes nothing back.
 	 */
 	void setScripted(const Common::String &spec);
+	/**
+	 * Touch ports (B-355): the inventory bar defaults to V (always visible) when the player has no stored value for
+	 * it; a stored H or V still wins.
+	 */
+	void setTouchDefaults(bool on) { _touchDefaults = on; }
 	/** RegPreferences' 24 variables (0 for a preference without one). */
 	void registerVariables(const VCAction &action);
 	/** The registry's value for Script::regPreferences, false: the .gam value stays. Takes the snapshot. */
@@ -76,6 +81,7 @@ private:
 
 	Script *_script;
 	bool _scripted;
+	bool _touchDefaults;
 	int32 _scriptedValues[kCount];
 	bool _hasScripted[kCount];
 	uint32 _variables[kCount];

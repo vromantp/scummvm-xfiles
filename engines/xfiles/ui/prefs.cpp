@@ -105,7 +105,7 @@ static int32 fromMixerVolume(int32 volume) {
 	return CLIP<int32>((volume * 100 + Audio::Mixer::kMaxMixerVolume / 2) / Audio::Mixer::kMaxMixerVolume, 0, 100);
 }
 
-Preferences::Preferences() : _script(nullptr), _scripted(false) {
+Preferences::Preferences() : _script(nullptr), _scripted(false), _touchDefaults(false) {
 	memset(_scriptedValues, 0, sizeof(_scriptedValues));
 	memset(_hasScripted, 0, sizeof(_hasScripted));
 	memset(_variables, 0, sizeof(_variables));
@@ -173,10 +173,19 @@ bool Preferences::query(uint index, int32 &value) const {
 	// exe's first start
 	if (_scripted) {
 		value = _scriptedValues[index];
+		if (!_hasScripted[index] && index == kPrefInventory && _touchDefaults) {
+			value = 'V';
+			return true;
+		}
 		return _hasScripted[index];
 	}
-	if (!read(index, value))
-		return false;
+	if (!read(index, value)) {
+		// No stored value: a touch port shows the bar, which has no hover to open it (B-355)
+		if (index != kPrefInventory || !_touchDefaults)
+			return false;
+		value = 'V';
+		return true;
+	}
 	if (isShared(index)) {
 		_snapshot[index] = value;
 		_hasSnapshot[index] = true;

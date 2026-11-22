@@ -207,6 +207,7 @@ Common::Error XFilesEngine::run() {
 	// here because Auto Set Depth picks the screen format
 	if (!ConfMan.get("xfiles_steps").empty())
 		_preferences.setScripted(ConfMan.get("xfiles_prefs"));
+	_preferences.setTouchDefaults(g_system->hasFeature(OSystem::kFeatureTouchscreen));
 	// The exe draws at the screen depth: 32 bits in its Quality configuration, 16 with Auto Set Depth L. ScummVM has
 	// no desktop depth to keep, so H, N and A take the best depth the backend offers (B-217). The list overload of
 	// initGraphics takes the backend's first format that the list holds, so the order here would not count: the

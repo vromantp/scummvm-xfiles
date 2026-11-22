@@ -697,6 +697,33 @@ bool Interface::getInventoryRect(uint32 id, Common::Rect *rect) const {
 	return false;
 }
 
+uint32 Interface::labelButton(uint32 id, const Common::Point &pos) const {
+	// Engine addition (B-358, not in the exe): on the ING search screen (layout 15108) a click on a radio button's label
+	// acts as one on its 12x12 button. The label rects of the database group overlap by 2 pixels, so the row is the
+	// button's own band, one pixel above and below (the rows are 14 apart).
+	static const struct {
+		uint32 label, button;
+	} kLabels[] = {
+		{37505, 37390}, {37506, 37392}, {37507, 37394}, {37510, 37400},
+		{37511, 37402}, {37512, 37404}, {37513, 37406}, {37514, 37408}
+	};
+	bool isLabel = false;
+	for (uint i = 0; i < ARRAYSIZE(kLabels); i++)
+		isLabel = isLabel || kLabels[i].label == id;
+	if (!isLabel)
+		return id;
+	// Another label's row may be the one under the mouse in the overlap
+	for (uint i = 0; i < ARRAYSIZE(kLabels); i++) {
+		VCInterfaceItem label, button;
+		if (!_data.getInterfaceItem(kLabels[i].label, label) || !_data.getInterfaceItem(kLabels[i].button, button))
+			continue;
+		if (pos.x >= label.rect.left && pos.x < label.rect.right && pos.y >= button.rect.top - 1 &&
+				pos.y < button.rect.bottom + 1)
+			return kLabels[i].button;
+	}
+	return id;
+}
+
 Interface::Hit Interface::hitTest(const Common::Point &pos) const {
 	Hit hit;
 	hit.kind = kHitNone;
@@ -704,7 +731,7 @@ Interface::Hit Interface::hitTest(const Common::Point &pos) const {
 	for (uint i = _items.size(); i-- > 0;) {
 		if (_items[i].rect.contains(pos)) {
 			hit.kind = kHitItem;
-			hit.id = _items[i].id;
+			hit.id = labelButton(_items[i].id, pos);
 			return hit;
 		}
 	}

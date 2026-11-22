@@ -106,6 +106,8 @@ public:
 
 	/** What is under the mouse: layout items first, then icons. */
 	Hit hitTest(const Common::Point &pos) const;
+	/** The item a click on item id at pos goes to: a radio label's button on the ING search screen, else id. */
+	uint32 labelButton(uint32 id, const Common::Point &pos) const;
 	/** A shown layout takes the input from the view and the icons (0x42b250). */
 	bool isModal() const;
 	/**

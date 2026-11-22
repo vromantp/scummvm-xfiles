@@ -63,6 +63,8 @@ public:
 	bool hasCard() const { return _cardState != kCardNone; }
 	/** Take the card away (a new game). */
 	void reset() { _cardState = kCardNone; }
+	/** How many cards were started; a fast-forward compares it before and after. */
+	uint cardStarts() const { return _cardStarts; }
 
 	/** Draw the card, with its bottom left corner in the view band. */
 	void drawCard(Graphics::Surface &dst) const;
@@ -84,6 +86,7 @@ private:
 	uint _cardShown;     ///< Characters typed so far
 	CardState _cardState;
 	uint32 _cardNext;    ///< When the state changes or the next characters are typed
+	uint _cardStarts;
 };
 
 } // End of namespace XFiles

@@ -78,7 +78,7 @@ static const char *monthName(bool april) {
 	}
 }
 
-Captions::Captions() : _smooth(true), _cardFont(nullptr), _captionFont(nullptr), _cardShown(0), _cardState(kCardNone), _cardNext(0) {
+Captions::Captions() : _smooth(true), _cardFont(nullptr), _captionFont(nullptr), _cardShown(0), _cardState(kCardNone), _cardNext(0), _cardStarts(0) {
 }
 
 Captions::~Captions() {
@@ -134,6 +134,7 @@ void Captions::startCard(const Common::U32String &text, uint32 now) {
 	_cardText = text;
 	_cardShown = 0;
 	_cardState = kCardDelay;
+	_cardStarts++;
 	_cardNext = now + kCardDelay;
 }
 

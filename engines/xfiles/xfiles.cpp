@@ -592,11 +592,13 @@ void XFilesEngine::runGame() {
 	// Fast-forward (xfiles_fastforward): the steps run in the script alone,
 	// as vc_sim.py runs them, so nothing plays and no time passes; the
 	// game goes on from where they end
+	const uint cardStarts = _captions.cardStarts();
 	for (uint i = 0; i < _fastForward.size(); i++)
 		_script->step(_fastForward[i]);
 	_fastForward.clear();
-	// A location card started by a skipped step is gone: no time passed
-	_captions.reset();
+	// A location card started by a skipped step is gone: no time passed (one from before them stays)
+	if (_captions.cardStarts() != cardStarts)
+		_captions.reset();
 	// A clip whose end step was skipped is no longer playing in the script
 	_sound.dropEndedClips();
 	while (!shouldQuit()) {

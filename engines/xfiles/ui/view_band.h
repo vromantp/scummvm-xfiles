@@ -37,7 +37,12 @@ enum {
 	kBandWidth = 600,
 	kBandHeight = 240,
 	kBandRight = kBandLeft + kBandWidth,
-	kBandBottom = kBandTop + kBandHeight
+	kBandBottom = kBandTop + kBandHeight,
+	// The zoomed band on the widescreen canvas (B-353): 1.25x, at (52, 34)
+	kZoomLeft = 52,
+	kZoomTop = 34,
+	kZoomWidth = kBandWidth * 5 / 4,
+	kZoomHeight = kBandHeight * 5 / 4
 };
 
 inline void readPixel(const Graphics::Surface &s, int x, int y, byte &r, byte &g, byte &b) {

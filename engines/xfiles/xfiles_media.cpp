@@ -30,6 +30,7 @@
 #include "xfiles/media/movie.h"
 #include "xfiles/script/script.h"
 #include "xfiles/script/vcdata.h"
+#include "xfiles/ui/view_band.h"
 
 namespace XFiles {
 
@@ -290,6 +291,9 @@ void XFilesEngine::playQueuedVideo(const Input &input) {
 	blit(_video->getFrame(), pos.x, pos.y);
 	// A playing movie is drawn untinted under SetLBoxTint (B-309); a tool change still latches the tint
 	relatchBandTint();
+	// Widescreen: only a 600x240 frame in the band is zoomed (B-353); a 600x400 clip is framed
+	if (_video->getWidth() == kBandWidth && _video->getHeight() == kBandHeight && pos.x == kBandLeft && pos.y == kBandTop)
+		captureBandPass();
 	drawCaptions(*_video, pos);
 
 	if (_video->hasEnded()) {

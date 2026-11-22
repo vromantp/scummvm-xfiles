@@ -112,6 +112,8 @@ public:
 	 * (Scene_PauseView 0x46cd80, B-007).
 	 */
 	bool pausesView() const;
+	/** Any layout is shown (widescreen: the band is then drawn framed, B-353). */
+	bool hasLayouts() const { return !_layouts.empty(); }
 	/** A shown layout other than id (0x442b50: the head credits are held back by any but the Letter). */
 	bool showsLayoutOtherThan(uint32 id) const;
 	/** Multiply the pixels of an area by the suspend tint (RGB 60, 60, 60, B-007). */

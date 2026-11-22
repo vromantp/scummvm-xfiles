@@ -193,6 +193,14 @@ private:
 	 */
 	static uint getKeyValue(const Common::KeyState &kbd);
 	void present();
+	/** Widescreen: keep the finished band pass so present() scales it (B-353); framed when a layout or menu is up. */
+	void captureBandPass();
+	/** The widescreen canvas: framed, or with the band pass zoomed (B-353). */
+	void composeWide(Graphics::Surface &canvas, bool zoomed);
+	/** Canvas point to screen point: the zoomed band maps back through the inverse scale (B-353). */
+	Common::Point toScreen(const Common::Point &canvas) const;
+	/** Screen point to canvas point (the inverse of toScreen). */
+	Common::Point toCanvas(const Common::Point &screen) const;
 	void blit(const Graphics::Surface &src, int x, int y);
 	Common::Point getBandPosition(const Movie &movie) const;
 	/** The gun in hand over a live .HOT entry of the shootout (kinds 221-223) at a screen position; its kind or 0. */
@@ -391,6 +399,10 @@ private:
 	Graphics::Surface _screen;
 	/** Widescreen layout (B-352): x offset of the 640x480 screen on the canvas, 0 when the option is off. */
 	int _wideDx = 0;
+	/** Widescreen zoomed band (B-353): the band pass captured this frame, and whether the last present() zoomed it. */
+	Graphics::Surface _bandPass;
+	bool _bandCaptured = false;
+	bool _bandZoomed = false;
 	Captions _captions;
 	HeadCredits _headCredits;
 	Subliminal _subliminal;

@@ -212,6 +212,7 @@ void XFilesEngine::playTransition(int mode, const Graphics::Surface &oldBand, co
 		}
 		// A held tool's overlay stays over the moving picture (night vision: else it drops out for the transition)
 		drawToolOverlay();
+		captureBandPass();
 		_headCredits.draw(_screen); // fixed on top, out of the slid picture (B-247)
 		present();
 		if (done)
@@ -357,6 +358,7 @@ void XFilesEngine::drawView() {
 	}
 	drawViewfinder();
 	drawToolOverlay();
+	captureBandPass(); // the band pass ends here; the rest is the UI pass (B-353)
 	// The rest follows the exe's draw list, bottom to top (screen-composition.md): icons, the dialog box (translucent
 	// by Pref_bTranslucency, Prefs_Apply 0x452d70; Options and Help cover it and it takes no clicks then), the location
 	// card and head credits, captions, the subliminal word, then the layout items over all of it

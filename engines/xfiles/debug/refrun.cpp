@@ -74,11 +74,8 @@ void XFilesEngine::saveShot() {
 	Common::DumpFile file;
 	// The widescreen canvas (B-352): the shot is what present() sends, the screen at its offset between black sides
 	Graphics::Surface canvas;
-	if (_wideDx) {
-		canvas.create(kWideWidth, kScreenHeight, _screen.format);
-		canvas.fillRect(Common::Rect(canvas.w, canvas.h), 0);
-		canvas.copyRectToSurface(_screen, _wideDx, 0, Common::Rect(_screen.w, _screen.h));
-	}
+	if (_wideDx)
+		composeWide(canvas, _bandZoomed);
 	if (!file.open(_shotsDir.join(name), true) || !Image::writePNG(file, _wideDx ? canvas : _screen))
 		warning("Cannot write the screenshot %s", name.c_str());
 	canvas.free();
@@ -123,7 +120,8 @@ void XFilesEngine::stepMouse(const Common::String &step) {
 	const char *comma = parseInt(step.c_str() + 6, x);
 	if (comma && *comma == ',' && parseInt(comma + 1, y)) {
 		_mouse = Common::Point(x, y);
-		g_system->warpMouse(x + _wideDx, y);
+		Common::Point canvas = toCanvas(Common::Point(x, y));
+		g_system->warpMouse(canvas.x, canvas.y);
 	}
 }
 

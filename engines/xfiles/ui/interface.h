@@ -101,6 +101,7 @@ public:
 	void updateBar(const Common::Point &mouse, bool hiddenBar);
 	/** The icons and their rollover texts (under the dialog box). */
 	void drawBar(Graphics::Surface &dst, WideLayout *wide = nullptr) const;
+	void drawBarPart(Graphics::Surface &dst, int part, bool dim) const;
 	/** The items of the shown layouts, the lowest key last (over the dialog box and the captions). */
 	void drawItems(Graphics::Surface &dst) const;
 

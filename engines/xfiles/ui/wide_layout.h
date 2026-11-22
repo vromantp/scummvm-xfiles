@@ -55,7 +55,7 @@ public:
 		kDrag        ///< The dragged idea: at the canvas mouse
 	};
 
-	WideLayout() : _active(false) {}
+	WideLayout() : _active(false), _ideasTop(22) {}
 
 	/** Start recording a zoomed frame: the screen as the band pass left it. */
 	void begin(const Graphics::Surface &screen);
@@ -69,6 +69,8 @@ public:
 		_mouseOffset = Common::Point();
 	}
 	bool isActive() const { return _active; }
+	/** The screen y of the tallest idea icon's top: the idea icons move up so that it lands on the canvas top. */
+	void setIdeasTop(int top) { _ideasTop = top; }
 	/** Record what changed on the screen since the last mark as this element (no-op when not recording). */
 	void mark(Element element, const Graphics::Surface &screen);
 	/**
@@ -77,6 +79,8 @@ public:
 	 * over the scaled band instead of pasting the pixels blended over the 1x band. screen is as for mark().
 	 */
 	void markBox(const Graphics::Surface &screen, const Graphics::Surface *black, const Graphics::Surface *white);
+	/** As markBox for any element drawn translucent or antialiased (the bar icons): the offset is the element's own. */
+	void markAlpha(Element element, const Graphics::Surface &screen, const Graphics::Surface *black, const Graphics::Surface *white);
 	/** The dragged image's offset: canvas mouse minus screen mouse. */
 	void setMouseOffset(const Common::Point &offset) { _mouseOffset = offset; }
 
@@ -106,6 +110,7 @@ private:
 	Graphics::Surface _prev;
 	Common::Array<Layer> _layers;
 	Common::Point _mouseOffset;
+	int _ideasTop;
 };
 
 } // End of namespace XFiles

@@ -853,9 +853,65 @@ void Interface::drawDragged(Graphics::Surface &dst, uint32 ideaId, const Common:
 	}
 }
 
-static void markWide(WideLayout *wide, WideLayout::Element element, const Graphics::Surface &screen) {
-	if (wide)
-		wide->mark(element, screen);
+void Interface::drawBarPart(Graphics::Surface &dst, int part, bool dim) const {
+	switch (part) {
+	case 0:
+		drawIcons(dst, _actions, dim);
+		break;
+	case 1:
+		drawIcons(dst, _emotions, dim);
+		break;
+	case 2:
+		if ((_aiSuspended || dim) && !_aiIcon.empty() && _aiIcon[0].graphic) {
+			// The suspend tint (colour RGB 60, 60, 60, 0x5086b0) multiplies the icon's pixels: in the reference screenshots a
+			// suspended icon is the lit one times about 60/255. Only the pixels the icon draws change
+			const Icon &icon = _aiIcon[0];
+			drawTinted(dst, icon.rect, icon.graphic, icon.rect.left, icon.rect.top);
+		} else {
+			drawIcons(dst, _aiIcon, dim);
+		}
+		break;
+	case 3:
+		drawIcons(dst, _ideas, dim);
+		break;
+	case 4:
+		drawIcons(dst, _evidence, dim);
+		break;
+	case 5:
+		if (_barOpen) {
+			drawIcons(dst, _inventory, dim, _held);
+		} else if (_held && !isModal()) {
+			// A closed bar hides every icon but the one in hand (InvBar_OnShow 0x437050, Tool_BarIcons 0x4e2060)
+			Common::Array<Icon> heldIcon;
+			for (uint i = 0; i < _inventory.size(); i++) {
+				if (_inventory[i].id == _held)
+					heldIcon.push_back(_inventory[i]);
+			}
+			drawIcons(dst, heldIcon, dim, _held);
+		}
+		break;
+	case 6:
+		// Kit icons have no rollover text (0x437600 leaves out group 1)
+		if (_kitOpen && !_evidenceRowShown)
+			drawIcons(dst, _kit, dim);
+		break;
+	case 7:
+		drawRolloverText(dst, _actions);
+		break;
+	case 8:
+		drawRolloverText(dst, _emotions);
+		break;
+	case 9:
+		drawRolloverText(dst, _ideas);
+		break;
+	case 10:
+		drawRolloverText(dst, _evidence);
+		break;
+	case 11:
+		if (_barOpen)
+			drawRolloverText(dst, _inventory);
+		break;
+	}
 }
 
 void Interface::drawBar(Graphics::Surface &dst, WideLayout *wide) const {
@@ -863,51 +919,45 @@ void Interface::drawBar(Graphics::Surface &dst, WideLayout *wide) const {
 	// their pixels are multiplied by the suspend tint (B-007)
 	bool dim = isModal();
 	// Widescreen (B-354): each pane is recorded as it is drawn, to be placed on the canvas
-	drawIcons(dst, _actions, dim);
-	markWide(wide, WideLayout::kActions, dst);
-	drawIcons(dst, _emotions, dim);
-	markWide(wide, WideLayout::kEmotions, dst);
-	if ((_aiSuspended || dim) && !_aiIcon.empty() && _aiIcon[0].graphic) {
-		// The suspend tint (colour RGB 60, 60, 60, 0x5086b0) multiplies the icon's pixels: in the reference screenshots a
-		// suspended icon is the lit one times about 60/255. Only the pixels the icon draws change
-		const Icon &icon = _aiIcon[0];
-		drawTinted(dst, icon.rect, icon.graphic, icon.rect.left, icon.rect.top);
-	} else {
-		drawIcons(dst, _aiIcon, dim);
+	static const WideLayout::Element kElements[12] = {WideLayout::kActions, WideLayout::kEmotions, WideLayout::kAIIcon,
+		WideLayout::kIdeas, WideLayout::kEvidence, WideLayout::kInventory, WideLayout::kKit, WideLayout::kActions,
+		WideLayout::kEmotions, WideLayout::kIdeaText, WideLayout::kEvidence, WideLayout::kInventory};
+	// The icons are antialiased: drawn alone over black and over white too, their alpha follows (B-359). A tinted
+	// (suspended) icon has no alpha to recover
+	if (wide && !_ideas.empty()) {
+		int top = _ideas[0].rect.top;
+		for (uint i = 1; i < _ideas.size(); i++)
+			top = MIN<int>(top, _ideas[i].rect.top);
+		wide->setIdeasTop(top);
 	}
-	markWide(wide, WideLayout::kAIIcon, dst);
-	drawIcons(dst, _ideas, dim);
-	markWide(wide, WideLayout::kIdeas, dst);
-	drawIcons(dst, _evidence, dim);
-	markWide(wide, WideLayout::kEvidence, dst);
-	if (_barOpen) {
-		drawIcons(dst, _inventory, dim, _held);
-	} else if (_held && !isModal()) {
-		// A closed bar hides every icon but the one in hand (InvBar_OnShow 0x437050, Tool_BarIcons 0x4e2060)
-		Common::Array<Icon> heldIcon;
-		for (uint i = 0; i < _inventory.size(); i++) {
-			if (_inventory[i].id == _held)
-				heldIcon.push_back(_inventory[i]);
+	bool pair = wide && wide->isActive() && !dim && !_aiSuspended;
+	Graphics::Surface black, white;
+	if (pair) {
+		const Graphics::PixelFormat format = Graphics::PixelFormat::createFormatARGB32();
+		black.create(dst.w, dst.h, format);
+		white.create(dst.w, dst.h, format);
+		black.fillRect(Common::Rect(black.w, black.h), format.RGBToColor(0, 0, 0));
+		white.fillRect(Common::Rect(white.w, white.h), format.RGBToColor(255, 255, 255));
+	}
+	for (int part = 0; part < 12; part++) {
+		drawBarPart(dst, part, dim);
+		if (!wide)
+			continue;
+		// The rollover text sits on its own black backing: no alpha
+		if (pair && kElements[part] != WideLayout::kIdeaText) {
+			drawBarPart(black, part, dim);
+			drawBarPart(white, part, dim);
+			wide->markAlpha(kElements[part], dst, &black, &white);
+		} else {
+			if (pair) {
+				drawBarPart(black, part, dim);
+				drawBarPart(white, part, dim);
+			}
+			wide->mark(kElements[part], dst);
 		}
-		drawIcons(dst, heldIcon, dim, _held);
 	}
-	markWide(wide, WideLayout::kInventory, dst);
-	bool kitShown = _kitOpen && !_evidenceRowShown;
-	if (kitShown)
-		drawIcons(dst, _kit, dim);
-	markWide(wide, WideLayout::kKit, dst);
-	// Kit icons have no rollover text (0x437600 leaves out group 1)
-	drawRolloverText(dst, _actions);
-	markWide(wide, WideLayout::kActions, dst);
-	drawRolloverText(dst, _emotions);
-	markWide(wide, WideLayout::kEmotions, dst);
-	drawRolloverText(dst, _ideas);
-	markWide(wide, WideLayout::kIdeaText, dst);
-	drawRolloverText(dst, _evidence);
-	markWide(wide, WideLayout::kEvidence, dst);
-	if (_barOpen)
-		drawRolloverText(dst, _inventory);
-	markWide(wide, WideLayout::kInventory, dst);
+	black.free();
+	white.free();
 }
 
 void Interface::drawItems(Graphics::Surface &dst) const {

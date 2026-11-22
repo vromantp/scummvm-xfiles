@@ -33,6 +33,8 @@ static const int kBelowDy = kZoomTop + kZoomHeight - kBandBottom; // 4: under th
 // The X corner's rectangle (XCorner_ctor) moves to the canvas top right corner
 static const int kXCornerDx = kWideWidth - kScreenWidth;
 static const int kBarTop = 420;
+// The idea icons (screen y 22..74) move up to the canvas top, over the black strip above the band
+static const int kIdeasDy = -22;
 
 static Common::Rect xCorner() {
 	return Common::Rect(501, 0, kScreenWidth, 34);
@@ -44,7 +46,7 @@ Common::Point WideLayout::offsetOf(Element element) {
 		return Common::Point(115, -46);
 	case kIdeas:
 	case kIdeaText:
-		return Common::Point(kLeftDx, 26);
+		return Common::Point(kLeftDx, kIdeasDy);
 	case kEvidence:
 	case kEmotions:
 	case kCard:
@@ -110,6 +112,8 @@ void WideLayout::mark(Element element, const Graphics::Surface &screen) {
 	layer.src = box;
 	layer.backing = element == kIdeaText;
 	layer.offset = offsetOf(element);
+	if (element == kIdeas || element == kIdeaText)
+		layer.offset.y = -_ideasTop;
 	if (element == kDrag) {
 		layer.offset = _mouseOffset;
 	} else if (element == kBox) {
@@ -131,16 +135,22 @@ void WideLayout::mark(Element element, const Graphics::Surface &screen) {
 }
 
 void WideLayout::markBox(const Graphics::Surface &screen, const Graphics::Surface *black, const Graphics::Surface *white) {
+	markAlpha(kBox, screen, black, white);
+}
+
+void WideLayout::markAlpha(Element element, const Graphics::Surface &screen, const Graphics::Surface *black, const Graphics::Surface *white) {
 	uint before = _layers.size();
-	mark(kBox, screen); // keeps the screen diff current; the layer it adds is the fallback
+	mark(element, screen); // keeps the screen diff current; the layer it adds is the fallback
 	if (!_active || !black || !white || _layers.size() == before)
 		return;
 	// alpha per channel: white - black = 255 - a (the box over white and over black); colour = black * 255 / a
 	const int w = black->w, h = black->h;
 	Common::Array<byte> alpha(w * h), rgb(w * h * 3);
 	int minX = w, maxX = 0, minY = h, maxY = 0;
-	for (int y = 0; y < h; y++) {
-		for (int x = 0; x < w; x++) {
+	// Only what this element changed: the pair surfaces hold the earlier elements too
+	const Common::Rect changed = _layers.back().src;
+	for (int y = changed.top; y < changed.bottom; y++) {
+		for (int x = changed.left; x < changed.right; x++) {
 			byte br, bg, bb, wr, wg, wb;
 			black->format.colorToRGB(black->getPixel(x, y), br, bg, bb);
 			white->format.colorToRGB(white->getPixel(x, y), wr, wg, wb);
@@ -165,7 +175,8 @@ void WideLayout::markBox(const Graphics::Surface &screen, const Graphics::Surfac
 	Layer &layer = _layers.back();
 	const int bpp = screen.format.bytesPerPixel;
 	layer.src = box;
-	layer.offset = boxOffset(box);
+	if (element == kBox)
+		layer.offset = boxOffset(box);
 	layer.px.resize(box.width() * box.height() * bpp);
 	layer.mask.clear();
 	layer.alpha.resize(box.width() * box.height());

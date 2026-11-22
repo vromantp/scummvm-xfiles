@@ -26,6 +26,8 @@
 
 namespace XFiles {
 
+#define GAMEOPTION_WIDESCREEN GUIO_GAMEOPTIONS1
+
 enum XFilesDebugChannels {
 	kDebugDatabase = 1,
 	kDebugFiles,

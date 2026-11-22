@@ -30,6 +30,26 @@
 #include "xfiles/detection.h"
 #include "xfiles/xfiles.h"
 
+static const ADExtraGuiOptionsMap optionsList[] = {
+	{
+		GAMEOPTION_WIDESCREEN,
+		{
+			_s("Widescreen layout"),
+			_s("Show the view larger on wide screens; text and controls keep their size. Menus and computer screens stay 4:3."),
+			"xfiles_widescreen",
+			false,
+			0,
+			0
+		}
+	},
+
+	AD_EXTRA_GUI_OPTIONS_TERMINATOR
+};
+
+const ADExtraGuiOptionsMap *XFilesMetaEngine::getAdvancedExtraGuiOptions() const {
+	return optionsList;
+}
+
 const char *XFilesMetaEngine::getName() const {
 	return "xfiles";
 }

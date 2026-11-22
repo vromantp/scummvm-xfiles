@@ -225,7 +225,15 @@ Common::Error XFilesEngine::run() {
 			break;
 		}
 	}
-	initGraphics(kScreenWidth, kScreenHeight, &format);
+	// B-352: the widescreen canvas is fixed here; a scripted run keeps the 4:3 one (fixtures and goldens)
+	_wideDx = 0;
+	// xfiles_widescreen_scripted=true lets a headless check shoot the wide canvas
+	const bool scriptedOk = ConfMan.hasKey("xfiles_widescreen_scripted") && ConfMan.getBool("xfiles_widescreen_scripted");
+	if ((ConfMan.get("xfiles_steps").empty() || scriptedOk) && ConfMan.hasKey("xfiles_widescreen") && ConfMan.getBool("xfiles_widescreen"))
+		_wideDx = (kWideWidth - kScreenWidth) / 2;
+	initGraphics(_wideDx ? kWideWidth : kScreenWidth, kScreenHeight, &format);
+	if (_wideDx)
+		g_system->fillScreen(0);
 	_screen.create(kScreenWidth, kScreenHeight, g_system->getScreenFormat());
 	setDebugger(new Console());
 
@@ -299,6 +307,8 @@ XFilesEngine::Input XFilesEngine::pollInput() {
 	input.release = false;
 	Common::Event event;
 	while (g_system->getEventManager()->pollEvent(event)) {
+		// The widescreen canvas has black sides: canvas x to screen x (clamped to the 640 columns)
+		event.mouse.x = CLIP<int16>(event.mouse.x - _wideDx, 0, kScreenWidth - 1);
 		if (event.type == Common::EVENT_LBUTTONDOWN && _steps.empty()) {
 			input.click = true;
 			input.pos = event.mouse;
@@ -357,7 +367,7 @@ uint XFilesEngine::getKeyValue(const Common::KeyState &kbd) {
 }
 
 void XFilesEngine::present() {
-	g_system->copyRectToScreen(_screen.getPixels(), _screen.pitch, 0, 0, _screen.w, _screen.h);
+	g_system->copyRectToScreen(_screen.getPixels(), _screen.pitch, _wideDx, 0, _screen.w, _screen.h);
 	g_system->updateScreen();
 	g_system->delayMillis(10);
 }

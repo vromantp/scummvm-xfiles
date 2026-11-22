@@ -29,6 +29,7 @@ namespace XFiles {
 enum {
 	kScreenWidth = 640,
 	kScreenHeight = 480,
+	kWideWidth = 854, // the widescreen canvas (B-352), 16:9
 	// The view band: navigation frames and videos are 600x240 at (20, 90);
 	// hotspot rectangles are in screen coordinates
 	kBandLeft = 20,

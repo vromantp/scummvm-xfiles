@@ -26,6 +26,7 @@
 #include "xfiles/media/movie.h"
 #include "xfiles/parse.h"
 #include "xfiles/script/vcdata.h"
+#include "xfiles/ui/view_band.h"
 #include "xfiles/debug/vcdump.h"
 #include "xfiles/xfiles.h"
 
@@ -71,8 +72,16 @@ void XFilesEngine::updateShots() {
 void XFilesEngine::saveShot() {
 	Common::String name = Common::String::format("%04u-%s-%u.png", ++_shots, _shotReason.c_str(), _shotId);
 	Common::DumpFile file;
-	if (!file.open(_shotsDir.join(name), true) || !Image::writePNG(file, _screen))
+	// The widescreen canvas (B-352): the shot is what present() sends, the screen at its offset between black sides
+	Graphics::Surface canvas;
+	if (_wideDx) {
+		canvas.create(kWideWidth, kScreenHeight, _screen.format);
+		canvas.fillRect(Common::Rect(canvas.w, canvas.h), 0);
+		canvas.copyRectToSurface(_screen, _wideDx, 0, Common::Rect(_screen.w, _screen.h));
+	}
+	if (!file.open(_shotsDir.join(name), true) || !Image::writePNG(file, _wideDx ? canvas : _screen))
 		warning("Cannot write the screenshot %s", name.c_str());
+	canvas.free();
 	debugC(1, kDebugScript, "-- shot %s", name.c_str());
 }
 
@@ -114,7 +123,7 @@ void XFilesEngine::stepMouse(const Common::String &step) {
 	const char *comma = parseInt(step.c_str() + 6, x);
 	if (comma && *comma == ',' && parseInt(comma + 1, y)) {
 		_mouse = Common::Point(x, y);
-		g_system->warpMouse(x, y);
+		g_system->warpMouse(x + _wideDx, y);
 	}
 }
 

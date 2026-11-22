@@ -36,7 +36,7 @@ const ADGameDescription gameDescriptions[] = {
 		Common::EN_ANY,
 		Common::kPlatformWindows,
 		ADGF_UNSTABLE,
-		GUIO1(GUIO_NOMIDI)
+		GUIO2(GUIO_NOMIDI, GAMEOPTION_WIDESCREEN)
 	},
 
 	// French, Windows, 7 CDs. Database and script are the same files as the German release; only XFilesT.dll
@@ -50,7 +50,7 @@ const ADGameDescription gameDescriptions[] = {
 		Common::FR_FRA,
 		Common::kPlatformWindows,
 		ADGF_UNSTABLE,
-		GUIO1(GUIO_NOMIDI)
+		GUIO2(GUIO_NOMIDI, GAMEOPTION_WIDESCREEN)
 	},
 
 	// German, Windows, 7 CDs.
@@ -63,7 +63,7 @@ const ADGameDescription gameDescriptions[] = {
 		Common::DE_DEU,
 		Common::kPlatformWindows,
 		ADGF_UNSTABLE,
-		GUIO1(GUIO_NOMIDI)
+		GUIO2(GUIO_NOMIDI, GAMEOPTION_WIDESCREEN)
 	},
 
 	// Spanish, Windows, 7 CDs.
@@ -76,7 +76,7 @@ const ADGameDescription gameDescriptions[] = {
 		Common::ES_ESP,
 		Common::kPlatformWindows,
 		ADGF_UNSTABLE,
-		GUIO1(GUIO_NOMIDI)
+		GUIO2(GUIO_NOMIDI, GAMEOPTION_WIDESCREEN)
 	},
 
 	// Italian, Windows, 7 CDs.
@@ -89,7 +89,7 @@ const ADGameDescription gameDescriptions[] = {
 		Common::IT_ITA,
 		Common::kPlatformWindows,
 		ADGF_UNSTABLE,
-		GUIO1(GUIO_NOMIDI)
+		GUIO2(GUIO_NOMIDI, GAMEOPTION_WIDESCREEN)
 	},
 
 	AD_TABLE_END_MARKER

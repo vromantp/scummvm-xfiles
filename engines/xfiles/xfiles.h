@@ -389,6 +389,8 @@ private:
 	DiscFiles _discFiles;
 	Script *_script;
 	Graphics::Surface _screen;
+	/** Widescreen layout (B-352): x offset of the 640x480 screen on the canvas, 0 when the option is off. */
+	int _wideDx = 0;
 	Captions _captions;
 	HeadCredits _headCredits;
 	Subliminal _subliminal;

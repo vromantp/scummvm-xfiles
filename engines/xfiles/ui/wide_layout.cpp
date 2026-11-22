@@ -76,6 +76,12 @@ void WideLayout::begin(const Graphics::Surface &screen) {
 	_prev.copyFrom(screen);
 }
 
+Common::Point WideLayout::boxOffset(const Common::Rect &box) {
+	int centre = kZoomLeft + ((box.left + box.right) / 2 - kBandLeft) * 5 / 4;
+	int left = CLIP<int>(centre - box.width() / 2, kZoomLeft, kZoomLeft + kZoomWidth - box.width());
+	return Common::Point(left - box.left, kBelowDy);
+}
+
 void WideLayout::mark(Element element, const Graphics::Surface &screen) {
 	if (!_active)
 		return;
@@ -108,9 +114,7 @@ void WideLayout::mark(Element element, const Graphics::Surface &screen) {
 		layer.offset = _mouseOffset;
 	} else if (element == kBox) {
 		// The box's centre follows the character: the band's mapping of its centre, kept inside the band
-		int centre = kZoomLeft + ((box.left + box.right) / 2 - kBandLeft) * 5 / 4;
-		int left = CLIP<int>(centre - box.width() / 2, kZoomLeft, kZoomLeft + kZoomWidth - box.width());
-		layer.offset = Common::Point(left - box.left, kBelowDy);
+		layer.offset = boxOffset(box);
 	}
 	layer.px.resize(box.width() * box.height() * bpp);
 	layer.mask.resize(box.width() * box.height());
@@ -124,6 +128,58 @@ void WideLayout::mark(Element element, const Graphics::Surface &screen) {
 		memcpy((byte *)_prev.getBasePtr(box.left, y), b, box.width() * bpp);
 	}
 	_layers.push_back(layer);
+}
+
+void WideLayout::markBox(const Graphics::Surface &screen, const Graphics::Surface *black, const Graphics::Surface *white) {
+	uint before = _layers.size();
+	mark(kBox, screen); // keeps the screen diff current; the layer it adds is the fallback
+	if (!_active || !black || !white || _layers.size() == before)
+		return;
+	// alpha per channel: white - black = 255 - a (the box over white and over black); colour = black * 255 / a
+	const int w = black->w, h = black->h;
+	Common::Array<byte> alpha(w * h), rgb(w * h * 3);
+	int minX = w, maxX = 0, minY = h, maxY = 0;
+	for (int y = 0; y < h; y++) {
+		for (int x = 0; x < w; x++) {
+			byte br, bg, bb, wr, wg, wb;
+			black->format.colorToRGB(black->getPixel(x, y), br, bg, bb);
+			white->format.colorToRGB(white->getPixel(x, y), wr, wg, wb);
+			int a = 255 - ((wr - br) + (wg - bg) + (wb - bb)) / 3;
+			a = CLIP(a, 0, 255);
+			uint at = y * w + x;
+			alpha[at] = a;
+			if (!a)
+				continue;
+			rgb[at * 3] = MIN(br * 255 / a, 255);
+			rgb[at * 3 + 1] = MIN(bg * 255 / a, 255);
+			rgb[at * 3 + 2] = MIN(bb * 255 / a, 255);
+			minX = MIN(minX, x);
+			maxX = MAX(maxX, x + 1);
+			minY = MIN(minY, y);
+			maxY = y + 1;
+		}
+	}
+	if (maxX <= minX || maxY <= minY)
+		return;
+	Common::Rect box(minX, minY, maxX, maxY);
+	Layer &layer = _layers.back();
+	const int bpp = screen.format.bytesPerPixel;
+	layer.src = box;
+	layer.offset = boxOffset(box);
+	layer.px.resize(box.width() * box.height() * bpp);
+	layer.mask.clear();
+	layer.alpha.resize(box.width() * box.height());
+	for (int y = 0; y < box.height(); y++) {
+		for (int x = 0; x < box.width(); x++) {
+			uint from = (box.top + y) * w + box.left + x, at = y * box.width() + x;
+			layer.alpha[at] = alpha[from];
+			uint32 color = screen.format.RGBToColor(rgb[from * 3], rgb[from * 3 + 1], rgb[from * 3 + 2]);
+			if (bpp == 4)
+				WRITE_UINT32(&layer.px[at * bpp], color);
+			else
+				WRITE_UINT16(&layer.px[at * bpp], color);
+		}
+	}
 }
 
 void WideLayout::compose(Graphics::Surface &canvas) const {
@@ -146,6 +202,21 @@ void WideLayout::compose(Graphics::Surface &canvas) const {
 			for (int x = 0; x < layer.src.width(); x++) {
 				int cx = dest.left + x;
 				uint at = y * layer.src.width() + x;
+				if (!layer.alpha.empty()) {
+					byte a = layer.alpha[at];
+					if (!a || cx < 0 || cx >= canvas.w)
+						continue;
+					uint32 color = bpp == 4 ? READ_UINT32(&layer.px[at * bpp]) : READ_UINT16(&layer.px[at * bpp]);
+					if (a != 255) {
+						byte sr, sg, sb, dr, dg, db;
+						canvas.format.colorToRGB(color, sr, sg, sb);
+						canvas.format.colorToRGB(canvas.getPixel(cx, cy), dr, dg, db);
+						color = canvas.format.RGBToColor((sr * a + dr * (255 - a)) / 255, (sg * a + dg * (255 - a)) / 255,
+							(sb * a + db * (255 - a)) / 255);
+					}
+					canvas.setPixel(cx, cy, color);
+					continue;
+				}
 				if (layer.mask[at] && cx >= 0 && cx < canvas.w)
 					memcpy(canvas.getBasePtr(cx, cy), &layer.px[at * bpp], bpp);
 			}

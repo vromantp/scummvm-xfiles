@@ -365,7 +365,22 @@ void XFilesEngine::drawView() {
 	// card and head credits, captions, the subliminal word, then the layout items over all of it
 	_interface->drawBar(_screen, &_wide);
 	_dialogBox.draw(_screen, _mouse, !getPreference(kPrefTranslucency));
-	_wide.mark(WideLayout::kBox, _screen);
+	if (_wide.isActive() && getPreference(kPrefTranslucency) && _dialogBox.isVisible()) {
+		// The zoomed band shows through the box: draw it alone over black and over white, the two give its alpha (B-359)
+		Graphics::Surface black, white;
+		const Graphics::PixelFormat format = Graphics::PixelFormat::createFormatARGB32();
+		black.create(_screen.w, _screen.h, format);
+		white.create(_screen.w, _screen.h, format);
+		black.fillRect(Common::Rect(black.w, black.h), format.RGBToColor(0, 0, 0));
+		white.fillRect(Common::Rect(white.w, white.h), format.RGBToColor(255, 255, 255));
+		_dialogBox.draw(black, _mouse, false);
+		_dialogBox.draw(white, _mouse, false);
+		_wide.markBox(_screen, &black, &white);
+		black.free();
+		white.free();
+	} else {
+		_wide.mark(WideLayout::kBox, _screen);
+	}
 	_captions.drawCard(_screen);
 	_wide.mark(WideLayout::kCard, _screen);
 	_headCredits.draw(_screen);

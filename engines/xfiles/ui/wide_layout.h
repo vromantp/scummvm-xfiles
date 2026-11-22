@@ -71,6 +71,12 @@ public:
 	bool isActive() const { return _active; }
 	/** Record what changed on the screen since the last mark as this element (no-op when not recording). */
 	void mark(Element element, const Graphics::Surface &screen);
+	/**
+	 * Record the dialog box (B-359). black and white are the box drawn alone over a black and over a white 32 bit surface
+	 * (null: not translucent, or not recorded); from the two the box's colour and alpha follow, and compose blends it
+	 * over the scaled band instead of pasting the pixels blended over the 1x band. screen is as for mark().
+	 */
+	void markBox(const Graphics::Surface &screen, const Graphics::Surface *black, const Graphics::Surface *white);
 	/** The dragged image's offset: canvas mouse minus screen mouse. */
 	void setMouseOffset(const Common::Point &offset) { _mouseOffset = offset; }
 
@@ -88,11 +94,13 @@ private:
 		Common::Point offset;     ///< Canvas position minus screen position
 		Common::Array<byte> px;   ///< The box's pixels
 		Common::Array<byte> mask; ///< One byte per pixel: changed
+		Common::Array<byte> alpha; ///< The translucent box: one byte per pixel, blended over the canvas (else empty)
 		bool backing;             ///< A black backing under the box (text over the video)
 	};
 
 	static Common::Point offsetOf(Element element);
 	static bool interactive(Element element);
+	static Common::Point boxOffset(const Common::Rect &box);
 
 	bool _active;
 	Graphics::Surface _prev;

@@ -41,6 +41,20 @@ void Script::answerEndGame(bool asked) {
 	if (asked)
 		setVariable(_endGameVar, 0); // 0x4fbd60 writes the changed value back, after the answer
 	_endGamePending = false;
+	// Game_Start (0x48cd70, Yes and No alike) tears the game down: the held-item object's deactivation
+	// (0x437c20) resets iCurrInventory, with no put back of the icon
+	if (isHolding()) {
+		// Logged as the call's effect, as the run comparison counts the exe's write (~30 ms after the call)
+		bool trace = isLogging() && !_traceHook;
+		if (trace) {
+			_traceBefore = _variables;
+			_traceScript.clear();
+		}
+		clearHeldItem();
+		_tool.cursorItem = 0;
+		if (trace)
+			flushHookEffects();
+	}
 }
 
 void Script::travel() {
@@ -924,6 +938,10 @@ void Script::step(const Common::String &s) {
 		arg = s.substr(colon + 1);
 	}
 	uint32 id = (uint32)parseIntOr0(arg.c_str());
+	// EndGame with 0 asks nothing: the game ends at the next frame top (XFilesEngine::handleEndGame), before
+	// this step's input
+	if (_endGamePending && _endGameValue == 0 && kind != "answer")
+		answerEndGame(false);
 	// The phone's buttons pressed by the last step go up (100 ms later in the exe)
 	for (uint i = 0; i < _pressed.size(); i++)
 		releaseItem(_pressed[i]);

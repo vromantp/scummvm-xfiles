@@ -242,7 +242,7 @@ void Script::enableTarget(uint32 target, bool value) {
 	else if (!value && was)
 		deactivateViewObject(target);
 	if ((value) != was && _data.getClassOf(target) == kClassAssetRef)
-		updateViewAsset(target);
+		updateViewAsset(target, value);
 	updateLayoutItem(target, value);
 }
 

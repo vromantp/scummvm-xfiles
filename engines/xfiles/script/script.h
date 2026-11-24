@@ -951,7 +951,7 @@ private:
 	void activateViewObject(uint32 id);
 	void deactivateViewObject(uint32 id);
 	/** An asset of the current view enabled or disabled: the view picks the asset it shows again. */
-	void updateViewAsset(uint32 id);
+	void updateViewAsset(uint32 id, bool value);
 	void activateViewAsset();
 	/**
 	 * An asset object counts its activations (XFiles.exe +0x14c): Object Activation fires on the first,

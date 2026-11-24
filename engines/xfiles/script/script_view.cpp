@@ -673,37 +673,57 @@ void Script::deactivateViewObject(uint32 id) {
 	fire(id, kEventObjectDeactivation);
 }
 
-void Script::updateViewAsset(uint32 id) {
+void Script::updateViewAsset(uint32 id, bool value) {
 	// 0x4494d0 (disable), 0x47a260 (enable): for an asset of the current
 	// view's list, unless a view change is pending (0x46f210), the view
 	// object is made again: its old asset is deactivated at once (event kind
 	// 12), the first enabled one activated by kind 11, which a video holds
 	// (exe-map.md "Held events"). Crime Lab view 10788: Amis's greeting 71783
 	// disables the clip 33974, whose Deactivation stops timer 0 (B-052).
-	// Only a change of the shown asset is modelled
+	// See view-objects-timers.md "Enable action on an asset"
 	VCView v;
 	if (!_pos.active || _pos.held || _travel.pending || isViewChangeQueued() || !_data.getView(_pos.view, v))
 		return;
 	Common::Array<uint32> ids;
 	_data.getMembers(v.assets, ids);
-	if (Common::find(ids.begin(), ids.end(), id) == ids.end())
+	uint pos = 0;
+	while (pos < ids.size() && ids[pos] != id)
+		pos++;
+	if (pos == ids.size())
 		return;
-	uint32 background;
-	getViewAssets(ids, background);
-	uint32 shown = ids.empty() ? 0 : ids[0];
+	// An enable (0x47a260) stops at an earlier enabled asset of the list: it remakes the view object only for the
+	// asset that becomes the shown one. A disable (0x4494d0) remakes it for any asset of the list
+	if (value) {
+		for (uint i = 0; i < pos; i++) {
+			if (isEnabled(ids[i]))
+				return;
+		}
+	}
+	// The shown asset is deactivated even when it stays the same (rauchvisitors-to-base: disabling 7651 stops and
+	// starts 25997 of view 8138), then the first enabled one is activated, held while a video plays
 	for (uint i = 0; i < _pos.objects.size(); i++) {
 		if (_data.getClassOf(_pos.objects[i]) != kClassAssetRef)
 			continue;
 		uint32 old = _pos.objects[i];
-		if (old == shown)
-			return;
 		_pos.objects.remove_at(i);
 		deactivateAsset(old);
 		break;
 	}
 	_pos.assetHeld = !_media.videoQueue.empty();
-	if (!_pos.assetHeld)
-		activateViewAsset();
+	if (_pos.assetHeld)
+		return;
+	// The old asset's Deactivation trigger may have enabled or disabled an asset of this list, which remade the
+	// view object inside this call (view 6963, asset 21096). The exe's outer make then reuses the object the inner
+	// one made and counts it a second time (0x4a0a70 finds it on the kind 28 list, no second Activation), so
+	// leaving the view later does not deactivate it [exe, not seen in a run]
+	Common::Array<uint32> now;
+	uint32 background;
+	getViewAssets(now, background);
+	if (!now.empty() && Common::find(_pos.objects.begin(), _pos.objects.end(), now[0]) != _pos.objects.end()) {
+		_media.assetActive[now[0]]++;
+		return;
+	}
+	activateViewAsset();
 }
 
 void Script::activateViewAsset() {

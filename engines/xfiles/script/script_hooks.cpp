@@ -715,6 +715,26 @@ void Script::logHook(const Common::String &name, HookStatus status) {
 	debugC(2, kDebugScript, "hook %s %s", name.c_str(), kStatus[status]);
 }
 
+void Script::traceHookAsset(uint32 id) {
+	if (_traceHook && id && Common::find(_traceAssets.begin(), _traceAssets.end(), id) == _traceAssets.end())
+		_traceAssets.push_back(id);
+}
+
+void Script::logHookEffects(const Common::HashMap<uint32, int32> &before) {
+	Common::Array<uint32> changed;
+	for (Common::HashMap<uint32, int32>::const_iterator it = _variables.begin(); it != _variables.end(); ++it) {
+		if (it->_value != before.getValOrDefault(it->_key, 0) &&
+			Common::find(_traceScript.begin(), _traceScript.end(), it->_key) == _traceScript.end())
+			changed.push_back(it->_key);
+	}
+	Common::sort(changed.begin(), changed.end());
+	for (uint i = 0; i < changed.size(); i++)
+		log(Common::String::format("      var.set #%u = %d", changed[i], _variables[changed[i]]));
+	Common::sort(_traceAssets.begin(), _traceAssets.end());
+	for (uint i = 0; i < _traceAssets.size(); i++)
+		log(Common::String::format("      hook asset #%u", _traceAssets[i]));
+}
+
 bool Script::isHolding() const {
 	return _tool.variable && getVariable(_tool.variable) != _tool.none;
 }

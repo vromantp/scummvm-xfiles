@@ -133,6 +133,7 @@ void Script::setPDAText(uint32 item, const Common::U32String &text, int size, bo
 }
 
 bool Script::getTextAsset(uint32 entry, Common::U32String &text) {
+	traceHookAsset(entry);
 	// A text asset, or one that names a string of XFilesT.dll
 	uint32 type, resource;
 	if (_data.getResourceRef(entry, type, resource)) {
@@ -145,6 +146,7 @@ bool Script::getTextAsset(uint32 entry, Common::U32String &text) {
 }
 
 bool Script::readTextFile(uint32 asset, Common::U32String &text) {
+	traceHookAsset(asset);
 	Common::Array<byte> data;
 	if (!_hooks || !_hooks->readAssetFile(asset, data))
 		return false;

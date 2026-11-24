@@ -736,6 +736,8 @@ public:
 protected:
 	/** One line of the log; the default writes it to the Script debug channel. */
 	virtual void log(const Common::String &line);
+	/** Whether log() goes anywhere: the call traces (logHookEffects) cost a copy of the variables. */
+	virtual bool isLogging() const;
 	/**
 	 * A branch the script took, for vcdump's coverage (docs/engine/debugging.md): kind 'A' an action ran, 'F' a
 	 * conditional action's condition was false, 'T' a trigger's action list started, 'O' an object's Object
@@ -759,6 +761,10 @@ private:
 	/** == of the exe (0x5d5ef0), which compares string variables by their text. */
 	bool testEqual(const VCExpression &condition, int32 a, int32 b) const;
 	void logHook(const Common::String &name, HookStatus status);
+	/** Under a C++ hook call (only while the log is on): remember a text asset the hook reads, once per call. */
+	void traceHookAsset(uint32 id);
+	/** The variables a C++ hook call changed (against `before`, by ID) and the assets it read, as log lines. */
+	void logHookEffects(const Common::HashMap<uint32, int32> &before);
 	/** Fill _hookTable: the Script's own hooks, then those of each area file. */
 	void addHooks();
 	void addCoreHooks();
@@ -1030,6 +1036,9 @@ private:
 	// The Smolnikoff shootout: exe globals a save does not hold (0x6b1ef0..0x6b1f10, 0x6be8a4/7cc/834)
 	OncePerProcess _ownOnce; ///< Used when the engine hands no flags (vcdump: one game per process)
 	OncePerProcess *_once;
+	bool _traceHook;                    ///< A C++ hook call runs and its variable writes and assets are logged
+	Common::Array<uint32> _traceAssets; ///< The text assets it read, in order, once each
+	Common::Array<uint32> _traceScript; ///< The variables the script's own statements wrote meanwhile (nested actions)
 	bool _endGamePending; ///< EndGame ran and waits for the engine's answer
 	uint32 _endGameVar;   ///< Its variable (bReplay)
 	int32 _endGameValue;  ///< and the value it had

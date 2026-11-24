@@ -85,7 +85,7 @@ Script::Script(const VCData &data) : _data(data), _hooks(nullptr), _phone(*this,
 	_prefs(*this), _texts(nullptr), _timerSerial(0), _random(1), _fixedSeeds(false), _seedBase(0), _restoreMode(-1),
 	_disc(1), _photosOnCamera(0), _evidenceRowShown(false), _tint(0), _restored(false), _restorePending(false),
 	_focus(0), _held(0), _currNodeVariable(0), _viewSpecialVariable(0), _fireSerial(0), _inEvent(false), _viewSerial(0),
-	_fireDepth(0), _nextId(0), _endGamePending(false), _endGameVar(0), _endGameValue(0), _prefArtificialIntuition(0),
+	_fireDepth(0), _nextId(0), _traceHook(false), _endGamePending(false), _endGameVar(0), _endGameValue(0), _prefArtificialIntuition(0),
 	_cookEmailCount(0), _cookEmailFlag(0), _uberParanoia(0), _journalLeft(0), _bibleLeft(0) {
 	memset(_prefVariables, 0, sizeof(_prefVariables));
 	_once = &_ownOnce;
@@ -112,6 +112,10 @@ Script::Script(const VCData &data) : _data(data), _hooks(nullptr), _phone(*this,
 		if (data.getEnabled(entries[i].key, target, enabled))
 			_enabled[target] = enabled;
 	}
+}
+
+bool Script::isLogging() const {
+	return debugChannelSet(1, kDebugScript);
 }
 
 void Script::log(const Common::String &line) {
@@ -463,8 +467,11 @@ void Script::execute(const VCAction &a, int event, const EventFields &fields, Lo
 		}
 		if (local)
 			locals[s.lhs.value] = value;
-		else
+		else {
 			_variables[s.lhs.value] = value;
+			if (_traceHook)
+				_traceScript.push_back(s.lhs.value); // a nested action list's write, not the hook's
+		}
 		break;
 	}
 	case kActionEnable: {
@@ -572,9 +579,23 @@ void Script::callFunction(const VCAction &a, int event, const EventFields &field
 	} else {
 		log(callLine);
 		// The Script's own hooks first (this file and the area files), then the engine's
+		// The variables the call changes and the text assets it reads follow its line, for the run comparison
+		// (tools/ref/compare.py): variables by ID, then assets, each once
+		bool trace = isLogging();
+		Common::HashMap<uint32, int32> before;
+		if (trace) {
+			before = _variables;
+			_traceHook = true;
+			_traceAssets.clear();
+			_traceScript.clear();
+		}
 		HookStatus status = _hookTable.run(*this, call);
 		if (_hooks && _hooks->callFunction(call))
 			status = kHookHandled;
+		if (trace) {
+			_traceHook = false;
+			logHookEffects(before);
+		}
 		logHook(a.function, status);
 	}
 }

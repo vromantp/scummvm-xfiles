@@ -85,6 +85,9 @@ struct Script::GameHooks {
 		// emotion and action ones lose their enable flags
 		s.spendIcons(kClassEmotionIcon);
 		s.spendIcons(kClassActionIcon);
+		// Kind 24 (the held tool) is in 0x44d850's kinds too; its deactivation (0x437c20) sets iCurrInventory to
+		// Inventory_None, see docs/subsystems/inventory.md
+		s.putBack();
 		return true;
 	}
 
@@ -693,6 +696,11 @@ void Script::addStateHooks() {
 		// 0x49b5b0 is a bare ret 0xc: the handle is not kept; the scripts read iDayNight themselves
 		return true;
 	});
+	t.add("RegUberVars", [](Script &s, const HookCall &c) {
+		// 0x48ba50; the Script adds to iUberParanoia (0x4bf500). The engine's hook keeps all three for the subliminals
+		s.registerUberParanoia(c.variableArg(1));
+		return true;
+	});
 	t.add("RegCookEmail", StateHooks::hookRegCookEmail);
 	t.add("StopAllTimers", StateHooks::hookStopAllTimers);
 	t.add("SetLBoxTint", StateHooks::hookSetLBoxTint);
@@ -720,23 +728,24 @@ void Script::traceHookAsset(uint32 id) {
 		_traceAssets.push_back(id);
 }
 
-void Script::logHookEffects(const Common::HashMap<uint32, int32> &before, uint scriptMark) {
+void Script::flushHookEffects() {
+	_traceFlushing = true;
 	Common::Array<uint32> changed;
 	for (Common::HashMap<uint32, int32>::const_iterator it = _variables.begin(); it != _variables.end(); ++it) {
-		if (it->_value != before.getValOrDefault(it->_key, 0) &&
-			Common::find(_traceScript.begin() + scriptMark, _traceScript.end(), it->_key) == _traceScript.end())
+		if (it->_value != _traceBefore.getValOrDefault(it->_key, 0) &&
+			Common::find(_traceScript.begin(), _traceScript.end(), it->_key) == _traceScript.end())
 			changed.push_back(it->_key);
 	}
 	Common::sort(changed.begin(), changed.end());
 	for (uint i = 0; i < changed.size(); i++)
 		log(Common::String::format("      var.set #%u = %d", changed[i], _variables[changed[i]]));
-	Common::sort(_traceAssets.begin(), _traceAssets.end());
-	for (uint i = 0; i < _traceAssets.size(); i++)
+	Common::sort(_traceAssets.begin() + _traceAssetsLogged, _traceAssets.end());
+	for (uint i = _traceAssetsLogged; i < _traceAssets.size(); i++)
 		log(Common::String::format("      hook asset #%u", _traceAssets[i]));
-	// What a hook run inside another's action list reported is not the outer call's too (the exe's log gives it to the
-	// last call before the write)
-	_traceScript.push_back(changed);
-	_traceAssets.clear();
+	_traceAssetsLogged = _traceAssets.size();
+	_traceBefore = _variables;
+	_traceScript.clear();
+	_traceFlushing = false;
 }
 
 bool Script::isHolding() const {

@@ -675,8 +675,8 @@ public:
 	/** DoActionList(trigger, actionList): another trigger's actions. */
 	void runActionList(uint32 actionList, int event, const EventFields &fields);
 	void clearItemText(uint32 item) { _itemTexts.erase(item); }
-	/** The text of a text asset (or a string of XFilesT.dll), false if it has none. */
-	bool getTextAsset(uint32 entry, Common::U32String &text);
+	/** The text of a text asset (or a string of XFilesT.dll), false if it has none. trace false: the exe reads it without starting the asset. */
+	bool getTextAsset(uint32 entry, Common::U32String &text, bool trace = true);
 	void setFocus(uint32 item) { _focus = item; }
 	/** Where an item's text or picture is drawn from (getItemOrigin), e.g. a caret behind a field's text. */
 	void setItemOrigin(uint32 item, const Common::Point &origin) { _itemOrigins[item] = origin; }
@@ -693,7 +693,7 @@ public:
 	/** PlayAssetAt (0x491de0): start the asset unless it already plays; an XG clip is drawn at (x, y). */
 	void playAssetAt(uint32 asset, int x, int y);
 	/** The text of a file asset: Windows-1252, carriage returns dropped. */
-	bool readTextFile(uint32 asset, Common::U32String &text);
+	bool readTextFile(uint32 asset, Common::U32String &text, bool trace = true);
 	/** PDA text: Courier New, regular, black, left, no shadow, wrapped at width (0x4be2c0); ScrollTextList's colour and Arial are
 	 * optional. */
 	void setPDAText(uint32 item, const Common::U32String &text, int size, bool doubleWidth, uint32 color = 0,
@@ -734,9 +734,11 @@ public:
 	uint32 getCookEmailFlag() const { return _cookEmailFlag; }
 
 protected:
-	/** One line of the log; the default writes it to the Script debug channel. */
-	virtual void log(const Common::String &line);
-	/** Whether log() goes anywhere: the call traces (logHookEffects) cost a copy of the variables. */
+	/** One line of the log, after the pending effects of a C++ hook call (flushHookEffects). */
+	void log(const Common::String &line);
+	/** Where a log line goes; the default writes it to the Script debug channel. */
+	virtual void writeLog(const Common::String &line);
+	/** Whether log() goes anywhere: the call traces (flushHookEffects) cost a copy of the variables. */
 	virtual bool isLogging() const;
 	/**
 	 * A branch the script took, for vcdump's coverage (docs/engine/debugging.md): kind 'A' an action ran, 'F' a
@@ -763,8 +765,8 @@ private:
 	void logHook(const Common::String &name, HookStatus status);
 	/** Under a C++ hook call (only while the log is on): remember a text asset the hook reads, once per call. */
 	void traceHookAsset(uint32 id);
-	/** The variables a C++ hook call changed (against `before`, by ID, without those _traceScript got from scriptMark on) and the assets it read, as log lines. */
-	void logHookEffects(const Common::HashMap<uint32, int32> &before, uint scriptMark);
+	/** Log the variables the outermost C++ hook call changed since the last flush (by ID, without those _traceScript holds) and the assets it read since, as lines. */
+	void flushHookEffects();
 	/** Fill _hookTable: the Script's own hooks, then those of each area file. */
 	void addHooks();
 	void addCoreHooks();
@@ -1039,6 +1041,9 @@ private:
 	bool _traceHook;                    ///< A C++ hook call runs and its variable writes and assets are logged
 	Common::Array<uint32> _traceAssets; ///< The text assets it read, in order, once each
 	Common::Array<uint32> _traceScript; ///< The variables the script's own statements wrote meanwhile (nested actions)
+	Common::HashMap<uint32, int32> _traceBefore; ///< The variables at the call's start or the last flush
+	uint _traceAssetsLogged;                     ///< How many of _traceAssets the last flush logged
+	bool _traceFlushing;                         ///< flushHookEffects runs (its log lines flush nothing)
 	bool _endGamePending; ///< EndGame ran and waits for the engine's answer
 	uint32 _endGameVar;   ///< Its variable (bReplay)
 	int32 _endGameValue;  ///< and the value it had

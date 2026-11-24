@@ -461,8 +461,9 @@ void PdaHooks::scrollTextList(int32 item, int32 asset, int32 color, int32 font, 
 	uint32 rgb = color == 'w' ? 0xffffff : color == 'x' ? 0x2e6b8c : 0;
 	bool arial = font == 'H';
 	Common::U32String text;
-	if (asset && !_script.readTextFile(asset, text))
-		_script.getTextAsset(asset, text);
+	// The exe reads these texts without starting the asset (see pda.md)
+	if (asset && !_script.readTextFile(asset, text, false))
+		_script.getTextAsset(asset, text, false);
 	// Arial 12 is 15 px per line (font.metrics, regular); the bold one is assumed to match
 	setScrollText(item, text, size, rgb, arial, arial);
 }

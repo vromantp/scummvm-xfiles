@@ -864,7 +864,8 @@ bool ComputerHooks::sameText(const Common::String &buffer, uint32 textAsset) {
 	// 0x459e00 and 0x459fb0: two empty strings are equal, otherwise _mbsicmp
 	Common::U32String text;
 	Common::String other;
-	if (_script.getTextAsset(textAsset, text))
+	// The exe reads the text without starting the asset (see computers.md)
+	if (_script.getTextAsset(textAsset, text, false))
 		other = text.encode();
 	return !scumm_stricmp(buffer.c_str(), other.c_str());
 }
@@ -1076,8 +1077,9 @@ bool ComputerHooks::searchPhone(const Common::String &query, int event, const Co
 			setFieldAsset(kIngResultText, kIngPhoneText);
 		} else {
 			setFieldAsset(kIngResultText, kIngPhoneSpecialText);
-			_script.runActionList(kIngPhoneSpecialActions, event, fields);
+			// The exe writes the variable before the action list runs (the run's var.set precedes its ClearAIList)
 			_script.setVariable(kIngPhoneSpecialVariable, 1);
+			_script.runActionList(kIngPhoneSpecialActions, event, fields);
 		}
 		noRecord();
 		return true;

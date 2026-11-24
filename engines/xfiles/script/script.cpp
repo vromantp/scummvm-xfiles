@@ -85,7 +85,7 @@ Script::Script(const VCData &data) : _data(data), _hooks(nullptr), _phone(*this,
 	_prefs(*this), _texts(nullptr), _timerSerial(0), _random(1), _fixedSeeds(false), _seedBase(0), _restoreMode(-1),
 	_disc(1), _photosOnCamera(0), _evidenceRowShown(false), _tint(0), _restored(false), _restorePending(false),
 	_focus(0), _held(0), _currNodeVariable(0), _viewSpecialVariable(0), _fireSerial(0), _inEvent(false), _viewSerial(0),
-	_fireDepth(0), _nextId(0), _traceHook(false), _endGamePending(false), _endGameVar(0), _endGameValue(0), _prefArtificialIntuition(0),
+	_fireDepth(0), _nextId(0), _traceHook(false), _traceAssetsLogged(0), _traceFlushing(false), _endGamePending(false), _endGameVar(0), _endGameValue(0), _prefArtificialIntuition(0),
 	_cookEmailCount(0), _cookEmailFlag(0), _uberParanoia(0), _journalLeft(0), _bibleLeft(0) {
 	memset(_prefVariables, 0, sizeof(_prefVariables));
 	_once = &_ownOnce;
@@ -119,6 +119,13 @@ bool Script::isLogging() const {
 }
 
 void Script::log(const Common::String &line) {
+	// A hook's writes and text reads are logged before the next line, as the exe logs a write when it is made
+	if (_traceHook && !_traceFlushing)
+		flushHookEffects();
+	writeLog(line);
+}
+
+void Script::writeLog(const Common::String &line) {
 	debugC(1, kDebugScript, "%s", line.c_str());
 }
 
@@ -579,25 +586,22 @@ void Script::callFunction(const VCAction &a, int event, const EventFields &field
 	} else {
 		log(callLine);
 		// The Script's own hooks first (this file and the area files), then the engine's
-		// The variables the call changes and the text assets it reads follow its line, for the run comparison
-		// (tools/ref/compare.py): variables by ID, then assets, each once
+		// The variables the call changes and the text assets it reads are logged before the next line (flushHookEffects),
+		// for the run comparison (tools/ref/compare.py): variables by ID, then assets, each once
 		bool trace = isLogging();
 		bool outermost = trace && !_traceHook; // a hook run by another hook's action list reports its own effects
-		Common::HashMap<uint32, int32> before;
-		uint scriptMark = _traceScript.size(); // the statements an enclosing action list ran before this call are not its own
-		if (trace) {
-			before = _variables;
-			if (outermost) {
-				_traceHook = true;
-				_traceAssets.clear();
-				_traceScript.clear();
-			}
+		if (outermost) {
+			_traceHook = true;
+			_traceBefore = _variables;
+			_traceAssets.clear();
+			_traceAssetsLogged = 0;
+			_traceScript.clear();
 		}
 		HookStatus status = _hookTable.run(*this, call);
 		if (_hooks && _hooks->callFunction(call))
 			status = kHookHandled;
 		if (trace) {
-			logHookEffects(before, outermost ? 0 : scriptMark);
+			flushHookEffects();
 			if (outermost)
 				_traceHook = false;
 		}

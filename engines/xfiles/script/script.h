@@ -763,8 +763,8 @@ private:
 	void logHook(const Common::String &name, HookStatus status);
 	/** Under a C++ hook call (only while the log is on): remember a text asset the hook reads, once per call. */
 	void traceHookAsset(uint32 id);
-	/** The variables a C++ hook call changed (against `before`, by ID) and the assets it read, as log lines. */
-	void logHookEffects(const Common::HashMap<uint32, int32> &before);
+	/** The variables a C++ hook call changed (against `before`, by ID, without those _traceScript got from scriptMark on) and the assets it read, as log lines. */
+	void logHookEffects(const Common::HashMap<uint32, int32> &before, uint scriptMark);
 	/** Fill _hookTable: the Script's own hooks, then those of each area file. */
 	void addHooks();
 	void addCoreHooks();

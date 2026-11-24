@@ -720,11 +720,11 @@ void Script::traceHookAsset(uint32 id) {
 		_traceAssets.push_back(id);
 }
 
-void Script::logHookEffects(const Common::HashMap<uint32, int32> &before) {
+void Script::logHookEffects(const Common::HashMap<uint32, int32> &before, uint scriptMark) {
 	Common::Array<uint32> changed;
 	for (Common::HashMap<uint32, int32>::const_iterator it = _variables.begin(); it != _variables.end(); ++it) {
 		if (it->_value != before.getValOrDefault(it->_key, 0) &&
-			Common::find(_traceScript.begin(), _traceScript.end(), it->_key) == _traceScript.end())
+			Common::find(_traceScript.begin() + scriptMark, _traceScript.end(), it->_key) == _traceScript.end())
 			changed.push_back(it->_key);
 	}
 	Common::sort(changed.begin(), changed.end());
@@ -733,6 +733,10 @@ void Script::logHookEffects(const Common::HashMap<uint32, int32> &before) {
 	Common::sort(_traceAssets.begin(), _traceAssets.end());
 	for (uint i = 0; i < _traceAssets.size(); i++)
 		log(Common::String::format("      hook asset #%u", _traceAssets[i]));
+	// What a hook run inside another's action list reported is not the outer call's too (the exe's log gives it to the
+	// last call before the write)
+	_traceScript.push_back(changed);
+	_traceAssets.clear();
 }
 
 bool Script::isHolding() const {

@@ -582,19 +582,24 @@ void Script::callFunction(const VCAction &a, int event, const EventFields &field
 		// The variables the call changes and the text assets it reads follow its line, for the run comparison
 		// (tools/ref/compare.py): variables by ID, then assets, each once
 		bool trace = isLogging();
+		bool outermost = trace && !_traceHook; // a hook run by another hook's action list reports its own effects
 		Common::HashMap<uint32, int32> before;
+		uint scriptMark = _traceScript.size(); // the statements an enclosing action list ran before this call are not its own
 		if (trace) {
 			before = _variables;
-			_traceHook = true;
-			_traceAssets.clear();
-			_traceScript.clear();
+			if (outermost) {
+				_traceHook = true;
+				_traceAssets.clear();
+				_traceScript.clear();
+			}
 		}
 		HookStatus status = _hookTable.run(*this, call);
 		if (_hooks && _hooks->callFunction(call))
 			status = kHookHandled;
 		if (trace) {
-			_traceHook = false;
-			logHookEffects(before);
+			logHookEffects(before, outermost ? 0 : scriptMark);
+			if (outermost)
+				_traceHook = false;
 		}
 		logHook(a.function, status);
 	}

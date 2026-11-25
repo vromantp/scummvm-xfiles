@@ -559,29 +559,31 @@ void Script::activateView() {
 	// The exe activates the view's asset before the view's own actions run (B-151),
 	// its character views after them (tarakan-to-evidence2: view 11705's
 	// Activation actions run before character view 24182 is activated, B-167)
+	Common::Array<uint32> chars, others;
+	collectViewObjects(chars, others);
 	activateViewAsset();
 	fire(_pos.view, kEventObjectActivation);
-	activateViewObjects(true);
-	activateViewObjects(false);
+	for (uint i = 0; i < chars.size(); i++)
+		activateViewObject(chars[i]);
+	for (uint i = 0; i < others.size(); i++)
+		activateViewObject(others[i]);
 }
 
-void Script::activateViewObjects(bool before) {
-	// XFiles.exe activates the asset it shows (activateViewAsset) and its
-	// enabled character views (before = true) ahead of the view's own
-	// Activation actions, then (after the transition) its enabled navs and
-	// explorables (reference run, 2026-10-12); the view's activation
-	// creates them (0x4402e0). B-151
+void Script::collectViewObjects(Common::Array<uint32> &chars, Common::Array<uint32> &others) {
+	// The view's activation (0x4402e0) reads the flags of its character views, navs and explorables before its
+	// Activation actions run: one those actions disable is still activated and stays active, hit-tested and
+	// clickable with its flag at 0 until the view is left (view-objects-timers.md "Entering a view", B-009)
 	VCView v;
 	if (!_data.getView(_pos.view, v))
 		return;
-	Common::Array<uint32> ids;
 	const uint32 lists[3] = { v.characters, v.navs, v.explorables };
-	for (int i = before ? 0 : 1; i < (before ? 1 : 3); i++) {
+	Common::Array<uint32> ids;
+	for (int i = 0; i < 3; i++) {
 		ids.clear();
 		_data.getMembers(lists[i], ids);
 		for (uint j = 0; j < ids.size(); j++) {
 			if (isEnabled(ids[j]))
-				activateViewObject(ids[j]);
+				(i == 0 ? chars : others).push_back(ids[j]);
 		}
 	}
 }
@@ -1047,18 +1049,7 @@ void Script::step(const Common::String &s) {
 
 void Script::availableSteps(Common::Array<Common::String> &steps) {
 	steps.clear();
-	// Whether the object has a trigger for the event
-	auto hasEvent = [this](uint32 id, int event) {
-		Common::Array<uint32> triggers;
-		if (!_data.getMembers(getTriggers(id), triggers))
-			return false;
-		for (uint i = 0; i < triggers.size(); i++) {
-			VCTrigger t;
-			if (_data.getTrigger(triggers[i], t) && t.event == event)
-				return true;
-		}
-		return false;
-	};
+	auto hasEvent = [this](uint32 id, int event) { return hasTriggerFor(id, event); };
 	Common::HashMap<Common::String, bool> seen;
 	struct Adder {
 		Common::Array<Common::String> &steps;
@@ -1113,7 +1104,9 @@ void Script::availableSteps(Common::Array<Common::String> &steps) {
 	}
 	for (uint i = 0; i < objects.size(); i++) {
 		uint32 id = objects[i];
-		if (!isEnabled(id))
+		// The first _pos.objects.size() entries are the active view objects and the shown asset: a character view,
+		// nav or explorable among them stays with its flag at 0 (B-009), an asset does not
+		if (!isEnabled(id) && (i >= _pos.objects.size() || _data.getClassOf(id) == kClassAssetRef))
 			continue;
 		uint32 classId = _data.getClassOf(id);
 		bool isLayoutItem = i >= _pos.objects.size();

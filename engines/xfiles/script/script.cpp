@@ -846,7 +846,7 @@ void Script::click(uint32 id, const Common::Point *at) {
 	_dlg.clickOpensBox = !isHolding();
 	if (clickClass != kClassInterfaceItem && clickClass != kClassEmotionIcon && clickClass != kClassActionIcon)
 		_dlg.box = 0;
-	if (!isEnabled(id)) {
+	if (!isEnabled(id) && !isViewObjectActive(id)) {
 		log("  " + getObjectLabel(_data, id) + " is disabled");
 		return;
 	}
@@ -888,21 +888,37 @@ void Script::spendIcons(uint32 classId) {
 	Common::Array<NeoEntry> entries;
 	_data.getHdb().getObjects(classId, entries);
 	for (uint i = 0; i < entries.size(); i++) {
-		if (isEnabled(entries[i].key))
+		if (isEnabled(entries[i].key)) {
+			// The flag is already 0 when the Deactivation trigger's actions run (0x4c0610); only icon 66362 has one
 			_enabled[entries[i].key] = false;
+			if (hasTriggerFor(entries[i].key, kEventObjectDeactivation))
+				fire(entries[i].key, kEventObjectDeactivation);
+		}
 	}
+}
+
+bool Script::hasTriggerFor(uint32 id, int event) {
+	Common::Array<uint32> triggers;
+	if (!_data.getMembers(getTriggers(id), triggers))
+		return false;
+	for (uint i = 0; i < triggers.size(); i++) {
+		VCTrigger t;
+		if (_data.getTrigger(triggers[i], t) && t.event == event)
+			return true;
+	}
+	return false;
 }
 
 void Script::doubleClick(uint32 id) {
 	_dlg.box = 0;
-	if (!isEnabled(id))
+	if (!isEnabled(id) && !isViewObjectActive(id))
 		log("  " + getObjectLabel(_data, id) + " is disabled");
 	else
 		fire(id, kEventMouseDoubleClick);
 }
 
 void Script::roll(uint32 id, bool into) {
-	if (!isEnabled(id))
+	if (!isEnabled(id) && !isViewObjectActive(id))
 		return;
 	fire(id, into ? kEventRollInto : kEventRollOutOf);
 	// CharView_OnRoll 0x443010: rolling into a character with an Atoms topic with the gun, handcuffs or stiletto in

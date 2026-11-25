@@ -196,6 +196,14 @@ void Script::enableTarget(uint32 target, bool value) {
 	// An Enable action (kActionEnable), or code that does the same (0x4083d0)
 	bool was = isEnabled(target);
 	_enabled[target] = value;
+	// An action or emotion icon fires Object Activation when enabled and Object Deactivation when disabled
+	// (0x4c05e0, 0x4c0610; B-009); the flag is set already
+	uint32 iconClass = _data.getClassOf(target);
+	if ((iconClass == kClassActionIcon || iconClass == kClassEmotionIcon) && value != was) {
+		int event = value ? kEventObjectActivation : kEventObjectDeactivation;
+		if (hasTriggerFor(target, event))
+			fire(target, event);
+	}
 	// The held item disabled goes back (0x436c20)
 	if (!value && _tool.cursorItem && _tool.cursorItem == target)
 		putBack();

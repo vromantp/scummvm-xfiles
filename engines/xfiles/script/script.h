@@ -483,6 +483,8 @@ public:
 	/** Whether the first video loops: it ends only when a Stop action stops it. */
 	bool isVideoLooped() const { return !_media.videoPlays.empty() && _media.videoPlays[0].loop; }
 	bool isEnabled(uint32 id) const;
+	/** Whether the object is an active object of the current view (it can be active with its flag at 0, B-009). */
+	bool isViewObjectActive(uint32 id) const { return Common::find(_pos.objects.begin(), _pos.objects.end(), id) != _pos.objects.end(); }
 	/** A mouse wheel notch at pos over a scroll text, list or the photo viewer (B-357, an engine addition); true: used up. */
 	bool wheelScroll(const Common::Point &pos, bool down) { return _pda.wheel(pos, down) || _computer.wheel(pos, down); }
 	/** The first member of an asset list that is enabled (XFiles.exe 0x41fe60), 0 if none. */
@@ -942,7 +944,8 @@ private:
 	/** Activate what the current view shows: its first asset, character views, navs, explorables. */
 	void activateView();
 	void activateOrHoldView();
-	void activateViewObjects(bool before);
+	/** The enabled character views, and the navs and explorables, of the current view (flags read now). */
+	void collectViewObjects(Common::Array<uint32> &chars, Common::Array<uint32> &others);
 	void deactivateView();
 	void enterLeavePath(); ///< Enters the Set View deferred while the view was left (B-205)
 	void deactivateViewAsset();
@@ -961,6 +964,8 @@ private:
 	void deactivateAsset(uint32 id, bool fireEvent = true);
 	bool isInView(uint32 id) const;
 	void spendIcons(uint32 classId);
+	/** Whether the object has a trigger for the event. */
+	bool hasTriggerFor(uint32 id, int event);
 	/** Whether the Timer Expiration actions of an object test for timer n. */
 	bool holdsTimer(uint32 id, uint n) const;
 

@@ -433,7 +433,7 @@ XFilesEngine::ViewHit XFilesEngine::hitView(const Common::Point &pos, bool skipC
 		_data->getMembers(view.characters, ids);
 	for (uint i = 0; i < ids.size(); i++) {
 		VCCharView cv;
-		if (_script->isEnabled(ids[i]) && _data->getCharView(ids[i], cv) && containsPoint(cv.rect, pos)) {
+		if ((_script->isEnabled(ids[i]) || _script->isViewObjectActive(ids[i])) && _data->getCharView(ids[i], cv) && containsPoint(cv.rect, pos)) {
 			hit.kind = ViewHit::kCharView;
 			hit.id = ids[i];
 			hit.cursor = cv.cursor;
@@ -444,7 +444,7 @@ XFilesEngine::ViewHit XFilesEngine::hitView(const Common::Point &pos, bool skipC
 	_data->getMembers(view.explorables, ids);
 	for (uint i = 0; i < ids.size(); i++) {
 		VCExplorable e;
-		if (_script->isEnabled(ids[i]) && _data->getExplorable(ids[i], e) && containsPoint(e.rect, pos)) {
+		if ((_script->isEnabled(ids[i]) || _script->isViewObjectActive(ids[i])) && _data->getExplorable(ids[i], e) && containsPoint(e.rect, pos)) {
 			hit.kind = ViewHit::kExplorable;
 			hit.id = ids[i];
 			hit.cursor = e.cursor;
@@ -456,8 +456,8 @@ XFilesEngine::ViewHit XFilesEngine::hitView(const Common::Point &pos, bool skipC
 	for (uint i = 0; i < ids.size(); i++) {
 		VCNav nav;
 		VCHotSpot hotSpot;
-		if (_script->isEnabled(ids[i]) && _data->getNav(ids[i], nav) && _data->getHotSpot(nav.hotSpot, hotSpot) &&
-				containsPoint(hotSpot.rect, pos)) {
+		if ((_script->isEnabled(ids[i]) || _script->isViewObjectActive(ids[i])) && _data->getNav(ids[i], nav) && _data->getHotSpot(nav.hotSpot, hotSpot) &&
+			containsPoint(hotSpot.rect, pos)) {
 			hit.kind = ViewHit::kNav;
 			hit.id = ids[i];
 			hit.cursor = hotSpot.cursor;

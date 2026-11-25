@@ -35,6 +35,7 @@ void Script::start() {
 		return;
 	}
 	log("== start: " + nameOrNone(_data, title.name));
+	_viewLayouts.clear();
 	// Game_Start (0x48cd70) writes the preferences before the title activates
 	shootoutReset(); // 0x48ccd0
 	_tool.gunValue = 0;
@@ -50,6 +51,7 @@ void Script::restore(const VCSave &save) {
 	// (docs/formats/saves.md, "How the game restores a save")
 	_restored = true;
 	_restorePending = true;
+	_viewLayouts.clear();
 	_restoredSave = save;
 	// The travel gets the save's disc (+42) the way SwapDisc's does
 	if (save.disc >= 1)
@@ -101,8 +103,10 @@ void Script::restoreView() {
 		log(Common::String::format("  clip #%u at time %d in the view (the view plays from there)", save.clip, save.clipTime));
 
 	// 1. The full-screen layout (Layout_SetAsView)
-	if (save.layout)
+	if (save.layout) {
 		showLayout(save.layout);
+		_viewLayouts.push_back(save.layout);
+	}
 
 	// 2. Sounds playing are kind 27 sound objects: no Object Activation. The
 	// 2nd value is the object's loop flag (+0x30, set by a Play loop asset

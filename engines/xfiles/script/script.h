@@ -596,6 +596,8 @@ public:
 	};
 	/** Shown layouts, oldest first. */
 	const Common::Array<Layout> &getLayouts() const { return _layouts; }
+	/** SetIFLAsView (0x41b300) was called for the layout: its items are in the view group (0x80800). */
+	bool isViewLayout(uint32 id) const { return Common::find(_viewLayouts.begin(), _viewLayouts.end(), id) != _viewLayouts.end(); }
 	/** Disc in use: 1 at the start, the save's (+42) after a restore. */
 	int32 getDisc() const { return _disc; }
 	/** Whether restore() ran, and the save it continued from (parts the engine applies or only logs). */
@@ -986,6 +988,7 @@ private:
 	uint32 _seedBase;
 	Common::HashMap<uint32, uint32> _diceBuilt; ///< Generators built per call site, with _fixedSeeds
 	Common::Array<Layout> _layouts;
+	Common::Array<uint32> _viewLayouts; ///< Layouts set as view (asView, never cleared until the objects are rebuilt)
 	Common::Array<uint32> _kit;
 	Common::Array<uint32> _inventory, _evidence, _history;
 	Common::Array<VCPhoto> _photos; ///< The VCPhotos in database order

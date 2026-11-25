@@ -104,6 +104,8 @@ public:
 	void drawBarPart(Graphics::Surface &dst, int part, bool dim) const;
 	/** The items of the shown layouts, the lowest key last (over the dialog box and the captions). */
 	void drawItems(Graphics::Surface &dst) const;
+	/** The items of the layouts set as view (SetIFLAsView): part of the view group, under the clips started later. */
+	void drawViewItems(Graphics::Surface &dst) const;
 
 	/** What is under the mouse: layout items first, then icons. */
 	Hit hitTest(const Common::Point &pos) const;
@@ -226,6 +228,7 @@ private:
 		uint32 layoutIndex; ///< Position of its layout in the shown list
 		uint16 layer;
 		uint32 key; ///< The exe's draw list key: the lower is on top
+		bool view;  ///< In the view group (SetIFLAsView): drawn by drawViewItems
 		Common::Rect rect;
 		Graphic *graphic;    ///< nullptr if the item shows no picture
 		bool hasText;
@@ -285,6 +288,7 @@ private:
 	bool _barClosed;
 	Common::Array<uint32> _layouts;               ///< Shown layouts whose items are loaded
 	Common::Array<uint32> _itemIds;               ///< Their items, in script order
+	Common::Array<bool> _viewFlags;               ///< Per shown layout: set as view
 	Common::Array<Item> _items;                   ///< The same, in drawing order
 	Common::Array<uint32> _modalExceptions;
 	Common::Point _mouse;

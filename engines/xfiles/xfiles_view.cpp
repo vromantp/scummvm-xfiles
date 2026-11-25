@@ -340,7 +340,9 @@ void XFilesEngine::drawView() {
 		Common::Point pos = getBandPosition(*_video);
 		blit(_video->getFrame(), pos.x, pos.y);
 	}
-	// Band clips are part of the view group (0x80800)
+	// The items of a layout set as view (SetIFLAsView) and the band clips are part of the view group (0x80800), in the
+	// order they were added (screen-composition.md "The draw list")
+	_interface->drawViewItems(_screen);
 	_sound.drawClips(_screen, false);
 	applyBandTint(_script->heldToolType() == 3 && _script->getFlashlight()[0]);
 	if (_interface->isModal()) {

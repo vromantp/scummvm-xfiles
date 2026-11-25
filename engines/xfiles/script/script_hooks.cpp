@@ -704,6 +704,14 @@ void Script::addStateHooks() {
 	t.add("RegCookEmail", StateHooks::hookRegCookEmail);
 	t.add("StopAllTimers", StateHooks::hookStopAllTimers);
 	t.add("SetLBoxTint", StateHooks::hookSetLBoxTint);
+	t.add("SetIFLAsView", [](Script &s, const HookCall &c) {
+		// Layout_SetAsView 0x41b300: the layout's items go to the view group (key 0x80800), for the rest of the game
+		if (!c.has(1))
+			return false;
+		if (!s.isViewLayout(c.args[0]))
+			s._viewLayouts.push_back(c.args[0]);
+		return true;
+	});
 	t.add("ClearLBoxTint", [](Script &s, const HookCall &c) {
 		s._tint = 0;
 		return true;

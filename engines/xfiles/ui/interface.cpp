@@ -561,12 +561,14 @@ void Interface::syncIdeas(const Script &script) {
 void Interface::syncItems(const Script &script) {
 	const Common::Array<Script::Layout> &layouts = script.getLayouts();
 	Common::Array<uint32> layoutIds, itemIds;
+	Common::Array<bool> viewFlags;
 	for (uint i = 0; i < layouts.size(); i++) {
 		layoutIds.push_back(layouts[i].id);
+		viewFlags.push_back(script.isViewLayout(layouts[i].id));
 		for (uint j = 0; j < layouts[i].items.size(); j++)
 			itemIds.push_back(layouts[i].items[j]);
 	}
-	if (layoutIds == _layouts && itemIds == _itemIds) {
+	if (layoutIds == _layouts && itemIds == _itemIds && viewFlags == _viewFlags) {
 		for (uint i = 0; i < _items.size(); i++) {
 			if (_items[i].graphic)
 				_items[i].graphic->update();
@@ -578,6 +580,7 @@ void Interface::syncItems(const Script &script) {
 	freeItems();
 	_layouts = layoutIds;
 	_itemIds = itemIds;
+	_viewFlags = viewFlags;
 	for (uint i = 0; i < layouts.size(); i++) {
 		for (uint j = 0; j < layouts[i].items.size(); j++) {
 			VCInterfaceItem data;
@@ -589,7 +592,9 @@ void Interface::syncItems(const Script &script) {
 			item.layer = data.layer & 0xff; // only the low byte is the drawing layer
 			// The screen's layer key (docs/subsystems/screen-composition.md): a layout shown later has its keys below
 			// every earlier one (0x42b250: lowest shown key minus 0x100), the low byte of the layer adds to it
-			item.key = 0x80010 - 0x100 * (i + 1) + item.layer;
+			// A layout set as view (SetIFLAsView, 0x41b3e0) has its items in the view group: 0x80800 plus the layer
+			item.view = viewFlags[i];
+			item.key = item.view ? 0x80800 + item.layer : 0x80010 - 0x100 * (i + 1) + item.layer;
 			item.rect = Common::Rect(data.rect.left, data.rect.top, data.rect.right, data.rect.bottom);
 			// The picture is the first enabled asset of the list (0x41fe60)
 			item.graphic = loadAsset(script.firstEnabled(data.assets));
@@ -625,6 +630,7 @@ void Interface::freeItems() {
 	_items.clear();
 	_layouts.clear();
 	_itemIds.clear();
+	_viewFlags.clear();
 }
 
 void Interface::setSuspended(bool suspended) {
@@ -971,6 +977,8 @@ void Interface::drawItems(Graphics::Surface &dst) const {
 			modalLayout = i;
 	}
 	for (uint i = 0; i < _items.size(); i++) {
+		if (_items[i].view)
+			continue; // drawn with the view (drawViewItems)
 		// FadeBack(1) suspends the items already shown; an item activated after it stays lit: a layout shown with it
 		// (the PDA, a photo) and Help's explanation (items 50470 and 51090 come after 68589's FadeBack(1))
 		bool dimItem = _items[i].id != kNeverTintedItem &&
@@ -991,6 +999,18 @@ void Interface::drawItems(Graphics::Surface &dst) const {
 			before.free();
 			continue;
 		}
+		if (_items[i].graphic)
+			_items[i].graphic->draw(dst, _items[i].rect.left, _items[i].rect.top);
+		if (_items[i].hasText)
+			drawItemText(dst, _items[i]);
+	}
+}
+
+void Interface::drawViewItems(Graphics::Surface &dst) const {
+	// Not dimmed here: the modal dim of drawView comes after and covers them as part of the view
+	for (uint i = 0; i < _items.size(); i++) {
+		if (!_items[i].view)
+			continue;
 		if (_items[i].graphic)
 			_items[i].graphic->draw(dst, _items[i].rect.left, _items[i].rect.top);
 		if (_items[i].hasText)

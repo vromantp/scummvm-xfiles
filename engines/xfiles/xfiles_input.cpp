@@ -649,11 +649,23 @@ void XFilesEngine::handleDoubleClick(const Interface::Hit &hit) {
 }
 
 void XFilesEngine::handleRightClick(const Common::Point &pos) {
-	// A right button press on an inventory icon fires its Mouse Double-Click triggers, as the left double-click does
-	// (the close-up of the book, the photos; the run logs show trigger event=1 right after msg=rdown)
+	// A right button press is a Mouse Double-Click on the first object the hit test finds (0x4969b0), the exe's only
+	// one (docs/engine/playback.md "The right button and the video skip"; the run logs show trigger event=1 right
+	// after msg=rdown). The layers over the view take it first; a character view or explorable fires its triggers
 	Interface::Hit hit = _interface->hitTest(pos);
-	if (hit.kind == Interface::kHitInventory)
+	if (hit.kind == Interface::kHitItem || hit.kind == Interface::kHitInventory) {
 		handleDoubleClick(hit);
+		return;
+	}
+	if (hit.kind != Interface::kHitNone || _menuLayout || _interface->isModal())
+		return;
+	if (_script->binocularsBlock(pos) || (_dialogBox.isOpen() && _dialogBox.contains(pos)) || hotKindAt(pos))
+		return;
+	ViewHit viewHit = hitView(pos);
+	if (viewHit.kind == ViewHit::kCharView || viewHit.kind == ViewHit::kExplorable) {
+		debugC(1, kDebugScript, "-- dclick:%u (view)", viewHit.id);
+		_script->doubleClick(viewHit.id);
+	}
 }
 
 // -- Dialog box ---------------------------------------------------------------

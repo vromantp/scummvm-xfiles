@@ -86,7 +86,7 @@ bool XFilesEngine::playIntro() {
 		// A load chosen in the GMM ends the intro at once
 		while (!shouldQuit() && !_video->hasEnded() && !_pendingLoad.valid) {
 			Input input = pollInput();
-			if (input.click || input.skip)
+			if (input.click || input.rightClick || input.skip)
 				_video->stop();
 			_video->update();
 			_screen.fillRect(Common::Rect(_screen.w, _screen.h), 0);

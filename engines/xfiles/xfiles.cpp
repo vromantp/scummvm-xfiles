@@ -324,8 +324,7 @@ XFilesEngine::Input XFilesEngine::pollInput() {
 			input.wheel += event.type == Common::EVENT_WHEELUP ? -1 : 1;
 			input.wheelPos = event.mouse;
 		} else if (event.type == Common::EVENT_RBUTTONDOWN) {
-			// The exe ends the playing video on a right-click as on a natural end
-			input.skip = true;
+			// A right-click is a Mouse Double-Click on the object under the mouse; a video takes it as a skip
 			input.rightClick = _steps.empty();
 			input.rightPos = event.mouse;
 		} else if (event.type == Common::EVENT_CUSTOM_ENGINE_ACTION_START && event.customType == kActionEscape) {
@@ -693,8 +692,19 @@ void XFilesEngine::runMovieFrame(const Input &input) {
 			handleClick(input.pos);
 		}
 	}
+	Input in = input;
+	if (in.rightClick) {
+		Common::Rect rect = movieRect();
+		if (!rect.isEmpty() && rect.contains(in.rightPos)) {
+			// The video's sound object takes it (SoundObj_OnSkip 0x44da00) unless a live .HOT entry is over it
+			if (!(_hotMovie == _video && hotKindAt(in.rightPos)) && getPreference(kPrefSkipClips))
+				in.skip = true;
+		} else {
+			handleRightClick(in.rightPos);
+		}
+	}
 	if (!_script->getVideoQueue().empty())
-		playQueuedVideo(input);
+		playQueuedVideo(in);
 	// The bar, icon rolls and rollover text run under a movie; the rolls freeze inside the video's rect
 	updateInterface(true);
 	// The exe never hides the cursor for a movie: the refresh finds the playing video (B-285)

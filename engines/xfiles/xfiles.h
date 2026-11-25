@@ -487,9 +487,6 @@ private:
 	Movie *_hotMovie;               ///< The layer whose time opens and closes their windows
 	Interface *_interface;
 	Cursors *_cursors;
-	uint32 _lastClickTime; ///< For double-clicks
-	Common::Point _lastClickPos;
-	Interface::Hit _lastClickHit;
 	Interface::Hit _hover; ///< What the mouse is over, for Roll Into and Roll Out Of
 	uint32 _viewHover;     ///< The character view, explorable or nav the mouse is over, for Roll Into and Roll Out Of
 	Common::HashMap<uint, TimerState> _timerStates;

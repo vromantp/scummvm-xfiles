@@ -32,13 +32,6 @@
 
 namespace XFiles {
 
-enum {
-	// Two clicks at most this far apart in time and space make a double-click
-	// (the Windows defaults)
-	kDoubleClickMs = 500,
-	kDoubleClickDistance = 4
-};
-
 // The X corner, XCorner_ctor's rectangle (right and bottom exclusive)
 static const int kMenuCornerLeft = 501, kMenuCornerBottom = 34;
 // Its cursor, the VCCursor named "X"
@@ -183,17 +176,6 @@ static bool containsPoint(const VCRect &r, const Common::Point &pos) {
 
 void XFilesEngine::handleClick(const Common::Point &pos) {
 	Interface::Hit hit = _interface->hitTest(pos);
-	uint32 now = gameMillis();
-	bool doubleClick = now - _lastClickTime <= kDoubleClickMs && hit.kind != Interface::kHitNone &&
-		hit.kind == _lastClickHit.kind && hit.id == _lastClickHit.id &&
-		ABS(pos.x - _lastClickPos.x) <= kDoubleClickDistance && ABS(pos.y - _lastClickPos.y) <= kDoubleClickDistance;
-	_lastClickTime = doubleClick ? 0 : now;
-	_lastClickPos = pos;
-	_lastClickHit = hit;
-	if (doubleClick) {
-		handleDoubleClick(hit);
-		return;
-	}
 
 	if (hit.kind == Interface::kHitItem) {
 		debugC(1, kDebugScript, "-- click:%u (interface item)", hit.id);

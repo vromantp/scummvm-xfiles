@@ -99,7 +99,6 @@ XFilesEngine::XFilesEngine(OSystem *syst, const ADGameDescription *gameDesc) : E
 	_texts(nullptr),
 	_interface(nullptr),
 	_cursors(nullptr),
-	_lastClickTime(0),
 	_dragIdea(0),
 	_viewHover(0),
 	_dragMoved(false),
@@ -117,9 +116,8 @@ XFilesEngine::XFilesEngine(OSystem *syst, const ADGameDescription *gameDesc) : E
 	_stepAnswer = -1;
 	_pendingClipTime = -1;
 	memset(_uberVariables, 0, sizeof(_uberVariables));
-	_lastClickHit.kind = Interface::kHitNone;
-	_lastClickHit.id = 0;
-	_hover = _lastClickHit;
+	_hover.kind = Interface::kHitNone;
+	_hover.id = 0;
 }
 
 XFilesEngine::~XFilesEngine() {
@@ -880,11 +878,9 @@ bool XFilesEngine::teardownGame() {
 	_compose = true; // start-up and the menu set the flag (0x4903fb, 0x44e204)
 	_composeClip = 0;
 	_interface->setSuspended(false);
-	_lastClickTime = 0;
 	_dragIdea = 0;
-	_lastClickHit.kind = Interface::kHitNone;
-	_lastClickHit.id = 0;
-	_hover = _lastClickHit;
+	_hover.kind = Interface::kHitNone;
+	_hover.id = 0;
 	_pendingClipTime = -1;
 	_shotDue = 0;
 	_shotView = 0;
